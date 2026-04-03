@@ -20,10 +20,10 @@ semantics, except `randomChallenger` which explicitly uses `ProbComp`.
   `sample : (T : Type) → ProbComp T`.
 - **Completeness** (`Reduction.completeness`): honest execution on valid input
   yields valid output with probability at least `1 - ε`.
-- **Soundness** (`Reduction.soundness`): any prover on invalid input has
+- **Soundness** (`Verifier.soundness`): any prover on invalid input has
   acceptance probability at most `ε`. Uses an output language `langOut` to
   specify which verifier outputs are considered valid.
-- **Knowledge soundness** (`Reduction.knowledgeSoundness`): like soundness,
+- **Knowledge soundness** (`Verifier.knowledgeSoundness`): like soundness,
   but an `Extractor.Straightline` must recover a valid input witness from any
   accepting execution.
 
@@ -31,7 +31,7 @@ semantics, except `randomChallenger` which explicitly uses `ProbComp`.
 
 - `Reduction.completeness_comp` / `perfectCompleteness_comp` — completeness
   composes along `Reduction.Continuation.comp`.
-- `Reduction.soundness_comp` — soundness composes with additive error.
+- `Verifier.soundness_comp` — soundness composes with additive error.
 
 ## Round-by-round analysis
 
@@ -392,6 +392,8 @@ theorem Reduction.perfectCompleteness_comp
 
 /-! ## Soundness -/
 
+namespace Verifier
+
 /-- A verifier satisfies **soundness** with error `ε` if for all malicious
 provers and invalid inputs, the probability that the verifier produces an
 output in `langOut` is at most `ε`. The output language `langOut` specifies
@@ -421,7 +423,7 @@ with probability at most `ε₁` on invalid inputs, and outside that language th
 second-stage verifier reaches the output language with probability at most `ε₂`,
 then the composed verifier reaches the output language with probability at most
 `ε₁ + ε₂`. -/
-theorem Reduction.soundness_comp
+theorem soundness_comp
     {m : Type u → Type u} [Monad m] [LawfulMonad m] [HasEvalSPMF m]
     {StatementIn : Type v} {WitnessIn : Type w}
     {ctx₁ : StatementIn → Spec}
@@ -447,11 +449,11 @@ theorem Reduction.soundness_comp
       (fun shared tr₂ => StmtOut shared.1 shared.2 tr₂)
       (fun shared tr₂ => WitOut shared.1 shared.2 tr₂))
     {ε₁ ε₂ : ℝ≥0∞}
-    (h₁ : soundness reduction1.verifier langIn langMid ε₁)
+    (h₁ : reduction1.verifier.soundness langIn langMid ε₁)
     (h₂ : ∀ (s : StatementIn) (tr₁ : Spec.Transcript (ctx₁ s)),
-      soundness (reduction2.verifier ⟨s, tr₁⟩) (langMid s tr₁)
+      Verifier.soundness (reduction2.verifier ⟨s, tr₁⟩) (langMid s tr₁)
         (fun _ tr₂ => langOut s tr₁ tr₂) ε₂) :
-    soundness (Reduction.comp reduction1 reduction2).verifier langIn
+    (Reduction.comp reduction1 reduction2).verifier.soundness langIn
       (fun s tr =>
         {sOut | Spec.Transcript.liftAppendPred (ctx₁ s) (ctx₂ s) (StmtOut s)
           (fun tr₁ tr₂ sOut => sOut ∈ langOut s tr₁ tr₂) tr sOut})
@@ -503,7 +505,7 @@ theorem Reduction.soundness_comp
       let sOut := Spec.Transcript.unliftAppend (ctx₁ s) (ctx₂ s) (StmtOut s) z.1 z.2.2
       sOut ∈ langOut s splitTr.1 splitTr.2
   have h₁_bad : Pr[fun z₁ => ¬ bad₁ z₁ | mx] ≤ ε₁ := by
-    simpa [mx, bad₁, prefixProver, soundness] using h₁ prefixProver s hs
+    simpa [mx, bad₁, prefixProver, Verifier.soundness] using h₁ prefixProver s hs
   have h₂_bad :
       ∀ z₁ ∈ support mx, bad₁ z₁ → Pr[fun z => ¬¬ inLangOut z | my z₁] ≤ ε₂ := by
     intro z₁ _ hz₁
@@ -611,7 +613,9 @@ theorem Reduction.soundness_comp
       (Spec.Transcript.liftAppendPred_iff (ctx₁ s) (ctx₂ s) (StmtOut s)
         (fun tr₁ tr₂ sOut => sOut ∈ langOut s tr₁ tr₂) z.1 z.2.2).symm
   rw [hconv] at hbind
-  simpa [soundness, hrun] using hbind
+  simpa [Verifier.soundness, hrun] using hbind
+
+end Verifier
 
 /-! ## Knowledge soundness -/
 
@@ -637,6 +641,8 @@ instance
   coe E := E.toFun
 
 end Extractor
+
+namespace Verifier
 
 /-- A verifier satisfies **knowledge soundness** with error `ε` if there exists
 an extractor that, given the transcript and both outputs, recovers a valid input
@@ -683,7 +689,7 @@ theorem knowledgeSoundness_implies_soundness
     {relOut : ∀ (s : StatementIn) (tr : Spec.Transcript (Context s)),
       Set (StatementOut s tr × WitnessOut s tr)}
     {ε : ℝ≥0∞}
-    (hKS : knowledgeSoundness verifier relIn relOut ε)
+    (hKS : verifier.knowledgeSoundness relIn relOut ε)
     (langIn : Set StatementIn)
     (hLang : ∀ s, s ∉ langIn → ∀ w, (s, w) ∉ relIn)
     (langOut : ∀ (s : StatementIn) (tr : Spec.Transcript (Context s)),
@@ -692,7 +698,7 @@ theorem knowledgeSoundness_implies_soundness
       WitnessOut s tr)
     (hLangOut : ∀ s tr sOut,
       sOut ∈ langOut s tr → (sOut, acceptWitness s tr) ∈ relOut s tr) :
-    soundness verifier langIn langOut ε := by
+    verifier.soundness langIn langOut ε := by
   rcases hKS with ⟨extractor, hKS⟩
   intro OutputP prover s hs
   let proverKS : (s : StatementIn) →
@@ -720,6 +726,8 @@ theorem knowledgeSoundness_implies_soundness
     intro z _ hz
     exact ⟨hLangOut s z.1 z.2.2 hz, hLang s hs (extractor s z.1 z.2.2 (acceptWitness s z.1))⟩
   exact le_trans hmono hKS'
+
+end Verifier
 
 /-! ## Claim tree
 
@@ -1010,6 +1018,8 @@ structural equivalent:
 - `.receiver` nodes: per-round error bound (= per-challenge error)
 - `ClaimTree.maxPathError` = worst-case total error -/
 
+namespace Verifier
+
 /-- **Round-by-round soundness**: there exists a claim tree (state function)
 such that:
 1. The tree is sound per-round (`IsSound`): bad claims stay bad at sender nodes,
@@ -1044,7 +1054,7 @@ theorem soundness_of_rbrSoundness
     {langIn : Set StatementIn}
     {langOut : (s : StatementIn) → Spec.Transcript pSpec → Prop}
     {ε : ℝ≥0∞}
-    (h : rbrSoundness (roles := roles) sample langIn langOut ε) :
+    (h : Verifier.rbrSoundness (roles := roles) sample langIn langOut ε) :
     ∀ {OutputP : Spec.Transcript pSpec → Type}
       (prover : Spec.Strategy.withRoles ProbComp pSpec roles OutputP),
     ∀ s, s ∉ langIn →
@@ -1068,6 +1078,8 @@ theorem soundness_of_rbrSoundness
       (ClaimTree.IsSound.bound_terminalProb sample (tree s) (hSound s) prover (claim := root s)
         (hRootBad s hs))
       (hErr s)
+
+end Verifier
 
 /-! ## Knowledge claim tree
 
@@ -1229,6 +1241,8 @@ Round-by-round knowledge soundness existentially quantifies over a
 `KnowledgeClaimTree` with per-round error bounds and boundary conditions
 connecting the claim tree to `relIn` and `relOut`. -/
 
+namespace Verifier
+
 /-- **Round-by-round knowledge soundness**: there exists a knowledge claim tree
 such that:
 1. The tree satisfies `IsKnowledgeSound` per-round.
@@ -1265,13 +1279,13 @@ theorem rbrKnowledgeSoundness_implies_rbrSoundness
     {relOut : ∀ (s : StatementIn) (tr : Spec.Transcript pSpec),
       Set (StatementOut s tr × WitnessOut s tr)}
     {ε : StatementIn → ℝ≥0∞}
-    (h : rbrKnowledgeSoundness (roles := roles) sample relIn relOut ε)
+    (h : Verifier.rbrKnowledgeSoundness (roles := roles) sample relIn relOut ε)
     (langIn : Set StatementIn)
     (hLang : ∀ s, s ∉ langIn → ∀ w, (s, w) ∉ relIn)
     (langOut : (s : StatementIn) → Spec.Transcript pSpec → Prop)
     (hLangOut : ∀ s tr, langOut s tr → ∃ pOut, pOut ∈ relOut s tr)
     {εMax : ℝ≥0∞} (hε : ∀ s, ε s ≤ εMax) :
-    rbrSoundness (roles := roles) sample langIn langOut εMax := by
+    Verifier.rbrSoundness (roles := roles) sample langIn langOut εMax := by
   rcases h with ⟨Claim, tree, root, extract, hSound, hErr, hRoot, hTerm⟩
   refine ⟨Claim, fun s => (tree s).toClaimTree, root, ?_⟩
   refine ⟨?_, ?_, ?_, ?_⟩
@@ -1299,10 +1313,10 @@ theorem rbrKnowledgeSoundness_implies_knowledgeSoundness
     {relOut : ∀ (s : StatementIn) (tr : Spec.Transcript pSpec),
       Set (PUnit × WitnessOut s tr)}
     {ε : StatementIn → ℝ≥0∞}
-    (h : rbrKnowledgeSoundness (pSpec := pSpec) (roles := roles)
+    (h : Verifier.rbrKnowledgeSoundness (pSpec := pSpec) (roles := roles)
       sample relIn relOut ε)
     {εMax : ℝ≥0∞} (hε : ∀ s, ε s ≤ εMax) :
-    knowledgeSoundness
+    Verifier.knowledgeSoundness
       (fun _ : StatementIn => randomChallenger sample pSpec roles)
       relIn relOut εMax := by
   rcases h with ⟨Claim, tree, root, extract, hSound, hErr, hRoot, hTerm⟩
@@ -1339,6 +1353,8 @@ theorem rbrKnowledgeSoundness_implies_knowledgeSoundness
           (hSound s) (prover s)
           (claim := root s) hBadRoot)
         (le_trans (hErr s) (hε s))
+
+end Verifier
 
 end Interaction
 

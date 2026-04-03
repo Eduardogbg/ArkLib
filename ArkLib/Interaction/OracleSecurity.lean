@@ -23,8 +23,8 @@ reification function. This means:
 ## Main definitions
 
 - `OracleReduction.completeness` — honest-execution completeness
-- `OracleReduction.soundness` — soundness against arbitrary provers
-- `OracleReduction.knowledgeSoundness` — knowledge soundness with a
+- `OracleReduction.Verifier.soundness` — soundness against arbitrary provers
+- `OracleReduction.Verifier.knowledgeSoundness` — knowledge soundness with a
   `Straightline` extractor
 - `OracleStatement.Realizes` — coherence between a concrete oracle family
   and a deterministic query implementation
@@ -196,6 +196,8 @@ def Accepts
     Simulates reduction s.stmt s.oracleStmt tr oStmtOut ∧
       ⟨stmtOut, oStmtOut⟩ ∈ langOut s tr
 
+namespace Verifier
+
 /-- Soundness for a top-level oracle reduction: on invalid full inputs, every
 malicious prover makes the verifier accept only with probability at most `ε`,
 where acceptance is witnessed by some concrete output oracle family compatible
@@ -265,6 +267,8 @@ def knowledgeSoundness
           (⟨z.2.2.1, oStmtOut⟩, z.2.1) ∈ relOut s z.1 ∧
           (s, extractor s z.1 ⟨z.2.2.1, oStmtOut⟩ z.2.1) ∉ relIn
       | reduction.run s (prover s)] ≤ ε
+
+end Verifier
 
 namespace Continuation
 
@@ -460,6 +464,8 @@ def perfectCompleteness
       WitnessOut shared tr → Prop) : Prop :=
   reduction.completeness relIn relOut 0
 
+namespace Verifier
+
 /-- Soundness for a continuation oracle reduction. The input oracle access is
 allowed to be any deterministic implementation; invalidity means that no full
 input statement in `langIn` realizes that implementation. -/
@@ -538,6 +544,8 @@ def knowledgeSoundness
                 extractor shared ⟨stmt, oStmtIn⟩ z.1 ⟨z.2.2.1, oStmtOut⟩ z.2.1)
                   ∉ relIn shared
         | reduction.run shared stmt inputImpl prover accSpec accImpl] ≤ ε
+
+end Verifier
 
 end Continuation
 end OracleReduction
