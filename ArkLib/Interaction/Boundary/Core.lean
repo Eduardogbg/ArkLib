@@ -6,7 +6,7 @@ import ArkLib.Interaction.Reduction
 A *boundary* reinterprets an existing interaction through a different outer
 statement/witness interface without changing the underlying transcript or round
 structure. This is distinct from sequential composition (`Spec.append`,
-`Reduction.Continuation.comp`), which extends a protocol by appending new rounds.
+`Reduction.comp`), which extends a protocol by appending new rounds.
 
 ## When to use a boundary vs. composition
 

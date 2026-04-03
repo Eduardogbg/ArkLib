@@ -328,12 +328,15 @@ theorem completeness_pullback
     (compatOfValid :
       CompletenessCompat boundary outerRelIn innerRelOut compat)
     (hComplete :
-      reduction.completeness innerRelIn innerRelOut eps) :
+      reduction.completeness
+        (fun inner _ wit => (inner, wit) ∈ innerRelIn)
+        innerRelOut
+        eps) :
     (pullback boundary reduction).completeness
-      outerRelIn
+      (fun outer _ wit => (outer, wit) ∈ outerRelIn)
       outerRelOut
       eps := by
-  intro outerStmt outerWit hOuterIn
+  intro outerStmt _ outerWit hOuterIn
   have hInnerIn :
       (projection.proj outerStmt,
         boundary.wit.proj outerStmt outerWit) ∈ innerRelIn :=
@@ -405,6 +408,7 @@ theorem completeness_pullback
             (boundary.wit.proj outerStmt outerWit)] :=
       hComplete
         (projection.proj outerStmt)
+        PUnit.unit
         (boundary.wit.proj outerStmt outerWit)
         hInnerIn
     _ ≤ Pr[outerGood |
@@ -427,9 +431,11 @@ theorem perfectCompleteness_pullback
     (compatOfValid :
       CompletenessCompat boundary outerRelIn innerRelOut compat)
     (hPerfect :
-      reduction.perfectCompleteness innerRelIn innerRelOut) :
+      reduction.perfectCompleteness
+        (fun inner _ wit => (inner, wit) ∈ innerRelIn)
+        innerRelOut) :
     (pullback boundary reduction).perfectCompleteness
-      outerRelIn
+      (fun outer _ wit => (outer, wit) ∈ outerRelIn)
       outerRelOut := by
   exact
     completeness_pullback
