@@ -1069,55 +1069,61 @@ such that:
 4. Membership in the output language implies terminal goodness (bridges the tree
    to the verifier). -/
 def rbrSoundness
-    {pSpec : Spec} {roles : RoleDecoration pSpec}
-    {StatementIn : Type v}
+    {SharedIn : Type v}
+    {pSpec : SharedIn → Spec} {roles : (shared : SharedIn) → RoleDecoration (pSpec shared)}
+    {StatementIn : SharedIn → Type w}
     (sample : (T : Type) → ProbComp T)
-    (langIn : Set StatementIn)
-    (langOut : (s : StatementIn) → Spec.Transcript pSpec → Prop)
-    (ε : ℝ≥0∞) : Prop :=
-  ∃ (Claim : StatementIn → Type)
-    (tree : (s : StatementIn) → ClaimTree pSpec roles (Claim s))
-    (root : (s : StatementIn) → Claim s),
-  (∀ s, (tree s).IsSound sample) ∧
-  (∀ s, s ∉ langIn → ¬ (tree s).good (root s)) ∧
-  (∀ s, (tree s).maxPathError ≤ ε) ∧
-  (∀ s tr, langOut s tr →
-    (tree s).terminalGood tr ((tree s).follow tr (root s)))
+    (langIn : ∀ shared, Set (StatementIn shared))
+    (langOut : ∀ shared, Spec.Transcript (pSpec shared) → Prop)
+    (ε : ∀ shared, StatementIn shared → ℝ≥0∞) : Prop :=
+  ∃ (Claim : ∀ shared, StatementIn shared → Type)
+    (tree : ∀ (shared : SharedIn) (stmt : StatementIn shared),
+      ClaimTree (pSpec shared) (roles shared) (Claim shared stmt))
+    (root : ∀ (shared : SharedIn) (stmt : StatementIn shared), Claim shared stmt),
+  (∀ shared stmt, (tree shared stmt).IsSound sample) ∧
+  (∀ shared stmt, stmt ∉ langIn shared → ¬ (tree shared stmt).good (root shared stmt)) ∧
+  (∀ shared stmt, (tree shared stmt).maxPathError ≤ ε shared stmt) ∧
+  (∀ shared stmt tr, langOut shared tr →
+    (tree shared stmt).terminalGood tr ((tree shared stmt).follow tr (root shared stmt)))
 
 /-- Round-by-round soundness implies overall soundness: if `rbrSoundness` holds
 with error `ε`, then for any prover and any invalid statement, the probability
 of acceptance is at most `ε`. Uses `bound_terminalProb` internally. -/
 theorem soundness_of_rbrSoundness
-    {pSpec : Spec} {roles : RoleDecoration pSpec}
-    {StatementIn : Type v}
+    {SharedIn : Type v}
+    {pSpec : SharedIn → Spec} {roles : (shared : SharedIn) → RoleDecoration (pSpec shared)}
+    {StatementIn : SharedIn → Type w}
     {sample : (T : Type) → ProbComp T}
-    {langIn : Set StatementIn}
-    {langOut : (s : StatementIn) → Spec.Transcript pSpec → Prop}
-    {ε : ℝ≥0∞}
+    {langIn : ∀ shared, Set (StatementIn shared)}
+    {langOut : ∀ shared, Spec.Transcript (pSpec shared) → Prop}
+    {ε : ∀ shared, StatementIn shared → ℝ≥0∞}
     (h : Verifier.rbrSoundness (roles := roles) sample langIn langOut ε) :
-    ∀ {OutputP : Spec.Transcript pSpec → Type}
-      (prover : Spec.Strategy.withRoles ProbComp pSpec roles OutputP),
-    ∀ s, s ∉ langIn →
-      Pr[fun z => langOut s z.1
-        | Spec.Strategy.runWithRoles pSpec roles prover
-            (randomChallenger sample pSpec roles)] ≤ ε := by
+    ∀ (shared : SharedIn)
+      {OutputP : Spec.Transcript (pSpec shared) → Type}
+      (prover : Spec.Strategy.withRoles ProbComp (pSpec shared) (roles shared) OutputP)
+      (stmt : StatementIn shared), stmt ∉ langIn shared →
+      Pr[fun z => langOut shared z.1
+        | Spec.Strategy.runWithRoles (pSpec shared) (roles shared) prover
+            (randomChallenger sample (pSpec shared) (roles shared))] ≤ ε shared stmt := by
   rcases h with ⟨Claim, tree, root, hSound, hRootBad, hErr, hTerm⟩
-  intro OutputP prover s hs
+  intro shared OutputP prover stmt hs
   have hmono :
-      Pr[fun z => langOut s z.1
-        | Spec.Strategy.runWithRoles pSpec roles prover
-            (randomChallenger sample pSpec roles)] ≤
-        Pr[fun z => (tree s).terminalGood z.1 ((tree s).follow z.1 (root s))
-          | Spec.Strategy.runWithRoles pSpec roles prover
-              (randomChallenger sample pSpec roles)] := by
+      Pr[fun z => langOut shared z.1
+        | Spec.Strategy.runWithRoles (pSpec shared) (roles shared) prover
+            (randomChallenger sample (pSpec shared) (roles shared))] ≤
+        Pr[fun z =>
+            (tree shared stmt).terminalGood z.1
+              ((tree shared stmt).follow z.1 (root shared stmt))
+          | Spec.Strategy.runWithRoles (pSpec shared) (roles shared) prover
+              (randomChallenger sample (pSpec shared) (roles shared))] := by
     refine probEvent_mono ?_
     intro z _ hz
-    exact hTerm s z.1 hz
+    exact hTerm shared stmt z.1 hz
   exact le_trans hmono <|
     le_trans
-      (ClaimTree.IsSound.bound_terminalProb sample (tree s) (hSound s) prover (claim := root s)
-        (hRootBad s hs))
-      (hErr s)
+      (ClaimTree.IsSound.bound_terminalProb sample (tree shared stmt) (hSound shared stmt) prover
+        (claim := root shared stmt) (hRootBad shared stmt hs))
+      (hErr shared stmt)
 
 end Verifier
 
@@ -1286,127 +1292,132 @@ namespace Verifier
 /-- **Round-by-round knowledge soundness**: there exists a knowledge claim tree
 such that:
 1. The tree satisfies `IsKnowledgeSound` per-round.
-2. The worst-case cumulative error is at most `ε s`.
+2. The worst-case cumulative error is at most `ε shared stmt`.
 3. Root boundary: good root claim is equivalent to the extracted witness being
    in `relIn`.
 4. Terminal boundary: valid output in `relOut` implies terminal goodness. -/
 def rbrKnowledgeSoundness
-    {pSpec : Spec} {roles : RoleDecoration pSpec}
-    {StatementIn : Type v} {WitnessIn : Type w}
-    {StatementOut WitnessOut : (s : StatementIn) → Spec.Transcript pSpec → Type u}
+    {SharedIn : Type v}
+    {pSpec : SharedIn → Spec} {roles : (shared : SharedIn) → RoleDecoration (pSpec shared)}
+    {StatementIn WitnessIn : SharedIn → Type w}
+    {StatementOut WitnessOut :
+      (shared : SharedIn) → Spec.Transcript (pSpec shared) → Type u}
     (sample : (T : Type) → ProbComp T)
-    (relIn : Set (StatementIn × WitnessIn))
-    (relOut : ∀ (s : StatementIn) (tr : Spec.Transcript pSpec),
-      Set (StatementOut s tr × WitnessOut s tr))
-    (ε : StatementIn → ℝ≥0∞) : Prop :=
-  ∃ (Claim : StatementIn → Type)
-    (tree : (s : StatementIn) → KnowledgeClaimTree pSpec roles (Claim s))
-    (root : (s : StatementIn) → Claim s)
-    (extract : (s : StatementIn) → Claim s → WitnessIn),
-  (∀ s, (tree s).IsKnowledgeSound sample) ∧
-  (∀ s, (tree s).maxPathError ≤ ε s) ∧
-  (∀ s c, (tree s).good c ↔ (s, extract s c) ∈ relIn) ∧
-  (∀ s tr pOut, pOut ∈ relOut s tr →
-    (tree s).terminalGood tr ((tree s).follow tr (root s)))
+    (relIn : ∀ shared, Set (StatementIn shared × WitnessIn shared))
+    (relOut : ∀ (shared : SharedIn) (tr : Spec.Transcript (pSpec shared)),
+      Set (StatementOut shared tr × WitnessOut shared tr))
+    (ε : ∀ shared, StatementIn shared → ℝ≥0∞) : Prop :=
+  ∃ (Claim : ∀ shared, StatementIn shared → Type)
+    (tree : ∀ (shared : SharedIn) (stmt : StatementIn shared),
+      KnowledgeClaimTree (pSpec shared) (roles shared) (Claim shared stmt))
+    (root : ∀ (shared : SharedIn) (stmt : StatementIn shared), Claim shared stmt)
+    (extract : ∀ (shared : SharedIn) (stmt : StatementIn shared),
+      Claim shared stmt → WitnessIn shared),
+  (∀ shared stmt, (tree shared stmt).IsKnowledgeSound sample) ∧
+  (∀ shared stmt, (tree shared stmt).maxPathError ≤ ε shared stmt) ∧
+  (∀ shared stmt c, (tree shared stmt).good c ↔ (stmt, extract shared stmt c) ∈ relIn shared) ∧
+  (∀ shared stmt tr pOut, pOut ∈ relOut shared tr →
+    (tree shared stmt).terminalGood tr ((tree shared stmt).follow tr (root shared stmt)))
 
 /-- Round-by-round knowledge soundness implies round-by-round soundness. -/
 theorem rbrKnowledgeSoundness_implies_rbrSoundness
-    {pSpec : Spec} {roles : RoleDecoration pSpec}
-    {StatementIn : Type v} {WitnessIn : Type w}
-    {StatementOut WitnessOut : (s : StatementIn) → Spec.Transcript pSpec → Type u}
+    {SharedIn : Type v}
+    {pSpec : SharedIn → Spec} {roles : (shared : SharedIn) → RoleDecoration (pSpec shared)}
+    {StatementIn WitnessIn : SharedIn → Type w}
+    {StatementOut WitnessOut :
+      (shared : SharedIn) → Spec.Transcript (pSpec shared) → Type u}
     {sample : (T : Type) → ProbComp T}
-    {relIn : Set (StatementIn × WitnessIn)}
-    {relOut : ∀ (s : StatementIn) (tr : Spec.Transcript pSpec),
-      Set (StatementOut s tr × WitnessOut s tr)}
-    {ε : StatementIn → ℝ≥0∞}
+    {relIn : ∀ shared, Set (StatementIn shared × WitnessIn shared)}
+    {relOut : ∀ (shared : SharedIn) (tr : Spec.Transcript (pSpec shared)),
+      Set (StatementOut shared tr × WitnessOut shared tr)}
+    {ε : ∀ shared, StatementIn shared → ℝ≥0∞}
     (h : Verifier.rbrKnowledgeSoundness (roles := roles) sample relIn relOut ε)
-    (langIn : Set StatementIn)
-    (hLang : ∀ s, s ∉ langIn → ∀ w, (s, w) ∉ relIn)
-    (langOut : (s : StatementIn) → Spec.Transcript pSpec → Prop)
-    (hLangOut : ∀ s tr, langOut s tr → ∃ pOut, pOut ∈ relOut s tr)
-    {εMax : ℝ≥0∞} (hε : ∀ s, ε s ≤ εMax) :
-    Verifier.rbrSoundness (roles := roles) sample langIn langOut εMax := by
+    (langIn : ∀ shared, Set (StatementIn shared))
+    (hLang : ∀ shared stmt, stmt ∉ langIn shared → ∀ w, (stmt, w) ∉ relIn shared)
+    (langOut : ∀ shared, Spec.Transcript (pSpec shared) → Prop)
+    (hLangOut : ∀ shared tr, langOut shared tr → ∃ pOut, pOut ∈ relOut shared tr) :
+    Verifier.rbrSoundness (roles := roles) sample langIn langOut ε := by
   rcases h with ⟨Claim, tree, root, extract, hSound, hErr, hRoot, hTerm⟩
-  refine ⟨Claim, fun s => (tree s).toClaimTree, root, ?_⟩
+  refine ⟨Claim, fun shared stmt => (tree shared stmt).toClaimTree, root, ?_⟩
   refine ⟨?_, ?_, ?_, ?_⟩
-  · intro s
-    exact KnowledgeClaimTree.isKnowledgeSound_implies_isSound (hSound s)
-  · intro s hs
+  · intro shared stmt
+    exact KnowledgeClaimTree.isKnowledgeSound_implies_isSound (hSound shared stmt)
+  · intro shared stmt hs
     intro hGood
-    have hGood' : (tree s).good (root s) := by
+    have hGood' : (tree shared stmt).good (root shared stmt) := by
       simpa using hGood
-    exact hLang s hs (extract s (root s)) ((hRoot s (root s)).mp hGood')
-  · intro s
-    exact le_trans (hErr s) (hε s)
-  · intro s tr hLangOut'
-    rcases hLangOut s tr hLangOut' with ⟨pOut, hpOut⟩
-    exact hTerm s tr pOut hpOut
+    exact hLang shared stmt hs (extract shared stmt (root shared stmt))
+      ((hRoot shared stmt (root shared stmt)).mp hGood')
+  · intro shared stmt
+    exact hErr shared stmt
+  · intro shared stmt tr hLangOut'
+    rcases hLangOut shared tr hLangOut' with ⟨pOut, hpOut⟩
+    exact hTerm shared stmt tr pOut hpOut
 
 /-- Round-by-round knowledge soundness implies plain knowledge soundness
 (for a fixed protocol spec). -/
 theorem rbrKnowledgeSoundness_implies_knowledgeSoundness
-    {pSpec : Spec} {roles : RoleDecoration pSpec}
-    {StatementIn : Type v} {WitnessIn : Type w}
-    {WitnessOut : (s : StatementIn) → Spec.Transcript pSpec → Type}
+    {SharedIn : Type v}
+    {pSpec : SharedIn → Spec} {roles : (shared : SharedIn) → RoleDecoration (pSpec shared)}
+    {StatementIn : SharedIn → Type w} {WitnessIn : SharedIn → Type w}
+    {WitnessOut : (shared : SharedIn) → Spec.Transcript (pSpec shared) → Type}
     {sample : (T : Type) → ProbComp T}
-    {relIn : Set (StatementIn × WitnessIn)}
-    {relOut : ∀ (s : StatementIn) (tr : Spec.Transcript pSpec),
-      Set (PUnit.{1} × WitnessOut s tr)}
-    {ε : StatementIn → ℝ≥0∞}
+    {relIn : ∀ shared, Set (StatementIn shared × WitnessIn shared)}
+    {relOut : ∀ (shared : SharedIn) (tr : Spec.Transcript (pSpec shared)),
+      Set (PUnit.{1} × WitnessOut shared tr)}
+    {ε : ∀ shared, StatementIn shared → ℝ≥0∞}
     (h : Verifier.rbrKnowledgeSoundness (pSpec := pSpec) (roles := roles)
       sample relIn relOut ε)
-    {εMax : ℝ≥0∞} (hε : ∀ s, ε s ≤ εMax) :
+    {εMax : ℝ≥0∞} (hε : ∀ shared stmt, ε shared stmt ≤ εMax) :
     Verifier.knowledgeSoundness
-      (SharedIn := StatementIn)
-      (Context := fun _ => pSpec)
-      (Roles := fun _ => roles)
-      (StatementIn := fun _ => PUnit.{w+1})
-      (WitnessIn := fun _ => WitnessIn)
+      (SharedIn := SharedIn)
+      (Context := pSpec)
+      (Roles := roles)
+      (StatementIn := StatementIn)
+      (WitnessIn := WitnessIn)
       (StatementOut := fun _ _ => PUnit.{1})
       (WitnessOut := WitnessOut)
-      (fun _ _ => randomChallenger sample pSpec roles)
-      (fun s =>
-        ({ sw : PUnit.{w+1} × WitnessIn | (s, sw.2) ∈ relIn } :
-          Set (PUnit.{w+1} × WitnessIn)))
+      (fun shared _ => randomChallenger sample (pSpec shared) (roles shared))
+      relIn
       relOut
       εMax := by
   rcases h with ⟨Claim, tree, root, extract, hSound, hErr, hRoot, hTerm⟩
-  refine ⟨{ toFun := fun s _ _ _ _ => extract s (root s) }, ?_⟩
-  intro s _ prover
-  let relIn' : Set (PUnit.{w+1} × WitnessIn) :=
-    { sw : PUnit.{w+1} × WitnessIn | (s, sw.2) ∈ relIn }
-  by_cases hIn : (s, extract s (root s)) ∈ relIn
+  refine ⟨{ toFun := fun shared stmt _ _ _ => extract shared stmt (root shared stmt) }, ?_⟩
+  intro shared stmt prover
+  by_cases hIn : (stmt, extract shared stmt (root shared stmt)) ∈ relIn shared
   · have hZero :
         Pr[fun z =>
-          (z.2.2, z.2.1) ∈ relOut s z.1 ∧
-            ((PUnit.unit : PUnit.{w+1}), extract s (root s)) ∉ relIn'
-          | Spec.Strategy.runWithRoles pSpec roles prover
-              (randomChallenger sample pSpec roles)] = 0 := by
+          (z.2.2, z.2.1) ∈ relOut shared z.1 ∧
+            (stmt, extract shared stmt (root shared stmt)) ∉ relIn shared
+          | Spec.Strategy.runWithRoles (pSpec shared) (roles shared) prover
+              (randomChallenger sample (pSpec shared) (roles shared))] = 0 := by
         rw [probEvent_eq_zero_iff]
         intro z _ hz
-        exact hz.2 (by simpa [relIn'] using hIn)
+        exact hz.2 hIn
     exact hZero.le.trans bot_le
-  · have hBadRoot : ¬ (tree s).good (root s) := by
+  · have hBadRoot : ¬ (tree shared stmt).good (root shared stmt) := by
       intro hGood
-      exact hIn ((hRoot s (root s)).mp hGood)
+      exact hIn ((hRoot shared stmt (root shared stmt)).mp hGood)
     have hmono :
         Pr[fun z =>
-          (z.2.2, z.2.1) ∈ relOut s z.1 ∧
-            ((PUnit.unit : PUnit.{w+1}), extract s (root s)) ∉ relIn'
-          | Spec.Strategy.runWithRoles pSpec roles prover
-              (randomChallenger sample pSpec roles)] ≤
-          Pr[fun z => (tree s).terminalGood z.1 ((tree s).follow z.1 (root s))
-            | Spec.Strategy.runWithRoles pSpec roles prover
-                (randomChallenger sample pSpec roles)] := by
+          (z.2.2, z.2.1) ∈ relOut shared z.1 ∧
+            (stmt, extract shared stmt (root shared stmt)) ∉ relIn shared
+          | Spec.Strategy.runWithRoles (pSpec shared) (roles shared) prover
+              (randomChallenger sample (pSpec shared) (roles shared))] ≤
+          Pr[fun z =>
+            (tree shared stmt).terminalGood z.1
+              ((tree shared stmt).follow z.1 (root shared stmt))
+            | Spec.Strategy.runWithRoles (pSpec shared) (roles shared) prover
+                (randomChallenger sample (pSpec shared) (roles shared))] := by
       refine probEvent_mono ?_
       intro z _ hz
-      exact hTerm s z.1 ⟨z.2.2, z.2.1⟩ hz.1
+      exact hTerm shared stmt z.1 ⟨z.2.2, z.2.1⟩ hz.1
     exact le_trans hmono <|
       le_trans
-        (KnowledgeClaimTree.IsKnowledgeSound.bound_terminalProb sample (tree s)
-          (hSound s) prover
-          (claim := root s) hBadRoot)
-        (le_trans (hErr s) (hε s))
+        (KnowledgeClaimTree.IsKnowledgeSound.bound_terminalProb sample (tree shared stmt)
+          (hSound shared stmt) prover
+          (claim := root shared stmt) hBadRoot)
+        (le_trans (hErr shared stmt) (hε shared stmt))
 
 end Verifier
 
