@@ -1221,6 +1221,72 @@ theorem runWithOracleCounterpart_pullbackCounterpart
           hFinalRaw
   exact go spec roles od accSpec accImpl f strat cpt
 
+/-- Running a verifier counterpart after the raw oracle pullback is the same as
+running the original inner counterpart against the realized inner input oracle.
+
+This is the unmapped operational core of boundary pullback: the only effect is
+the rerouting of receiver-node input-oracle queries. -/
+theorem runWithOracleCounterpart_pullbackCounterpart_raw
+    {ι : Type} {oSpec : OracleSpec ι}
+    {Outerιₛᵢ Innerιₛᵢ : Type}
+    {OuterOStmtIn : Outerιₛᵢ → Type}
+    {InnerOStmtIn : Innerιₛᵢ → Type}
+    [∀ i, OracleInterface (OuterOStmtIn i)]
+    [∀ i, OracleInterface (InnerOStmtIn i)]
+    (simulateIn :
+      QueryImpl [InnerOStmtIn]ₒ (OracleComp [OuterOStmtIn]ₒ))
+    (outerInputImpl : QueryImpl [OuterOStmtIn]ₒ Id)
+    (innerInputImpl : QueryImpl [InnerOStmtIn]ₒ Id)
+    (hInput :
+      ∀ q,
+        simulateQ outerInputImpl (simulateIn q) =
+          pure (innerInputImpl q)) :
+    ∀ (spec : Spec) (roles : RoleDecoration spec)
+      (od : OracleDecoration spec roles)
+      {ιₐ : Type} (accSpec : OracleSpec ιₐ) (accImpl : QueryImpl accSpec Id)
+      {OutputP Output : Spec.Transcript spec → Type}
+      (strat :
+        Spec.Strategy.withRoles (OracleComp oSpec) spec roles OutputP)
+      (cpt :
+        Spec.Counterpart.withMonads spec roles
+          (OracleDecoration.toMonadDecoration
+            oSpec InnerOStmtIn spec roles od accSpec)
+          Output),
+      OracleDecoration.runWithOracleCounterpart
+          outerInputImpl
+          spec
+          roles
+          od
+          accSpec
+          accImpl
+          strat
+          (pullbackCounterpart simulateIn spec roles od (fun _ out => out) accSpec cpt) =
+        OracleDecoration.runWithOracleCounterpart
+          innerInputImpl
+          spec
+          roles
+          od
+          accSpec
+          accImpl
+          strat
+          cpt := by
+  intro spec roles od ιₐ accSpec accImpl OutputP Output strat cpt
+  simpa using
+    runWithOracleCounterpart_pullbackCounterpart
+      (oSpec := oSpec)
+      simulateIn
+      outerInputImpl
+      innerInputImpl
+      hInput
+      spec
+      roles
+      od
+      accSpec
+      accImpl
+      (fun _ out => out)
+      strat
+      cpt
+
 end Boundary
 
 namespace OracleDecoration
