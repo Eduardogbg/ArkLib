@@ -221,50 +221,6 @@ structure OracleStatementAccess
           ([OuterOStmtIn]ₒ +
             [InnerOStmtOut (projection.proj outer) tr]ₒ))
 
-/-- Oracle access bundled with a plain witness boundary.  Witness transport does
-not affect oracle simulation; this structure groups them for convenience. -/
-structure OracleContextAccess
-    {OuterStmtIn InnerStmtIn : Type}
-    {OuterWitIn InnerWitIn : Type}
-    {InnerSpec : InnerStmtIn → Spec}
-    {projection : StatementProjection OuterStmtIn InnerStmtIn InnerSpec}
-    {InnerStmtOut :
-      (s : InnerStmtIn) → Spec.Transcript (InnerSpec s) → Type}
-    {OuterStmtOut :
-      (outer : OuterStmtIn) →
-        Spec.Transcript (InnerSpec (projection.proj outer)) → Type}
-    {InnerWitOut :
-      (s : InnerStmtIn) → Spec.Transcript (InnerSpec s) → Type}
-    {OuterWitOut :
-      (outer : OuterStmtIn) →
-        Spec.Transcript (InnerSpec (projection.proj outer)) → Type}
-    (toContext :
-      Context projection
-        OuterWitIn InnerWitIn
-        InnerStmtOut OuterStmtOut
-        InnerWitOut OuterWitOut)
-    {Outerιₛᵢ : Type} (OuterOStmtIn : Outerιₛᵢ → Type)
-    {Innerιₛᵢ : Type} (InnerOStmtIn : Innerιₛᵢ → Type)
-    [∀ i, OracleInterface (OuterOStmtIn i)]
-    [∀ i, OracleInterface (InnerOStmtIn i)]
-    {Innerιₛₒ :
-      (s : InnerStmtIn) → (tr : Spec.Transcript (InnerSpec s)) → Type}
-    (InnerOStmtOut :
-      (s : InnerStmtIn) →
-      (tr : Spec.Transcript (InnerSpec s)) →
-      Innerιₛₒ s tr → Type)
-    {Outerιₛₒ :
-      (outer : OuterStmtIn) →
-      (tr : Spec.Transcript (InnerSpec (projection.proj outer))) → Type}
-    (OuterOStmtOut :
-      (outer : OuterStmtIn) →
-      (tr : Spec.Transcript (InnerSpec (projection.proj outer))) →
-      Outerιₛₒ outer tr → Type)
-    [∀ s tr i, OracleInterface (InnerOStmtOut s tr i)]
-    [∀ outer tr i, OracleInterface (OuterOStmtOut outer tr i)] where
-  stmt : OracleStatementAccess projection
-    OuterOStmtIn InnerOStmtIn InnerOStmtOut OuterOStmtOut
-
 namespace OracleStatementAccess
 
 /-! ### Input Query Routing -/

@@ -281,7 +281,7 @@ variable
         (InnerSpec := fun inner => InnerSpec inner.stmt)
         (proj := fun outer =>
           ⟨projection.proj outer.stmt,
-            boundary.reification.stmt.materializeIn outer.stmt outer.oracleStmt⟩))
+            boundary.reification.materializeIn outer.stmt outer.oracleStmt⟩))
       OuterWitIn
       InnerWitIn
       (fun inner tr =>
@@ -297,7 +297,7 @@ variable
   stmt := {
     lift := fun outer tr innerOut =>
       ⟨toContext.stmt.lift outer.stmt tr innerOut.stmt,
-        boundary.reification.stmt.materializeOut
+        boundary.reification.materializeOut
           outer.stmt
           outer.oracleStmt
           tr

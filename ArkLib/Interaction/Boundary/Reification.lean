@@ -84,51 +84,6 @@ structure OracleStatementReification
       OracleStatement (InnerOStmtOut (projection.proj outer) tr) →
       OracleStatement (OuterOStmtOut outer tr)
 
-/-- Oracle reification bundled with a plain witness boundary.  Witness transport
-does not affect oracle reification; this structure groups them for
-convenience. -/
-structure OracleContextReification
-    {OuterStmtIn InnerStmtIn : Type}
-    {OuterWitIn InnerWitIn : Type}
-    {InnerSpec : InnerStmtIn → Spec}
-    {projection : StatementProjection OuterStmtIn InnerStmtIn InnerSpec}
-    {InnerStmtOut :
-      (s : InnerStmtIn) → Spec.Transcript (InnerSpec s) → Type}
-    {OuterStmtOut :
-      (outer : OuterStmtIn) →
-        Spec.Transcript (InnerSpec (projection.proj outer)) → Type}
-    {InnerWitOut :
-      (s : InnerStmtIn) → Spec.Transcript (InnerSpec s) → Type}
-    {OuterWitOut :
-      (outer : OuterStmtIn) →
-        Spec.Transcript (InnerSpec (projection.proj outer)) → Type}
-    (toContext :
-      Context projection
-        OuterWitIn InnerWitIn
-        InnerStmtOut OuterStmtOut
-        InnerWitOut OuterWitOut)
-    {Outerιₛᵢ : Type} (OuterOStmtIn : Outerιₛᵢ → Type)
-    {Innerιₛᵢ : Type} (InnerOStmtIn : Innerιₛᵢ → Type)
-    [∀ i, OracleInterface (OuterOStmtIn i)]
-    [∀ i, OracleInterface (InnerOStmtIn i)]
-    {Innerιₛₒ :
-      (s : InnerStmtIn) → (tr : Spec.Transcript (InnerSpec s)) → Type}
-    (InnerOStmtOut :
-      (s : InnerStmtIn) →
-      (tr : Spec.Transcript (InnerSpec s)) →
-      Innerιₛₒ s tr → Type)
-    {Outerιₛₒ :
-      (outer : OuterStmtIn) →
-      (tr : Spec.Transcript (InnerSpec (projection.proj outer))) → Type}
-    (OuterOStmtOut :
-      (outer : OuterStmtIn) →
-      (tr : Spec.Transcript (InnerSpec (projection.proj outer))) →
-      Outerιₛₒ outer tr → Type)
-    [∀ s tr i, OracleInterface (InnerOStmtOut s tr i)]
-    [∀ outer tr i, OracleInterface (OuterOStmtOut outer tr i)] where
-  stmt : OracleStatementReification projection
-    OuterOStmtIn InnerOStmtIn InnerOStmtOut OuterOStmtOut
-
 namespace OracleStatementReification
 
 /-- Coherence between the simulation view (`access`) and the materialization
@@ -560,9 +515,8 @@ structure OracleStatement
 access + oracle reification + coherence proof.
 
 The oracle families depend only on the shared statement projection. The
-coherence law lives at the statement level
-(`access.stmt` / `reification.stmt`); the witness transport is independent of
-oracle simulation.
+coherence law is stated directly over the statement-level `access` and
+`reification`; the witness transport is independent of oracle simulation.
 
 Use this to drive `OracleDecoration.OracleReduction.pullback`. -/
 structure OracleContext
@@ -605,15 +559,15 @@ structure OracleContext
     [∀ s tr i, OracleInterface (InnerOStmtOut s tr i)]
     [∀ outer tr i, OracleInterface (OuterOStmtOut outer tr i)] where
   access :
-    OracleContextAccess toContext
+    OracleStatementAccess projection
       OuterOStmtIn InnerOStmtIn InnerOStmtOut OuterOStmtOut
   reification :
-    OracleContextReification toContext
+    OracleStatementReification projection
       OuterOStmtIn InnerOStmtIn InnerOStmtOut OuterOStmtOut
   coherent :
     OracleStatementReification.Realizes
-      access.stmt
-      reification.stmt
+      access
+      reification
 
 end Boundary
 
@@ -692,7 +646,7 @@ def pullback
     let outerOStmtIn := sWithOracles.oracleStmt
     let innerStmt := toContext.stmt.proj outerStmt
     let innerOStmtIn :=
-      boundary.reification.stmt.materializeIn outerStmt outerOStmtIn
+      boundary.reification.materializeIn outerStmt outerOStmtIn
     let innerWit :=
       toContext.wit.proj outerStmt outerWit
     let strat ← reduction.prover ⟨innerStmt, innerOStmtIn⟩ innerWit
@@ -703,7 +657,7 @@ def pullback
         let outerStmtOut :=
           toContext.stmt.lift outerStmt tr innerStmtOut
         let outerOStmtOut :=
-          boundary.reification.stmt.materializeOut
+          boundary.reification.materializeOut
             outerStmt
             outerOStmtIn
             tr
@@ -720,11 +674,11 @@ def pullback
   verifier :=
     OracleReduction.pullbackVerifier
       toContext.stmt
-      boundary.access.stmt
+      boundary.access
       reduction.verifier
   simulate outerStmt tr :=
     Boundary.OracleStatementAccess.pullbackSimulate
-      (access := boundary.access.stmt)
+      (access := boundary.access)
       outerStmt
       tr
       (toOracleSpec

@@ -288,7 +288,7 @@ private def materializedInput
     (outerStmt : StatementWithOracles OuterStmtIn OuterOStmtIn) :
     StatementWithOracles InnerStmtIn InnerOStmtIn :=
   ⟨toContext.stmt.proj outerStmt.stmt,
-    boundary.reification.stmt.materializeIn
+    boundary.reification.materializeIn
       outerStmt.stmt
       outerStmt.oracleStmt⟩
 
@@ -381,7 +381,7 @@ private def mapExecuteOutput
       z.2.1.wit
   ⟨z.1,
     ⟨⟨out.1,
-        boundary.reification.stmt.materializeOut
+        boundary.reification.materializeOut
           outerStmt.stmt
           outerStmt.oracleStmt
           z.1
@@ -389,7 +389,7 @@ private def mapExecuteOutput
       out.2⟩,
     ⟨toContext.stmt.lift outerStmt.stmt z.1 z.2.2.1,
       Boundary.OracleStatementAccess.pullbackSimulate
-        (access := boundary.access.stmt)
+        (access := boundary.access)
         outerStmt.stmt
         z.1
         (OracleDecoration.toOracleSpec
@@ -486,7 +486,7 @@ private theorem runWithOracleCounterpart_pullbackVerifier
         accImpl
         strat
         (Boundary.pullbackCounterpart
-          boundary.access.stmt.simulateIn
+          boundary.access.simulateIn
           (InnerSpec (toContext.stmt.proj outerStmt.stmt))
           (InnerRoles (toContext.stmt.proj outerStmt.stmt))
           (InnerOD (toContext.stmt.proj outerStmt.stmt))
@@ -498,7 +498,7 @@ private theorem runWithOracleCounterpart_pullbackVerifier
         OracleDecoration.runWithOracleCounterpart
           (OracleInterface.simOracle0
             InnerOStmtIn
-            (boundary.reification.stmt.materializeIn
+            (boundary.reification.materializeIn
               outerStmt.stmt
               outerStmt.oracleStmt))
           (InnerSpec (toContext.stmt.proj outerStmt.stmt))
@@ -580,7 +580,7 @@ theorem simulates_pullback
       Interaction.OracleDecoration.OracleReduction.Simulates
         reduction
         (toContext.stmt.proj outer)
-        (boundary.reification.stmt.materializeIn outer oStmtIn)
+        (boundary.reification.materializeIn outer oStmtIn)
         tr
         innerOStmtOut) :
     Interaction.OracleDecoration.OracleReduction.Simulates
@@ -591,13 +591,13 @@ theorem simulates_pullback
       outer
       oStmtIn
       tr
-      (boundary.reification.stmt.materializeOut outer oStmtIn tr innerOStmtOut) := by
+      (boundary.reification.materializeOut outer oStmtIn tr innerOStmtOut) := by
   intro i q
   simpa [Interaction.OracleDecoration.OracleReduction.Simulates,
     Interaction.OracleDecoration.OracleReduction.pullback] using
     Boundary.OracleStatementReification.pullbackSimulate_materialize
-      boundary.access.stmt
-      boundary.reification.stmt
+      boundary.access
+      boundary.reification
       boundary.coherent
       outer
       oStmtIn
