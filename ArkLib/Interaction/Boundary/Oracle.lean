@@ -1,6 +1,6 @@
 import ArkLib.Interaction.Boundary.Core
 import ArkLib.Interaction.Oracle.Core
-import ArkLib.Interaction.Oracle.Continuation
+import ArkLib.Interaction.Oracle.Execution
 
 /-!
 # Interaction-Native Boundaries: Oracle Access Layer
@@ -250,6 +250,44 @@ def routeInputQueries
   | .inr q =>
       liftM <| query (spec := accSpec) q
 
+/-- Concrete evaluator route for `routeInputQueries` on the outer-input side:
+ambient base oracles and accumulated sender-message oracles are queried
+directly, while outer input oracles are answered by `outerInputImpl`. -/
+def routeInputQueriesOuterEval
+    {ι : Type} {oSpec : OracleSpec ι}
+    {Outerιₛᵢ ιₐ : Type}
+    {OuterOStmtIn : Outerιₛᵢ → Type}
+    [∀ i, OracleInterface (OuterOStmtIn i)]
+    (outerInputImpl : QueryImpl [OuterOStmtIn]ₒ Id)
+    (accSpec : OracleSpec ιₐ)
+    (accImpl : QueryImpl accSpec Id) :
+    QueryImpl ((oSpec + [OuterOStmtIn]ₒ) + accSpec) (OracleComp oSpec) :=
+  fun
+  | .inl (.inl q) => liftM <| query (spec := oSpec) q
+  | .inl (.inr q) =>
+      (liftM (n := OracleComp oSpec) (outerInputImpl q) : OracleComp oSpec _)
+  | .inr q =>
+      (liftM (n := OracleComp oSpec) (accImpl q) : OracleComp oSpec _)
+
+/-- Concrete evaluator route for `routeInputQueries` on the inner-input side:
+ambient base oracles and accumulated sender-message oracles are queried
+directly, while inner input oracles are answered by `innerInputImpl`. -/
+def routeInputQueriesInnerEval
+    {ι : Type} {oSpec : OracleSpec ι}
+    {Innerιₛᵢ ιₐ : Type}
+    {InnerOStmtIn : Innerιₛᵢ → Type}
+    [∀ i, OracleInterface (InnerOStmtIn i)]
+    (innerInputImpl : QueryImpl [InnerOStmtIn]ₒ Id)
+    (accSpec : OracleSpec ιₐ)
+    (accImpl : QueryImpl accSpec Id) :
+    QueryImpl ((oSpec + [InnerOStmtIn]ₒ) + accSpec) (OracleComp oSpec) :=
+  fun
+  | .inl (.inl q) => liftM <| query (spec := oSpec) q
+  | .inl (.inr q) =>
+      (liftM (n := OracleComp oSpec) (innerInputImpl q) : OracleComp oSpec _)
+  | .inr q =>
+      (liftM (n := OracleComp oSpec) (accImpl q) : OracleComp oSpec _)
+
 /-- Evaluating `routeInputQueries` against concrete outer input oracles yields
 the same result as directly evaluating the original inner query handler against
 the corresponding concrete inner input oracles.
@@ -277,41 +315,21 @@ theorem routeInputQueries_eval
     ∀ {α : Type _}
       (oa : OracleComp ((oSpec + [InnerOStmtIn]ₒ) + accSpec) α),
       simulateQ
-          (fun
-            | .inl (.inl q) =>
-                liftM <| query (spec := oSpec) q
-            | .inl (.inr q) =>
-                (liftM (n := OracleComp oSpec) (outerInputImpl q) : OracleComp oSpec _)
-            | .inr q =>
-                (liftM (n := OracleComp oSpec) (accImpl q) : OracleComp oSpec _))
+          (routeInputQueriesOuterEval
+            (oSpec := oSpec)
+            outerInputImpl
+            accSpec
+            accImpl)
           (simulateQ
             (routeInputQueries (oSpec := oSpec) simulateIn accSpec)
             oa) =
         simulateQ
-          (fun
-            | .inl (.inl q) =>
-                liftM <| query (spec := oSpec) q
-            | .inl (.inr q) =>
-                (liftM (n := OracleComp oSpec) (innerInputImpl q) : OracleComp oSpec _)
-            | .inr q =>
-                (liftM (n := OracleComp oSpec) (accImpl q) : OracleComp oSpec _))
+          (routeInputQueriesInnerEval
+            (oSpec := oSpec)
+            innerInputImpl
+            accSpec
+            accImpl)
           oa := by
-  let routeOuter :
-      QueryImpl ((oSpec + [OuterOStmtIn]ₒ) + accSpec) (OracleComp oSpec) :=
-    fun
-    | Sum.inl (Sum.inl q) => liftM <| query (spec := oSpec) q
-    | Sum.inl (Sum.inr q) =>
-        (liftM (n := OracleComp oSpec) (outerInputImpl q) : OracleComp oSpec _)
-    | Sum.inr q =>
-        (liftM (n := OracleComp oSpec) (accImpl q) : OracleComp oSpec _)
-  let routeInner :
-      QueryImpl ((oSpec + [InnerOStmtIn]ₒ) + accSpec) (OracleComp oSpec) :=
-    fun
-    | Sum.inl (Sum.inl q) => liftM <| query (spec := oSpec) q
-    | Sum.inl (Sum.inr q) =>
-        (liftM (n := OracleComp oSpec) (innerInputImpl q) : OracleComp oSpec _)
-    | Sum.inr q =>
-        (liftM (n := OracleComp oSpec) (accImpl q) : OracleComp oSpec _)
   intro α oa
   rw [simulateQ_compose]
   apply simulateQ_ext
@@ -322,9 +340,14 @@ theorem routeInputQueries_eval
   · let outerRoute :
         QueryImpl [OuterOStmtIn]ₒ (OracleComp oSpec) :=
       fun q => (liftM (n := OracleComp oSpec) (outerInputImpl q) : OracleComp oSpec _)
-    simpa [OracleStatementAccess.routeInputQueries] using
+    simpa [OracleStatementAccess.routeInputQueries, routeInputQueriesOuterEval] using
       (calc
-      simulateQ routeOuter
+      simulateQ
+          (routeInputQueriesOuterEval
+            (oSpec := oSpec)
+            outerInputImpl
+            accSpec
+            accImpl)
           (OracleComp.liftComp
             (superSpec := (oSpec + [OuterOStmtIn]ₒ) + accSpec)
             (simulateIn q)) =
@@ -343,7 +366,8 @@ theorem routeInputQueries_eval
           simpa using congrArg
             (fun x => (liftM (n := OracleComp oSpec) x : OracleComp oSpec _))
             (hInput q))
-  · dsimp [OracleStatementAccess.routeInputQueries]
+  · dsimp [OracleStatementAccess.routeInputQueries, routeInputQueriesOuterEval,
+      routeInputQueriesInnerEval]
     rfl
 
 /-! ### Output Query Routing -/
@@ -930,16 +954,18 @@ theorem runWithOracleCounterpart_pullbackCounterpart
           bind_pure_comp, map_bind, Functor.map_map]
         let routeOuter :
             QueryImpl ((oSpec + [OuterOStmtIn]ₒ) + accSpec) (OracleComp oSpec) :=
-          fun
-          | .inl (.inl q) => liftM (query (spec := oSpec) q)
-          | .inl (.inr q) => liftM (outerInputImpl q)
-          | .inr q => liftM (accImpl q)
+          OracleStatementAccess.routeInputQueriesOuterEval
+            (oSpec := oSpec)
+            outerInputImpl
+            accSpec
+            accImpl
         let routeInner :
             QueryImpl ((oSpec + [InnerOStmtIn]ₒ) + accSpec) (OracleComp oSpec) :=
-          fun
-          | .inl (.inl q) => liftM (query (spec := oSpec) q)
-          | .inl (.inr q) => liftM (innerInputImpl q)
-          | .inr q => liftM (accImpl q)
+          OracleStatementAccess.routeInputQueriesInnerEval
+            (oSpec := oSpec)
+            innerInputImpl
+            accSpec
+            accImpl
         let mapRest :
             Sigma (fun x =>
               Spec.Counterpart.withMonads (rest x) (rRest x)
@@ -988,39 +1014,16 @@ theorem runWithOracleCounterpart_pullbackCounterpart
                     accSpec)
                   cpt) =
               simulateQ routeInner cpt := by
-          rw [simulateQ_compose]
-          apply simulateQ_ext
-          intro q
-          rcases q with (q | q) | q
-          · dsimp [OracleStatementAccess.routeInputQueries, routeOuter, routeInner]
-            rfl
-          · let outerRoute :
-                QueryImpl [OuterOStmtIn]ₒ (OracleComp oSpec) :=
-              fun q =>
-                (liftM (n := OracleComp oSpec) (outerInputImpl q) : OracleComp oSpec _)
-            simpa [OracleStatementAccess.routeInputQueries, routeOuter] using
-              (calc
-                simulateQ routeOuter
-                    (OracleComp.liftComp
-                      (superSpec := (oSpec + [OuterOStmtIn]ₒ) + accSpec)
-                      (simulateIn q)) =
-                  simulateQ outerRoute (simulateIn q) := by
-                    rw [OracleComp.liftComp_def, simulateQ_compose]
-                    apply simulateQ_ext
-                    intro q'
-                    rfl
-                _ =
-                  (liftM (n := OracleComp oSpec) (simulateQ outerInputImpl (simulateIn q)) :
-                    OracleComp oSpec _) := by
-                      simpa [outerRoute] using
-                        (simulateQ_liftId (superSpec := oSpec) outerInputImpl (simulateIn q))
-                _ =
-                  (liftM (n := OracleComp oSpec) (innerInputImpl q) : OracleComp oSpec _) := by
-                    simpa using congrArg
-                      (fun x => (liftM (n := OracleComp oSpec) x : OracleComp oSpec _))
-                      (hInput q))
-          · dsimp [OracleStatementAccess.routeInputQueries, routeOuter, routeInner]
-            rfl
+          simpa [routeOuter, routeInner] using
+            (OracleStatementAccess.routeInputQueries_eval
+              (oSpec := oSpec)
+              simulateIn
+              accSpec
+              outerInputImpl
+              innerInputImpl
+              accImpl
+              hInput
+              cpt)
         let contOuter :
             Sigma (fun x =>
               Spec.Counterpart.withMonads (rest x) (rRest x)
@@ -1107,8 +1110,29 @@ theorem runWithOracleCounterpart_pullbackCounterpart
                   accImpl
                   strat
                   cpt := by
-          simp [OracleDecoration.runWithOracleCounterpart, routeInner, contInner, prefixMap,
-            map_bind, bind_pure_comp, Functor.map_map]
+          let routeEval :
+              QueryImpl ((oSpec + [InnerOStmtIn]ₒ) + accSpec) (OracleComp oSpec) :=
+            fun
+            | .inl (.inl q) => liftM (query (spec := oSpec) q)
+            | .inl (.inr q) => liftM (innerInputImpl q)
+            | .inr q => liftM (accImpl q)
+          have hInnerEval :
+              OracleStatementAccess.routeInputQueriesInnerEval innerInputImpl accSpec accImpl =
+                routeEval := by
+            funext x
+            cases x with
+            | inl x =>
+                cases x with
+                | inl q => rfl
+                | inr q => rfl
+            | inr q => rfl
+          simp [OracleDecoration.runWithOracleCounterpart, routeInner, hInnerEval, contInner,
+            prefixMap, map_bind, bind_pure_comp, Functor.map_map]
+          refine congrArg
+            (fun k => simulateQ routeEval cpt >>= k) ?_
+          funext a
+          refine congrArg (fun k => strat a.fst >>= k) ?_
+          funext next
           rfl
         have hFirst :
             bindCont
@@ -1125,27 +1149,22 @@ theorem runWithOracleCounterpart_pullbackCounterpart
                       accSpec)
                     cpt)) =
               simulateQ routeInner cpt >>= contOuter := by
-          change
-            simulateQ
+          have hOuterEval :
+              OracleStatementAccess.routeInputQueriesOuterEval outerInputImpl accSpec accImpl =
                 (fun x =>
                   match x with
                   | Sum.inl (Sum.inl q) => liftM (query (spec := oSpec) q)
                   | Sum.inl (Sum.inr q) => liftM (outerInputImpl q)
-                  | Sum.inr q => liftM (accImpl q))
-                (simulateQ
-                  (OracleStatementAccess.routeInputQueries
-                    (oSpec := oSpec)
-                    simulateIn
-                    accSpec)
-                  cpt) >>= contOuter =
-              simulateQ
-                (fun x =>
-                  match x with
-                  | Sum.inl (Sum.inl q) => liftM (query (spec := oSpec) q)
-                  | Sum.inl (Sum.inr q) => liftM (innerInputImpl q)
-                  | Sum.inr q => liftM (accImpl q))
-                cpt >>= contOuter
-          exact congrArg (fun m => m >>= contOuter) hRoute
+                  | Sum.inr q => liftM (accImpl q)) := by
+            funext x
+            cases x with
+            | inl x =>
+                cases x with
+                | inl q => simp [OracleStatementAccess.routeInputQueriesOuterEval]
+                | inr q => simp [OracleStatementAccess.routeInputQueriesOuterEval]
+            | inr q => simp [OracleStatementAccess.routeInputQueriesOuterEval]
+          simpa [bindCont, routeOuter, hOuterEval] using
+            congrArg (fun m => m >>= contOuter) hRoute
         have hFinalRaw :
             bindCont
                 (simulateQ
