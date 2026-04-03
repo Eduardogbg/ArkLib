@@ -45,8 +45,11 @@ Interaction/             ← generic, standalone (future VCVio)
                            SenderDecoration (= Refine over RoleDecoration),
                            per-node monad variants, role-aware
                            append/replicate/stateChain combinators
-  Multiparty.lean          PartyDecoration, PartyDecoration.toRoles (via
-                           Decoration.map), ThreeParty examples
+  Multiparty/              Core local views and projected endpoints,
+                           `Profile` per-party view assignments,
+                           `Broadcast` owner/observer interaction,
+                           `Directed` sender/receiver/hidden interaction,
+                           definitional examples including quotient observation
   Reduction.lean           Prover (monadic setup, plain WitnessIn),
                            Verifier (= Counterpart with transcript-indexed leaf
                            output), transcript-indexed StatementOut/WitnessOut,

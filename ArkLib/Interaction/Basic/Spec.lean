@@ -38,7 +38,8 @@ is mathematically forced in protocols like sumcheck and FRI.
 - `Oracle/` — oracle decoration, path-dependent oracle access
 - `Security.lean` / `OracleSecurity.lean` — security definitions
 - `Boundary/` — same-transcript interface adaptation
-- `Multiparty.lean` — N-party interactions via party decoration
+- `Multiparty/` — native multiparty local views and per-party profiles,
+  including broadcast and directed communication models
 
 ## References
 

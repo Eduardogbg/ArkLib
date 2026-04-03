@@ -36,3 +36,5 @@ For reusable cross-cutting workflows that are not tied to one repo area, see
   large contributions.
 - [`../../ROADMAP.md`](../../ROADMAP.md) - planned directions.
 - [`../../BACKGROUND.md`](../../BACKGROUND.md) - background references.
+- [`../../INTERACTION_BOUNDARIES.md`](../../INTERACTION_BOUNDARIES.md) - current interaction
+  boundary-layer design reference.
