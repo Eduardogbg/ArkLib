@@ -562,6 +562,76 @@ def reifiedKnowledgeSoundness
           (StatementOut := StatementOut) relOut)
         ε
 
+/-- Concrete reified knowledge soundness implies concrete reified soundness
+whenever invalid concrete inputs admit no witness in the reified input
+relation, and accepted concrete outputs admit a transcript-indexed witness
+selector in the reified output relation. -/
+theorem reifiedKnowledgeSoundness_implies_reifiedSoundness
+    {ι : Type _} {oSpec : OracleSpec ι}
+    [LawfulMonad (OracleComp oSpec)] [HasEvalSPMF (OracleComp oSpec)]
+    {SharedIn : Type _}
+    {Context : SharedIn → Spec}
+    {Roles : (shared : SharedIn) → RoleDecoration (Context shared)}
+    {oracleDeco : (shared : SharedIn) → OracleDecoration (Context shared) (Roles shared)}
+    {StatementIn : SharedIn → Type _}
+    {ιₛᵢ : SharedIn → Type _}
+    {OStatementIn : (shared : SharedIn) → ιₛᵢ shared → Type _}
+    [∀ shared i, OracleInterface (OStatementIn shared i)]
+    {WitnessIn : SharedIn → Type _}
+    {StatementOut : (shared : SharedIn) → Spec.Transcript (Context shared) → Type _}
+    {ιₛₒ : (shared : SharedIn) → (tr : Spec.Transcript (Context shared)) → Type _}
+    {OStatementOut :
+      (shared : SharedIn) → (tr : Spec.Transcript (Context shared)) → ιₛₒ shared tr → Type _}
+    [∀ shared tr i, OracleInterface (OStatementOut shared tr i)]
+    {WitnessOut : (shared : SharedIn) → Spec.Transcript (Context shared) → Type _}
+    {verifier : Interaction.OracleVerifier oSpec SharedIn Context Roles oracleDeco
+      StatementIn OStatementIn StatementOut OStatementOut}
+    {relIn : ReifiedInputRelation StatementIn OStatementIn WitnessIn}
+    {relOut : ReifiedOutputRelation
+      (Context := Context) (StatementOut := StatementOut)
+      (OStatementOut := OStatementOut) (WitnessOut := WitnessOut)}
+    {ε : ENNReal}
+    (hKS : reifiedKnowledgeSoundness verifier relIn relOut ε)
+    (langIn : ReifiedInputLanguage StatementIn OStatementIn)
+    (hLang :
+      ∀ shared s, s ∉ langIn shared → ∀ w, (s, w) ∉ relIn shared)
+    (langOut : ReifiedOutputLanguage
+      (Context := Context) (StatementOut := StatementOut) (OStatementOut := OStatementOut))
+    (acceptWitness :
+      ∀ (shared : SharedIn) (tr : Spec.Transcript (Context shared)),
+        WitnessOut shared tr)
+    (hLangOut :
+      ∀ shared tr sOut,
+        sOut ∈ langOut shared tr →
+          (sOut, acceptWitness shared tr) ∈ relOut shared tr) :
+    reifiedSoundness verifier langIn langOut ε := by
+  refine
+    Interaction.OracleVerifier.knowledgeSoundness_implies_soundness
+      (verifier := verifier)
+      (relIn := inputRelationOfReifiedRelation relIn)
+      (relOut := outputRelationOfReifiedRelation
+        (Context := Context) (Roles := Roles) (oracleDeco := oracleDeco)
+        (StatementOut := StatementOut) relOut)
+      (ε := ε)
+      hKS
+      (langIn := inputLanguageOfReifiedLanguage langIn)
+      ?_
+      (langOut := outputLanguageOfReifiedLanguage
+        (Context := Context) (Roles := Roles) (oracleDeco := oracleDeco)
+        (StatementOut := StatementOut) langOut)
+      (acceptWitness := acceptWitness)
+      ?_
+  · intro shared stmt inputImpl hNotIn wit hRel
+    rcases hRel with ⟨oStatementIn, hRealizes, hMemRel⟩
+    have hNotMem : ⟨stmt, oStatementIn⟩ ∉ langIn shared := by
+      intro hMemLang
+      exact hNotIn ⟨oStatementIn, hRealizes, hMemLang⟩
+    exact hLang shared ⟨stmt, oStatementIn⟩ hNotMem wit hMemRel
+  · intro shared inputImpl tr stmtOut hOut
+    rcases hOut with ⟨oStatementOut, hRealizes, hMemLang⟩
+    exact ⟨oStatementOut, hRealizes,
+      hLangOut shared tr ⟨stmtOut, oStatementOut⟩ hMemLang⟩
+
 end OracleVerifier
 
 end Interaction
