@@ -42,3 +42,5 @@ For reusable cross-cutting workflows that are not tied to one repo area, see
   interaction design reference.
 - [`../../INTERACTION_PROTOCOL_ROADMAP.md`](../../INTERACTION_PROTOCOL_ROADMAP.md) - literature-
   driven roadmap for protocol families and future `Interaction` frontends.
+- [`../../INTERACTION_BRACHA_VERIFICATION.md`](../../INTERACTION_BRACHA_VERIFICATION.md) -
+  Bracha reliable broadcast benchmark note and verified-protocol landscape.
