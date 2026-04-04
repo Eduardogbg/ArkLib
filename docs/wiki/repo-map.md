@@ -39,5 +39,10 @@ home_page/            site assets and assembled website root
 - `ArkLib.lean` is a generated umbrella import file, not a hand-maintained module index.
 - Active areas are often grouped by paper or protocol family, for example
   `Data/CodingTheory/ProximityGap/BCIKS20/...` or `ProofSystem/Binius/...`.
+- `ArkLib/Interaction/Concurrent/` now splits into:
+  structural concurrency (`Spec`, `Frontier`, `Trace`, `Independence`,
+  `Interleaving`), dynamic process semantics (`Process`, `Execution`, `Run`,
+  `Fairness`, `Liveness`, `Refinement`, `Bisimulation`, `Equivalence`), and
+  the new open-boundary primitives in `Concurrent/Interface`.
 - Before assuming a file is authoritative, check whether it is source or derived output. See
   [`generated-files.md`](generated-files.md).

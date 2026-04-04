@@ -105,15 +105,16 @@ import ArkLib.Interaction.Boundary.Oracle
 import ArkLib.Interaction.Boundary.OracleSecurity
 import ArkLib.Interaction.Boundary.Reification
 import ArkLib.Interaction.Boundary.Security
+import ArkLib.Interaction.Concurrent.Bisimulation
 import ArkLib.Interaction.Concurrent.Control
 import ArkLib.Interaction.Concurrent.Current
-import ArkLib.Interaction.Concurrent.Bisimulation
 import ArkLib.Interaction.Concurrent.Equivalence
 import ArkLib.Interaction.Concurrent.Examples
 import ArkLib.Interaction.Concurrent.Execution
 import ArkLib.Interaction.Concurrent.Fairness
 import ArkLib.Interaction.Concurrent.Frontier
 import ArkLib.Interaction.Concurrent.Independence
+import ArkLib.Interaction.Concurrent.Interface
 import ArkLib.Interaction.Concurrent.Interleaving
 import ArkLib.Interaction.Concurrent.Liveness
 import ArkLib.Interaction.Concurrent.Machine
@@ -124,8 +125,8 @@ import ArkLib.Interaction.Concurrent.Profile
 import ArkLib.Interaction.Concurrent.Refinement
 import ArkLib.Interaction.Concurrent.Run
 import ArkLib.Interaction.Concurrent.Spec
-import ArkLib.Interaction.Concurrent.Tree
 import ArkLib.Interaction.Concurrent.Trace
+import ArkLib.Interaction.Concurrent.Tree
 import ArkLib.Interaction.FiatShamir.Basic
 import ArkLib.Interaction.FiatShamir.Transform
 import ArkLib.Interaction.Multiparty.Broadcast

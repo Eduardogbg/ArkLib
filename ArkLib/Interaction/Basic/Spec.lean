@@ -34,6 +34,7 @@ is mathematically forced in protocols like sumcheck and FRI.
 - `Basic/` — spec, node contexts, decoration, generic shapes, strategy,
   composition (this layer)
 - `Concurrent/` — structural concurrent source syntax, frontiers and residuals,
+  typed interfaces and directed open boundaries,
   structural frontier traces and true-concurrency refinements, dynamic
   `Process` / `Machine` / `Tree` frontends, generic process executions and
   policies, finite prefixes and infinite runs, observation extraction,
