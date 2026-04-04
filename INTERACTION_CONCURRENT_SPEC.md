@@ -1185,3 +1185,250 @@ The following sequence captures the main traditions that inform this design.
 - Andrea Chappe, Léo Andrès, and colleagues, *Choice Trees: Representing
   Nondeterministic, Recursive, and Impure Programs in Coq* (2022), for a close
   mechanized analogue of interactive trees plus internal choice.
+
+---
+
+## 15. Ranked Comparison Matrix
+
+This section ranks nearby frameworks by closeness to the **current**
+`Interaction.Concurrent` abstraction, not by historical importance.
+
+The comparison point is the present kernel:
+
+- a residual `Process`;
+- whose current state exposes one finite sequential `Step`;
+- with nodewise controller-path metadata;
+- and per-party `LocalView` metadata;
+- together with a machine-facing interpretation and an initial causal quotient
+  layer.
+
+So the relevant question is not merely:
+
+> "Which frameworks formalize concurrency?"
+
+but rather:
+
+> "Which frameworks come closest to this particular mix of continuation-first
+> residual behavior, explicit control, local observation, and later causal
+> quotienting?"
+
+| Rank | Framework family | Closest ArkLib layer | Why it is close | Main mismatch |
+| --- | --- | --- | --- | --- |
+| 1 | Interaction Trees / Choice Trees / resumptions | `Concurrent.Process`, `Concurrent.Execution`, future `Concurrent.Observation` | Continuation-first, executable, mechanized, and already comfortable with visible actions, residual behavior, and nondeterministic or concurrent semantics | They do not make scheduler ownership and per-party local views first-class in the way `NodeSemantics` does |
+| 2 | Multiparty session types / choreographies | `Multiparty`, future `Interaction.Choreography`, future session frontends | Strongest existing global-to-local protocol story; projection, coherence, and endpoint correctness fit the roadmap directly | Usually narrower than `Interaction` on adversarial scheduling, quotient observations, and non-session protocol structure |
+| 3 | I/O automata / Dynamic I/O automata / TLA+ | `Concurrent.Machine`, future `Concurrent.Fairness`, `Concurrent.Liveness`, `Concurrent.Verify` | Best references for enabled actions, explicit scheduling, refinement, fairness, and dynamic component creation | They are flatter than the current kernel because one ArkLib process step may itself be a structured finite sequential episode |
+| 4 | Mazurkiewicz traces / event structures / pomsets | `Concurrent.Independence`, `Concurrent.Interleaving`, future `Concurrent.EventStructure`, `Concurrent.Pomset` | Best semantic match for moving from interleavings to causal equivalence and partial-order runs | These are best understood as a refinement layer, not as the first executable kernel |
+| 5 | IITM / RSIM / UC | future `Interaction.Security.Protocol`, future `Interaction.Knowledge`, scheduler-sensitive wrappers over `Process` | Strongest adversarial and ideal/real composition lineage for scheduled, concurrent protocol semantics | They are security frameworks first, not neutral general-purpose local-view protocol kernels |
+| 6 | Strand spaces / applied pi / ProVerif / Tamarin | cryptographic frontends and case-study layers | Strong for symbolic adversaries, protocol traces, causality, and information-flow case studies | Control and observation are usually encoded indirectly rather than exposed as first-class semantic fields |
+| 7 | Join-calculus / CHAM / Rebeca / workflow nets | future dynamic-concurrency, mailbox, queue, workflow, and orchestration frontends | Strongest precedents once the live system is a changing population of entities, messages, or tasks | More domain-facing than the present kernel and usually less centered on per-party local views |
+| 8 | EventML / Logic of Events | architectural wildcard for the split-out library | Unusually close in spirit to an umbrella framework about events, causality, observation, and distributed reasoning | Less of a directly reusable kernel for the present Lean development than the higher-ranked families |
+
+The ranking should be read in the following way.
+
+- Rank 1 is the closest **semantic-kernel** neighbor.
+- Rank 2 is the closest **frontend** neighbor.
+- Rank 3 is the closest **machine-facing backend** neighbor.
+- Rank 4 is the closest **causal refinement** neighbor.
+- Rank 5 is the closest **adversarial protocol** neighbor.
+
+So there is still no single existing framework that covers all current axes at
+once. The nearest external picture is a **constellation**, not a single
+ancestor:
+
+- `ctrees` / `itrees` for kernel style;
+- session types / choreographies for projection;
+- I/O automata / TLA+ for fairness and verification;
+- event structures / pomsets for causal refinement;
+- and IITM / RSIM / UC for adversarial composition.
+
+---
+
+## 16. What ArkLib Should Borrow, by Layer
+
+The point of the comparison is not to imitate one existing framework wholesale.
+It is to borrow the strongest ideas from each line while preserving the
+distinctive center of `Interaction`.
+
+### 16.1. `Concurrent.Process` and `Concurrent.Execution`
+
+Primary references:
+
+- interaction trees;
+- choice trees;
+- resumption semantics.
+
+What to borrow:
+
+- the conviction that the semantic center can remain continuation-first and
+  executable;
+- observational equivalence and interpreter/handler patterns over residual
+  processes;
+- a clean separation between the core semantic carrier and later effect,
+  scheduler, or verification interpretations.
+
+What not to borrow as primitive:
+
+- reducing all node metadata to one undifferentiated event signature.
+
+ArkLib's extra structure here is real and should stay explicit:
+
+- controller paths;
+- per-party `LocalView`;
+- and the fact that one process step may itself be a structured finite
+  interaction episode.
+
+### 16.2. `Multiparty` and future choreography/session frontends
+
+Primary references:
+
+- binary and multiparty session types;
+- choreographic programming;
+- communicating finite-state or endpoint automata as checking backends.
+
+What to borrow:
+
+- projection algorithms from global protocols to local endpoints;
+- coherence / well-formedness criteria for global descriptions;
+- progress and communication-safety theorem templates;
+- explicit distinction between global branching structure and local endpoint
+  behavior.
+
+What not to borrow as primitive:
+
+- the claim that every protocol of interest is fundamentally a session-type
+  protocol.
+
+Session types should be a major frontend, not the definition of the whole
+library.
+
+### 16.3. `Concurrent.Machine`, `Concurrent.Fairness`, `Concurrent.Liveness`, and `Concurrent.Verify`
+
+Primary references:
+
+- I/O automata;
+- dynamic I/O automata;
+- TLA+.
+
+What to borrow:
+
+- enabled-action presentations for explicit state-indexed users;
+- forward and backward simulation templates;
+- weak and strong fairness patterns over stable event identifiers;
+- dynamic-component creation ideas once the library grows true spawning;
+- the discipline that verification-friendly subsets may be flatter than the
+  source semantics, provided the compilation to them is justified.
+
+What not to borrow as primitive:
+
+- state-machine-first identity for the whole library.
+
+The machine layer should remain a derived or alternate presentation of the
+continuation-first core, not a replacement for it.
+
+### 16.4. `Concurrent.Independence`, `Concurrent.Interleaving`, future `Concurrent.EventStructure`, and `Concurrent.Pomset`
+
+Primary references:
+
+- Mazurkiewicz trace theory;
+- event structures;
+- pomsets;
+- proof-relevant accounts of concurrent residuals and causal equivalence.
+
+What to borrow:
+
+- the view that interleavings should be quotiented by independence rather than
+  treated as the final semantic object;
+- residuation and commuting-conversion structure beyond bare adjacency swaps;
+- explicit configurations, causality, conflict, and partial-order executions;
+- canonical run objects at the quotient level when raw trace equivalence stops
+  being expressive enough.
+
+What not to borrow as primitive:
+
+- partial-order runs as the first executable representation.
+
+For ArkLib, this is a refinement layer over the current interleaving-capable
+kernel, not the very first semantic carrier.
+
+### 16.5. Future `Interaction.Security.Protocol` and `Interaction.Knowledge`
+
+Primary references:
+
+- IITM;
+- RSIM;
+- UC;
+- strand spaces and strand spaces with choice;
+- applied pi and symbolic protocol tooling.
+
+What to borrow:
+
+- ideal/real wrappers and simulation-based refinement interfaces;
+- explicit corruption, scheduling, and environment/adversary interfaces;
+- observational-equivalence and information-flow proof obligations;
+- causal / bundle-style views of runs where local knowledge matters;
+- symbolic protocol DSLs as optional frontends for case studies.
+
+What not to borrow as primitive:
+
+- identifying the security layer with one single symbolic calculus or one
+  single composition theorem format.
+
+The semantic center should stay neutral enough to support several protocol
+traditions.
+
+### 16.6. Future spawn, mailbox, queue, and workflow frontends
+
+Primary references:
+
+- join-calculus;
+- CHAM;
+- actor models and Rebeca;
+- workflow nets.
+
+What to borrow:
+
+- the idea that a live concurrent system may be a changing family or multiset
+  of active residuals;
+- mailbox and queue-oriented source languages that compile into the common
+  process core;
+- soundness/progress/completion criteria for orchestration-heavy systems.
+
+What not to borrow as primitive:
+
+- spawning or mailbox semantics in the first minimal kernel.
+
+The first kernel should stay small enough that dynamic concurrency remains a
+layered extension rather than a baked-in commitment.
+
+### 16.7. Wildcard architectural lesson from EventML / Logic of Events
+
+The strongest wildcard lesson is architectural rather than notational:
+
+- an umbrella framework can center events, causality, and observation
+  simultaneously;
+- it need not reduce itself to one domain-specific protocol DSL;
+- and it can still support extraction, synthesis, or verification workflows on
+  top.
+
+That reinforces the main thesis of this note:
+
+- keep one small semantic center;
+- keep several frontends;
+- and make the bridges between them theorem-carrying.
+
+### 16.8. Immediate consequences for the split-out roadmap
+
+The comparison suggests the following short implementation order.
+
+1. Finish `Process`-level observation, refinement, and fairness layers in a way
+   that keeps the kernel continuation-first.
+2. Build one serious choreography/session frontend over `LocalView`.
+3. Strengthen `Independence` and `Trace.Equiv` toward event-structure or
+   pomset semantics.
+4. Add ideal/real and observational-equivalence layers for adversarial
+   protocols.
+5. Only then broaden into spawn-heavy, mailbox-heavy, or workflow-heavy domain
+   frontends.
+
+This order matches both the current codebase and the nearest surrounding
+framework landscape.

@@ -40,3 +40,5 @@ For reusable cross-cutting workflows that are not tied to one repo area, see
   boundary-layer design reference.
 - [`../../INTERACTION_CONCURRENT_SPEC.md`](../../INTERACTION_CONCURRENT_SPEC.md) - concurrent
   interaction design reference.
+- [`../../INTERACTION_PROTOCOL_ROADMAP.md`](../../INTERACTION_PROTOCOL_ROADMAP.md) - literature-
+  driven roadmap for protocol families and future `Interaction` frontends.
