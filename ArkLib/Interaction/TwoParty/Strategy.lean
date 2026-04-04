@@ -194,7 +194,7 @@ private def counterpartMonadicSyntax :
 private def counterpartMonadicShape :
     ShapeOver.{u, 0, u, u + 1} PUnit RoleMonadContext where
   toSyntaxOver := counterpartMonadicSyntax
-  map := fun {_agent} {_X} {γ} {_A} {_B} f node =>
+  map := fun {agent} {X} {γ} {A} {B} f node =>
     match γ with
     | ⟨.sender, bm⟩ =>
         let observe : (x : X) → bm.M (A x) := by
@@ -767,7 +767,7 @@ private theorem pairedMonadicSyntax_family_focal :
         (agent := PUnit.unit)
         (ctxs := RoleDecoration.withPairedMonads roles stratDeco cptDeco)
         (Out := Output)]
-      simp [Strategy.withRolesAndMonads] using
+      simpa [Strategy.withRolesAndMonads] using
         (RoleDecoration.withPairedMonads_map_fst
           (spec := spec) (roles := roles)
           (stratDeco := stratDeco) (cptDeco := cptDeco))
@@ -789,7 +789,7 @@ private theorem pairedMonadicSyntax_family_counterpart :
         (agent := PUnit.unit)
         (ctxs := RoleDecoration.withPairedMonads roles stratDeco cptDeco)
         (Out := Output)]
-      simp [Counterpart.withMonads] using
+      simpa [Counterpart.withMonads] using
         (RoleDecoration.withPairedMonads_map_snd
           (spec := spec) (roles := roles)
           (stratDeco := stratDeco) (cptDeco := cptDeco))

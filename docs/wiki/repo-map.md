@@ -12,15 +12,6 @@ ArkLib/
   CommitmentScheme/   commitments and opening arguments
   ProofSystem/        protocol families and higher-level proofs
   ToMathlib/          local additions not upstreamed to Mathlib
-  ToVCVio/            bridge layer to VCV-io
-  Interaction/        `Spec` (W-type protocols), concurrent structural
-                      specs/frontiers/linearizations, dynamic process/machine/tree
-                      frontends, generic process execution/policy, profiles/control/
-                      current-view/independence/interleaving,
-                      generic syntax/execution,
-                      two-party roles, native multiparty
-                      local views and profiles (`Basic/`, `Concurrent/`, `TwoParty/`,
-                      `Multiparty/`)
 blueprint/src/        blueprint sources and references.bib
 scripts/              repo utilities
 home_page/            site assets and assembled website root
@@ -29,7 +20,7 @@ home_page/            site assets and assembled website root
 ## Conceptual Layering
 
 - `ArkLib/OracleReduction/` is the conceptual center of the library.
-- `ArkLib/Data/` and the bridge layers support the core with reusable definitions and lemmas.
+- `ArkLib/Data/` and `ArkLib/ToMathlib/` support the core with reusable definitions and lemmas.
 - `ArkLib/CommitmentScheme/` and `ArkLib/ProofSystem/` build on top of those foundations.
 - When changing a protocol subtree, read the local subtree plus one layer of imports toward
   `Data/` or `OracleReduction/` before making architectural edits.
@@ -41,7 +32,6 @@ home_page/            site assets and assembled website root
 - Working on protocol statements or proofs: start in `ArkLib/ProofSystem/`.
 - Updating commitment interfaces or concrete schemes: start in `ArkLib/CommitmentScheme/`.
 - Moving reusable helper lemmas that ideally belong upstream: start in `ArkLib/ToMathlib/`.
-- Bridging ArkLib definitions to VCV-io infrastructure: start in `ArkLib/ToVCVio/`.
 - Updating theory docs, references, or long-form exposition: start in `blueprint/src/`.
 
 ## Navigation Notes

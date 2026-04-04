@@ -10,7 +10,10 @@ import ArkLib.Data.Classes.HasSize
 import ArkLib.Data.Classes.Initialize
 import ArkLib.Data.Classes.Serde
 import ArkLib.Data.Classes.Slice
-import ArkLib.Data.CodingTheory.Basic
+import ArkLib.Data.CodingTheory.Basic.DecodingRadius
+import ArkLib.Data.CodingTheory.Basic.Distance
+import ArkLib.Data.CodingTheory.Basic.LinearCode
+import ArkLib.Data.CodingTheory.Basic.RelativeDistance
 import ArkLib.Data.CodingTheory.BerlekampWelch.BerlekampWelch
 import ArkLib.Data.CodingTheory.BerlekampWelch.Condition
 import ArkLib.Data.CodingTheory.BerlekampWelch.ElocPoly
@@ -48,7 +51,9 @@ import ArkLib.Data.CodingTheory.ProximityGap.BCIKS20.Prelude
 import ArkLib.Data.CodingTheory.ProximityGap.BCIKS20.ReedSolomonGap
 import ArkLib.Data.CodingTheory.ProximityGap.BCIKS20.WeightedAgreement
 import ArkLib.Data.CodingTheory.ProximityGap.Basic
-import ArkLib.Data.CodingTheory.ProximityGap.DG25
+import ArkLib.Data.CodingTheory.ProximityGap.DG25.Basic
+import ArkLib.Data.CodingTheory.ProximityGap.DG25.MainResults
+import ArkLib.Data.CodingTheory.ProximityGap.DG25.ReedSolomon
 import ArkLib.Data.CodingTheory.ReedSolomon
 import ArkLib.Data.CompPoly.Basic
 import ArkLib.Data.CompPoly.Fold
@@ -241,7 +246,3 @@ import ArkLib.ToMathlib.Data.IndexedBinaryTree.Equiv
 import ArkLib.ToMathlib.Data.IndexedBinaryTree.Lemmas
 import ArkLib.ToMathlib.Finset.Basic
 import ArkLib.ToMathlib.List.Basic
-import ArkLib.ToVCVio.DistEq
-import ArkLib.ToVCVio.Lemmas
-import ArkLib.ToVCVio.Oracle
-import ArkLib.ToVCVio.SimOracle

@@ -287,7 +287,8 @@ def run
       (StatementOut shared tr × QueryImpl [OStatementOut shared tr]ₒ
         (OracleComp
           ([OStatementIn shared]ₒ +
-            OracleDecoration.toOracleSpec (Context shared) (Roles shared) (oracleDeco shared) tr)))) := do
+            OracleDecoration.toOracleSpec
+              (Context shared) (Roles shared) (oracleDeco shared) tr)))) := do
   let ⟨tr, outP, stmtOutV⟩ ←
     OracleDecoration.runWithOracleCounterpart inputImpl
       (Context shared) (Roles shared) (oracleDeco shared) accSpec accImpl
@@ -404,7 +405,7 @@ def executeConcrete
 /-- Map the private honest-prover witness component of an executed oracle
 reduction while leaving its public transcript/output view unchanged. -/
 def mapExecuteWitness
-    {ι : Type} {_oSpec : OracleSpec ι}
+    {ι : Type} {oSpec : OracleSpec ι}
     {Input : Type} {ιₛᵢ : Input → Type}
     {OStmtIn : (i : Input) → ιₛᵢ i → Type}
     [∀ i j, OracleInterface (OStmtIn i j)]
@@ -418,7 +419,7 @@ def mapExecuteWitness
     [∀ i tr j, OracleInterface (OStmtOut i tr j)]
     {WitnessOut₁ WitnessOut₂ : (i : Input) → Spec.Transcript (Context i) → Type}
     (i : Input)
-    (_s : StatementWithOracles LocalStmt OStmtIn i)
+    (s : StatementWithOracles LocalStmt OStmtIn i)
     (liftWitness : (tr : Spec.Transcript (Context i)) →
       WitnessOut₁ i tr → WitnessOut₂ i tr) :
     ((tr : Spec.Transcript (Context i)) ×
@@ -442,7 +443,7 @@ def mapExecuteWitness
 /-- Forget the private honest-prover witness component of an executed oracle
 reduction, keeping only its public transcript/output view. -/
 def forgetExecuteWitness
-    {ι : Type} {_oSpec : OracleSpec ι}
+    {ι : Type} {oSpec : OracleSpec ι}
     {Input : Type} {ιₛᵢ : Input → Type}
     {OStmtIn : (i : Input) → ιₛᵢ i → Type}
     [∀ i j, OracleInterface (OStmtIn i j)]
@@ -456,7 +457,7 @@ def forgetExecuteWitness
     [∀ i tr j, OracleInterface (OStmtOut i tr j)]
     {WitnessOut : (i : Input) → Spec.Transcript (Context i) → Type}
     (i : Input)
-    (_s : StatementWithOracles LocalStmt OStmtIn i) :
+    (s : StatementWithOracles LocalStmt OStmtIn i) :
     ((tr : Spec.Transcript (Context i)) ×
       HonestProverOutput
         (StatementWithOracles (fun _ => StatementOut i tr) (fun _ => OStmtOut i tr) i)
