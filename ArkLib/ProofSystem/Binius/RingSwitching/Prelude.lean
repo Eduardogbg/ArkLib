@@ -101,7 +101,7 @@ def decompose_tensor_algebra_columns {σ : Type*} (β : Basis σ K L) (s_hat : L
   fun v =>
     (β.baseChange L).repr s_hat v
 /--
-**Definition 2.1 (MLE packing)**.
+**Definition 2.2 (MLE packing)**.
 Packs a small-field multilinear `t` into a large-field multilinear `t'` by
 reinterpreting chunks of `2^κ` coefficients as single `L`-elements.
 For each `w ∈ {0,1}^ℓ'`, the evaluation `t'(w)` is defined as:

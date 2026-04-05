@@ -134,7 +134,7 @@ import ArkLib.ProofSystem.Binius.BinaryBasefold.Soundness.BadBlocks
 import ArkLib.ProofSystem.Binius.BinaryBasefold.Soundness.FoldDistance
 import ArkLib.ProofSystem.Binius.BinaryBasefold.Soundness.Incremental
 import ArkLib.ProofSystem.Binius.BinaryBasefold.Soundness.Lift
-import ArkLib.ProofSystem.Binius.BinaryBasefold.Soundness.Proposition4_20
+import ArkLib.ProofSystem.Binius.BinaryBasefold.Soundness.Proposition4_21
 import ArkLib.ProofSystem.Binius.BinaryBasefold.Soundness.QueryPhasePrelims
 import ArkLib.ProofSystem.Binius.BinaryBasefold.Soundness.QueryPhaseSoundness
 import ArkLib.ProofSystem.Binius.BinaryBasefold.Spec

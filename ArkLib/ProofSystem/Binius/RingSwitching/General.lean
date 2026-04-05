@@ -23,6 +23,7 @@ ring-switching protocol. The protocol is a sequential composition of:
 
 - [DP24] Diamond, Benjamin E., and Jim Posen. "Polylogarithmic Proofs for Multilinears over Binary
   Towers." Cryptology ePrint Archive (2024).
+  Statement numbering follows the archived revision of [DP24].
 -/
 
 namespace Binius.RingSwitching.FullRingSwitching
