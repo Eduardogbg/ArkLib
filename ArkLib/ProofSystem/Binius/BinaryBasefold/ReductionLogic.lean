@@ -9,7 +9,7 @@ import ArkLib.ToVCVio.Simulation
 import ArkLib.OracleReduction.Completeness
 import ArkLib.Data.Misc.Basic
 
-set_option maxHeartbeats 400000  -- Increase if needed
+set_option maxHeartbeats 200000
 set_option profiler true
 -- set_option profiler.threshold 50  -- Show anything taking over 10ms
 namespace Binius.BinaryBasefold
@@ -235,9 +235,8 @@ section FoldStep
 
 /-- The Logic Instance for the i-th round of Binary Folding.
 **Computability note:** the prover-side fields are routed through the explicit fold kernels.
-Currently marked `noncomputable` because `getFoldProverFinalOutput` is noncomputable;
-proof obligations are still deferred where needed. -/
-noncomputable def foldStepLogic (i : Fin ℓ) :
+Proof obligations are still deferred where needed. -/
+def foldStepLogic (i : Fin ℓ) :
     ReductionLogicStep
       -- In/Out Types
       (Statement (L := L) Context i.castSucc)
