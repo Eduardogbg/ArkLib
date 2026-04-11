@@ -5,7 +5,7 @@ Authors: Quang Dao
 -/
 import ArkLib.ProofSystem.Sumcheck.Interaction.Oracle
 import ArkLib.Interaction.Oracle.Continuation
-import ArkLib.Interaction.TwoParty.Strategy
+import VCVio.Interaction.TwoParty.Strategy
 
 /-!
 # Interaction-Native Sum-Check: Single Round

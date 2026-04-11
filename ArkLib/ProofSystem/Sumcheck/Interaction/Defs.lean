@@ -3,9 +3,9 @@ Copyright (c) 2024-2025 ArkLib Contributors. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import ArkLib.Interaction.Basic.Chain
-import ArkLib.Interaction.Basic.Replicate
-import ArkLib.Interaction.TwoParty.Compose
+import VCVio.Interaction.Basic.Chain
+import VCVio.Interaction.Basic.Replicate
+import VCVio.Interaction.TwoParty.Compose
 import ArkLib.Interaction.Reduction
 import ArkLib.ProofSystem.Sumcheck.Interaction.CompPoly
 

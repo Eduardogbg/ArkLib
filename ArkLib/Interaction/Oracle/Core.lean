@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 import ArkLib.Interaction.Reduction
-import ArkLib.Interaction.TwoParty.Refine
+import VCVio.Interaction.TwoParty.Refine
 import ArkLib.OracleReduction.OracleInterface
 
 /-!
