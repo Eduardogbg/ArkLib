@@ -7,6 +7,7 @@ Authors: Chung Thai Nguyen, Quang Dao
 import CompPoly.Data.Nat.Bitwise
 import CompPoly.Data.Polynomial.Frobenius
 import CompPoly.Data.Polynomial.MonomialBasis
+import CompPoly.Univariate.ToPoly
 import Mathlib.LinearAlgebra.StdBasis
 import Mathlib.Algebra.Polynomial.Degree.Definitions
 
@@ -37,7 +38,7 @@ algebra over its prime-characteristic subfield `𝔽q`, and an `𝔽q`-basis `β
     over F2 (extended abstract)*][GGJ96]
 -/
 
-set_option linter.style.longFile 1600
+set_option linter.style.longFile 1800
 
 open Polynomial FiniteDimensional Finset Module
 
@@ -1420,7 +1421,8 @@ lemma linearIndependent_rows_of_lower_triangular_ne_zero_diag
 
 /-- The change-of-basis matrix from the novel basis to the monomial basis.
 Aⱼᵢ = coeff of Xⁱ in novel basis vector 𝕏ⱼ. novel_coeffs * A = monomial_coeffs -/
-noncomputable def changeOfBasisMatrix (ℓ : Nat) (h_ℓ : ℓ ≤ r) : Matrix (Fin (2^ℓ)) (Fin (2^ℓ)) L :=
+noncomputable def changeOfBasisMatrix (ℓ : Nat) (h_ℓ : ℓ ≤ r) :
+    Matrix (Fin (2^ℓ)) (Fin (2^ℓ)) L :=
     fun j i => (toCoeffsVec (L := L) (ℓ := ℓ) (
       basisVectors 𝔽q β ℓ h_ℓ j)) i
 
@@ -1590,6 +1592,93 @@ noncomputable def novelToMonomialCoeffs
   (ℓ : ℕ) (h_ℓ : ℓ ≤ r) (novel_coeffs : Fin (2 ^ ℓ) → L) : Fin (2^ℓ) → L :=
   let A := changeOfBasisMatrix 𝔽q β ℓ h_ℓ
   Matrix.vecMul novel_coeffs A
+
+/-! ## Executable companions for novel-basis conversion
+
+These definitions keep the reference noncomputable surfaces intact, while providing a deterministic
+coefficient-level path for downstream Binius code that must stay executable.
+-/
+
+/-- Executable companion of `W`. -/
+def computableW (𝔽q : Type u) [Field 𝔽q] [Fintype 𝔽q]
+    [Fact (Nat.Prime (ringChar 𝔽q))] [Fact (Fintype.card 𝔽q = 2)] [Algebra 𝔽q L]
+    (β : Fin r → L) [BEq L] [LawfulBEq L] : Fin r → CompPoly.CPolynomial L
+  | ⟨0, _⟩ => CompPoly.CPolynomial.X
+  | ⟨n + 1, hn⟩ =>
+      letI : Nontrivial L := inferInstance
+      let prev : Fin r := ⟨n, Nat.lt_trans (Nat.lt_succ_self n) hn⟩
+      let W_prev : CompPoly.CPolynomial L := computableW 𝔽q β prev
+      W_prev ^ (Fintype.card 𝔽q) -
+        CompPoly.CPolynomial.C
+          ((CompPoly.CPolynomial.eval (β prev) W_prev) ^ (Fintype.card 𝔽q - 1)) * W_prev
+
+/-- Executable companion of `normalizedW`. -/
+def computableNormalizedW (𝔽q : Type u) [Field 𝔽q] [Fintype 𝔽q]
+    [Fact (Nat.Prime (ringChar 𝔽q))] [Fact (Fintype.card 𝔽q = 2)] [Algebra 𝔽q L]
+    (β : Fin r → L) [BEq L] [LawfulBEq L] (i : Fin r) : CompPoly.CPolynomial L :=
+  let W_i : CompPoly.CPolynomial L := computableW 𝔽q β i
+  CompPoly.CPolynomial.C (1 / CompPoly.CPolynomial.eval (β i) W_i) * W_i
+
+/-- Executable companion of `Xⱼ`. -/
+def computableXⱼ (𝔽q : Type u) [Field 𝔽q] [Fintype 𝔽q]
+    [Fact (Nat.Prime (ringChar 𝔽q))] [Fact (Fintype.card 𝔽q = 2)] [Algebra 𝔽q L]
+    (β : Fin r → L) [BEq L] [LawfulBEq L] (ℓ : ℕ) (h_ℓ : ℓ ≤ r) (j : Fin (2 ^ ℓ)) :
+    CompPoly.CPolynomial L :=
+  ∏ i : Fin ℓ,
+    let W_hat_i : CompPoly.CPolynomial L := computableNormalizedW 𝔽q β (Fin.castLE h_ℓ i)
+    W_hat_i ^ (Nat.getBit i j)
+
+/-- Executable companion of `polynomialFromNovelCoeffs`. -/
+def computablePolynomialFromNovelCoeffs (𝔽q : Type u) [Field 𝔽q] [Fintype 𝔽q]
+    [Fact (Nat.Prime (ringChar 𝔽q))] [Fact (Fintype.card 𝔽q = 2)] [Algebra 𝔽q L]
+    (β : Fin r → L) [BEq L] [LawfulBEq L] (ℓ : ℕ) (h_ℓ : ℓ ≤ r)
+    (a : Fin (2 ^ ℓ) → L) : CompPoly.CPolynomial L :=
+  ∑ j, CompPoly.CPolynomial.C (a j) * (computableXⱼ 𝔽q β ℓ h_ℓ j : CompPoly.CPolynomial L)
+
+/-- Executable companion of `novelToMonomialCoeffs`, obtained by reading coefficients from the
+executable polynomial companion. -/
+def computableNovelToMonomialCoeffs (𝔽q : Type u) [Field 𝔽q] [Fintype 𝔽q]
+    [Fact (Nat.Prime (ringChar 𝔽q))] [Fact (Fintype.card 𝔽q = 2)] [Algebra 𝔽q L]
+    (β : Fin r → L) [BEq L] [LawfulBEq L] (ℓ : ℕ) (h_ℓ : ℓ ≤ r)
+    (novel_coeffs : Fin (2 ^ ℓ) → L) : Fin (2 ^ ℓ) → L :=
+  fun i =>
+    (computablePolynomialFromNovelCoeffs 𝔽q β ℓ h_ℓ novel_coeffs).coeff i.val
+
+lemma computableW_toPoly_eq_W [BEq L] [LawfulBEq L] (i : Fin r) :
+    CompPoly.CPolynomial.toPoly (computableW 𝔽q β i : CompPoly.CPolynomial L) = W 𝔽q β i := by
+  sorry
+
+lemma computableNormalizedW_toPoly_eq_normalizedW [BEq L] [LawfulBEq L] (i : Fin r) :
+    CompPoly.CPolynomial.toPoly (computableNormalizedW 𝔽q β i : CompPoly.CPolynomial L) =
+      normalizedW 𝔽q β i := by
+  sorry
+
+lemma computableXⱼ_toPoly_eq_Xⱼ [BEq L] [LawfulBEq L]
+    (ℓ : ℕ) (h_ℓ : ℓ ≤ r) (j : Fin (2 ^ ℓ)) :
+    CompPoly.CPolynomial.toPoly (computableXⱼ 𝔽q β ℓ h_ℓ j : CompPoly.CPolynomial L) =
+      Xⱼ 𝔽q β ℓ h_ℓ j := by
+  sorry
+
+lemma computablePolynomialFromNovelCoeffs_toPoly_eq [BEq L] [LawfulBEq L]
+    (ℓ : ℕ) (h_ℓ : ℓ ≤ r) (a : Fin (2 ^ ℓ) → L) :
+    CompPoly.CPolynomial.toPoly
+        (computablePolynomialFromNovelCoeffs 𝔽q β ℓ h_ℓ a : CompPoly.CPolynomial L) =
+      polynomialFromNovelCoeffs 𝔽q β ℓ h_ℓ a := by
+  sorry
+
+lemma computablePolynomialFromNovelCoeffs_eval_eq [BEq L] [LawfulBEq L]
+    (x : L) (ℓ : ℕ) (h_ℓ : ℓ ≤ r) (a : Fin (2 ^ ℓ) → L) :
+    CompPoly.CPolynomial.eval x
+        (computablePolynomialFromNovelCoeffs 𝔽q β ℓ h_ℓ a : CompPoly.CPolynomial L) =
+      (polynomialFromNovelCoeffsF₂ 𝔽q β ℓ h_ℓ a : Polynomial L).eval x := by
+  sorry
+
+lemma computableNovelToMonomialCoeffs_eq_novelToMonomialCoeffs [BEq L] [LawfulBEq L]
+    (ℓ : ℕ) (h_ℓ : ℓ ≤ r) (novel_coeffs : Fin (2 ^ ℓ) → L) :
+    computableNovelToMonomialCoeffs 𝔽q β ℓ h_ℓ novel_coeffs =
+      novelToMonomialCoeffs 𝔽q β ℓ h_ℓ novel_coeffs := by
+  funext i
+  sorry
 
 omit h_Fq_char_prime in
 /-- The conversion functions are inverses of each other. (Monomial -> Novel -> Monomial) -/

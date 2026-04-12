@@ -48,12 +48,21 @@ lemma getFoldingChallenges_init_succ_eq (i : Fin ℓ)
   ext cId
   simp only [Fin.init, Fin.val_castSucc, Fin.castSucc_mk, Fin.val_succ]
 
-noncomputable def getNextOracle (i : Fin (ℓ + 1))
+def getNextOracle (i : Fin (ℓ + 1))
     (oStmt : ∀ j, (OracleStatement 𝔽q β (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ i) j)
     (j : Fin (toOutCodewordsCount ℓ ϑ i)) (hj : j.val + 1 < toOutCodewordsCount ℓ ϑ i)
     {destDomainIdx : Fin r} (h_destDomainIdx : destDomainIdx = j.val * ϑ + ϑ) :
-    OracleFunction 𝔽q β (h_ℓ_add_R_rate := h_ℓ_add_R_rate) destDomainIdx := by
-  sorry
+    OracleFunction 𝔽q β (h_ℓ_add_R_rate := h_ℓ_add_R_rate) destDomainIdx :=
+  let res := oStmt ⟨j.val + 1, hj⟩
+  have h : j.val * ϑ + ϑ = (j.val + 1) * ϑ := by
+    rw [Nat.add_mul, one_mul]
+  have h_lt : (j.val + 1) * ϑ < r := by
+    omega
+  have h_eq : destDomainIdx = ⟨(j.val + 1) * ϑ, h_lt⟩ :=
+    Fin.eq_of_val_eq (by
+      simp only
+      omega)
+  fun y => res (cast (by rw [h_eq]) y)
 
 /-- Folding consistency for round i (where i is the oracleIdx) -/
 def oracleFoldingConsistencyProp (i : Fin (ℓ + 1)) (challenges : Fin i → L)
@@ -94,24 +103,63 @@ def BBF_SumcheckMultiplierParam : SumcheckMultiplierParam L ℓ (SumcheckBaseCon
   { multpoly := fun ctx => BBF_eq_multiplier ctx.t_eval_point }
 
 /-- This condition ensures that the folding witness `f` is properly generated from `t` -/
-noncomputable def getMidCodewords {i : Fin (ℓ + 1)} (t : MultilinearPoly L ℓ)
+def getMidCodewords {i : Fin (ℓ + 1)} (t : MultilinearPoly L ℓ)
     (challenges : Fin i → L) :
     OracleFunction (𝔽q := 𝔽q) (β := β)
       (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (ℓ := ℓ) (𝓡 := 𝓡) ⟨i, by omega⟩ :=
   letI : BEq L := inferInstance
   letI : LawfulBEq L := inferInstance
   let P₀ : CompPoly.CPolynomial L :=
-    ⟨CompPoly.CPolynomial.Raw.trim (Array.ofFn (fun i : Fin (2 ^ ℓ) =>
-        AdditiveNTT.novelToMonomialCoeffs 𝔽q β ℓ (by omega)
-          (fun ω => t.val.eval (bitsOfIndex ω)) i)), by
-      exact CompPoly.CPolynomial.Raw.Trim.trim_twice _⟩
+    computablePolynomialFromNovelCoeffsF₂ (𝔽q := 𝔽q) (β := β) ℓ (by omega)
+      (fun ω => t.val.eval (bitsOfIndex ω))
   let f₀ : OracleFunction 𝔽q β (h_ℓ_add_R_rate := h_ℓ_add_R_rate) 0 :=
     fun x => P₀.eval x.val
-  let fᵢ := iterated_fold 𝔽q β (h_ℓ_add_R_rate := h_ℓ_add_R_rate)
-    (i := 0) (steps := i) (destIdx := ⟨i, by omega⟩)
-    (h_destIdx := by simp only [Fin.coe_ofNat_eq_mod, zero_mod, zero_add]) (h_destIdx_le := by simp only; omega)
-    (f := f₀)
-    (r_challenges := challenges)
+  let domain_type := AdditiveNTT.Comp.sDomain
+    (𝔽q := 𝔽q) (β := β) (ℓ := ℓ) (R_rate := 𝓡) (h_ℓ_add_R_rate := h_ℓ_add_R_rate)
+  let α (j : Fin (i.val + 1)) := domain_type ⟨j.val, by omega⟩ → L
+  let fold_step (j : Fin i.val) (f_acc : α ⟨j, by omega⟩) : α j.succ := by
+    intro y
+    let srcIdx : Fin r := ⟨j.val, by omega⟩
+    let destIdx : Fin r := ⟨j.val + 1, by omega⟩
+    have h_i_le_ℓ : i.val ≤ ℓ := by
+      exact Nat.lt_succ_iff.mp i.isLt
+    have h_src_lt_ℓ : j.val < ℓ := by
+      exact lt_of_lt_of_le j.isLt h_i_le_ℓ
+    have h_dest_le_ℓ : j.val + 1 ≤ ℓ := by
+      exact Nat.succ_le_of_lt (lt_of_lt_of_le j.isLt h_i_le_ℓ)
+    have h_src_lt : srcIdx < ℓ + 𝓡 := by
+      exact lt_of_lt_of_le h_src_lt_ℓ (Nat.le_add_right ℓ 𝓡)
+    have h_dest_lt : destIdx < ℓ + 𝓡 := by
+      have h_ℓ_lt : ℓ < ℓ + 𝓡 := by
+        exact Nat.lt_add_of_pos_right (pos_of_neZero 𝓡)
+      exact lt_of_le_of_lt h_dest_le_ℓ h_ℓ_lt
+    let yIdx := AdditiveNTT.Comp.sDomainPointToLocalIndex
+      (𝔽q := 𝔽q) (β := β) (ℓ := ℓ) (R_rate := 𝓡)
+      (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (i := destIdx) (h_i := h_dest_lt) y
+    let x₀Raw := Nat.joinBits (low := (0 : Fin (2 ^ 1))) (high := yIdx)
+    let x₁Raw := Nat.joinBits (low := (1 : Fin (2 ^ 1))) (high := yIdx)
+    have h_local_bits : (ℓ + 𝓡 - (j.val + 1)) + 1 = ℓ + 𝓡 - j.val := by
+      omega
+    have h_local_pow : 2 ^ ((ℓ + 𝓡 - (j.val + 1)) + 1) = 2 ^ (ℓ + 𝓡 - j.val) := by
+      exact congrArg (fun n => 2 ^ n) h_local_bits
+    let x₀Local : Fin (2 ^ (ℓ + 𝓡 - j.val)) := Fin.cast h_local_pow x₀Raw
+    let x₁Local : Fin (2 ^ (ℓ + 𝓡 - j.val)) := Fin.cast h_local_pow x₁Raw
+    let x₀ := AdditiveNTT.Comp.localIndexToSDomain
+      (𝔽q := 𝔽q) (β := β) (ℓ := ℓ) (R_rate := 𝓡)
+      (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (i := srcIdx) (h_i := h_src_lt) x₀Local
+    let x₁ := AdditiveNTT.Comp.localIndexToSDomain
+      (𝔽q := 𝔽q) (β := β) (ℓ := ℓ) (R_rate := 𝓡)
+      (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (i := srcIdx) (h_i := h_src_lt) x₁Local
+    let r_chal := challenges ⟨j.val, j.isLt⟩
+    let f_x₀ := f_acc x₀
+    let f_x₁ := f_acc x₁
+    exact f_x₀ * ((1 - r_chal) * x₁.val - r_chal) +
+      f_x₁ * (r_chal - (1 - r_chal) * x₀.val)
+  let fᵢ : α (Fin.last i.val) := Fin.dfoldl (n := i.val) (α := α)
+    (f := fun j (f_acc : α j.castSucc) =>
+      let f_succ : α ⟨j.succ, by omega⟩ := fold_step j f_acc
+      f_succ)
+    (init := f₀)
   fᵢ
 
 lemma getMidCodewords_succ (t : MultilinearPoly L ℓ) (i : Fin ℓ)
@@ -200,7 +248,7 @@ def getFoldProverFinalOutput (i : Fin ℓ)
 def foldProverComputeMsg (i : Fin ℓ)
     (witIn : Witness (L := L) 𝔽q β (h_ℓ_add_R_rate := h_ℓ_add_R_rate) i.castSucc) :
     FoldMessage L :=
-  getSumcheckRoundMessage (L := L) (ℓ := ℓ) (𝓑 := 𝓑) (i := i) witIn.H
+  getSumcheckRoundPoly (L := L) (ℓ := ℓ) (𝓑 := 𝓑) (i := i) witIn.H
 
 @[reducible]
 def foldVerifierCheck (i : Fin ℓ)
@@ -243,7 +291,17 @@ lemma firstOracleWitnessConsistencyProp_unique (t₁ t₂ : MultilinearPoly L �
     (h₁ : firstOracleWitnessConsistencyProp 𝔽q β (h_ℓ_add_R_rate := h_ℓ_add_R_rate) t₁ f₀)
     (h₂ : firstOracleWitnessConsistencyProp 𝔽q β (h_ℓ_add_R_rate := h_ℓ_add_R_rate) t₂ f₀) :
     t₁ = t₂ := by
-  sorry
+  classical
+  have h₁_some :
+      extractMLP 𝔽q β (h_ℓ_add_R_rate := h_ℓ_add_R_rate) 0 f₀ = some t₁ :=
+    (extractMLP_eq_some_iff_pair_UDRClose 𝔽q β (h_ℓ_add_R_rate := h_ℓ_add_R_rate)
+      (f := f₀) (tpoly := t₁)).2 h₁
+  have h₂_some :
+      extractMLP 𝔽q β (h_ℓ_add_R_rate := h_ℓ_add_R_rate) 0 f₀ = some t₂ :=
+    (extractMLP_eq_some_iff_pair_UDRClose 𝔽q β (h_ℓ_add_R_rate := h_ℓ_add_R_rate)
+      (f := f₀) (tpoly := t₂)).2 h₂
+  rw [h₁_some] at h₂_some
+  injection h₂_some
 
 noncomputable def foldingBadEventAtBlock
     (stmtIdx : Fin (ℓ + 1)) (oracleIdx : OracleFrontierIndex stmtIdx)
@@ -407,7 +465,37 @@ lemma foldingBadEventAtBlock_imp_incrementalBadEvent_last
       (oStmt := oStmt) (challenges := challenges) j →
     incrementalBadEventAtLast 𝔽q β (h_ℓ_add_R_rate := h_ℓ_add_R_rate)
       (ϑ := ϑ) oStmt challenges j := by
-  sorry
+  intro h_j_bad
+  unfold incrementalBadEventAtLast
+  unfold foldingBadEventAtBlock at h_j_bad
+  dsimp [oraclePositionToDomainIndex] at h_j_bad ⊢
+  have h_le : j.val * ϑ + ϑ ≤ ℓ := by
+    exact oracle_index_add_steps_le_ℓ (ℓ := ℓ) (ϑ := ϑ) (i := Fin.last ℓ) (j := j)
+  have hk : min ϑ (ℓ - j.val * ϑ) = ϑ := by
+    omega
+  simp only [OracleFrontierIndex.val_mkFromStmtIdx, Fin.val_last, h_le, ↓reduceDIte] at h_j_bad
+  let blockStartIdx : Fin r := ⟨j.val * ϑ, by
+    exact lt_r_of_lt_ℓ (h_ℓ_add_R_rate := h_ℓ_add_R_rate)
+      ((oraclePositionToDomainIndex (ℓ := ℓ) (ϑ := ϑ) j).isLt)⟩
+  let destIdx : Fin r := ⟨j.val * ϑ + ϑ, by
+    exact lt_r_of_le_ℓ (h_ℓ_add_R_rate := h_ℓ_add_R_rate) h_le⟩
+  let rChallenges : Fin ϑ → L := fun cId => challenges ⟨j.val * ϑ + cId.val, by
+    change j.val * ϑ + cId.val < ℓ
+    omega⟩
+  convert
+      (incrementalFoldingBadEvent_eq_foldingBadEvent_of_k_eq_ϑ
+        (𝔽q := 𝔽q) (β := β) (h_ℓ_add_R_rate := h_ℓ_add_R_rate)
+        (ϑ := ϑ) (block_start_idx := blockStartIdx)
+        (midIdx := destIdx) (destIdx := destIdx)
+        (h_midIdx := rfl) (h_destIdx := rfl) (h_destIdx_le := h_le)
+        (f_block_start := oStmt j)
+        (r_challenges := rChallenges)).2 h_j_bad using 1
+  · apply Fin.ext
+    simp [destIdx, hk]
+  · exact
+      @lastRoundChallengeSlice_heq r L _ _ _ _ ℓ 𝓡 ϑ ‹NeZero ℓ› ‹NeZero ϑ›
+        challenges j (min ϑ (ℓ - j.val * ϑ)) hk
+        (Nat.min_le_right ϑ (ℓ - j.val * ϑ)) h_le
 
 set_option maxHeartbeats 200000 in
 lemma incrementalBadEvent_last_imp_foldingBadEventAtBlock
@@ -437,11 +525,35 @@ lemma incrementalBadEvent_last_imp_foldingBadEventAtBlock
       incrementalFoldingBadEvent 𝔽q β blockStartIdx ϑ (h_k_le := le_refl ϑ)
         (midIdx := destIdx) (destIdx := destIdx)
         (h_midIdx := rfl) (h_destIdx := rfl) (h_destIdx_le := h_le)
-      (f_block_start := by
-        simpa [OracleStatement, oraclePositionToDomainIndex] using oStmt j)
+        (f_block_start := oStmt j)
         (r_challenges := rChallenges) := by
-    sorry
-  sorry
+    convert h_j_inc_bad using 1
+    · apply Fin.ext
+      simp [destIdx, hk]
+    · exact hk.symm
+    · exact HEq.symm <|
+        @lastRoundChallengeSlice_heq r L _ _ _ _ ℓ 𝓡 ϑ ‹NeZero ℓ› ‹NeZero ϑ›
+          challenges j (min ϑ (ℓ - j.val * ϑ)) hk
+          (Nat.min_le_right ϑ (ℓ - j.val * ϑ)) h_le
+  have h_bad :
+      foldingBadEvent 𝔽q β blockStartIdx ϑ
+        (destIdx := destIdx)
+        (h_destIdx := rfl) (h_destIdx_le := by exact h_le)
+        (f_i := oStmt j)
+        (r_challenges := rChallenges) := by
+    exact
+      (incrementalFoldingBadEvent_eq_foldingBadEvent_of_k_eq_ϑ
+        (𝔽q := 𝔽q) (β := β) (h_ℓ_add_R_rate := h_ℓ_add_R_rate)
+        (ϑ := ϑ) (block_start_idx := blockStartIdx)
+        (midIdx := destIdx) (destIdx := destIdx)
+        (h_midIdx := rfl) (h_destIdx := rfl) (h_destIdx_le := by
+          exact h_le)
+        (f_block_start := oStmt j)
+        (r_challenges := rChallenges)).1 h_j_inc_bad'
+  unfold foldingBadEventAtBlock
+  dsimp [oraclePositionToDomainIndex]
+  simp only [OracleFrontierIndex.val_mkFromStmtIdx, Fin.val_last, h_le, ↓reduceDIte]
+  exact h_bad
 
 lemma badEventExistsProp_iff_incrementalBadEventExistsProp_last
     (oStmt : ∀ j, OracleStatement 𝔽q β (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ (Fin.last ℓ) j)
@@ -702,10 +814,8 @@ def strictOracleFoldingConsistencyProp (t : MultilinearPoly L ℓ) (i : Fin (ℓ
   letI : BEq L := inferInstance
   letI : LawfulBEq L := inferInstance
   let P₀ : CompPoly.CPolynomial L :=
-    ⟨CompPoly.CPolynomial.Raw.trim (Array.ofFn (fun i : Fin (2 ^ ℓ) =>
-        AdditiveNTT.novelToMonomialCoeffs 𝔽q β ℓ (by omega)
-          (fun ω => t.val.eval (bitsOfIndex ω)) i)), by
-      exact CompPoly.CPolynomial.Raw.Trim.trim_twice _⟩
+    computablePolynomialFromNovelCoeffsF₂ (𝔽q := 𝔽q) (β := β) ℓ (by omega)
+      (fun ω => t.val.eval (bitsOfIndex ω))
   let f₀ : OracleFunction 𝔽q β (h_ℓ_add_R_rate := h_ℓ_add_R_rate) 0 :=
     fun y => P₀.eval y.val
   ∀ (j : Fin (toOutCodewordsCount ℓ ϑ i)),

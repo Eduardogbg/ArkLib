@@ -7,6 +7,7 @@ Authors: Chung Thai Nguyen
 import CompPoly.Data.MvPolynomial.Notation
 import CompPoly.Multivariate.CMvPolynomial
 import CompPoly.Multivariate.MvPolyEquiv
+import CompPoly.Multivariate.Restrict
 import ArkLib.Data.MvPolynomial.Degrees
 
 /-!
@@ -55,13 +56,15 @@ theorem property [BEq R] [LawfulBEq R] (p : CPoly.CMvPolynomial.degreeLE n R d) 
     (h : (p : CPoly.CMvPolynomial n R) = (q : CPoly.CMvPolynomial n R)) : p = q :=
   Subtype.ext h
 
+open CPoly CMvPolynomial in
+private theorem degreeOf_restrictDegree_le [BEq R] [LawfulBEq R]
+    (d : Nat) (i : Fin n) (p : CPoly.CMvPolynomial n R) :
+    (CPoly.CMvPolynomial.restrictDegree d p).degreeOf i ≤ d := by
+  sorry
 /-- Canonical bounded-degree wrapper around a raw computable polynomial. -/
 def ofCMvPolynomial [BEq R] [LawfulBEq R] (d : ℕ) (p : CPoly.CMvPolynomial n R) :
     CPoly.CMvPolynomial.degreeLE n R d :=
-  ⟨CPoly.CMvPolynomial.restrictDegree d p, by
-    intro i
-    sorry
-  ⟩
+  ⟨CPoly.CMvPolynomial.restrictDegree d p, fun i => degreeOf_restrictDegree_le d i p⟩
 
 instance [BEq R] [LawfulBEq R] : Zero (CPoly.CMvPolynomial.degreeLE n R d) :=
   ⟨ofCMvPolynomial d 0⟩
@@ -85,10 +88,7 @@ def coeffVec (p : CPoly.CMvPolynomial.degreeLE 1 R d) : Fin (d + 1) → R :=
 
 /-- Build a bounded-degree computable univariate polynomial from its coefficient vector. -/
 def ofCoeffVec (coeffs : Fin (d + 1) → R) : CPoly.CMvPolynomial.degreeLE 1 R d :=
-  ⟨∑ k, CPoly.CMvPolynomial.monomial (coeffMonomial (d := d) k) (coeffs k), by
-    intro i
-    sorry
-  ⟩
+  ofCMvPolynomial d (∑ k, CPoly.CMvPolynomial.monomial (coeffMonomial (d := d) k) (coeffs k))
 
 @[simp] theorem coeffVec_ofCoeffVec (coeffs : Fin (d + 1) → R) :
     coeffVec (ofCoeffVec (R := R) (d := d) coeffs) = coeffs := by

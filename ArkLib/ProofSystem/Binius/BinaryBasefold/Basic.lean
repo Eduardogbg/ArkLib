@@ -11,7 +11,6 @@ import ArkLib.Data.MvPolynomial.MultilinearComputational
 
 /- ## Fundamental OracleReduction-related defintions for protocol specifications -/
 
-section
 namespace Binius.BinaryBasefold
 
 open OracleSpec OracleComp ProtocolSpec Finset AdditiveNTT Polynomial MvPolynomial
@@ -38,6 +37,11 @@ def toOutCodewordsCount (i : Fin (ℓ + 1)) : ℕ := by
 
 def isCommitmentRound (i : Fin ℓ) : Prop :=
   ϑ ∣ i.val + 1 ∧ i.val + 1 ≠ ℓ
+
+instance instDecidableIsCommitmentRound (i : Fin ℓ) :
+    Decidable (isCommitmentRound ℓ ϑ i) := by
+  unfold isCommitmentRound
+  infer_instance
 
 omit [NeZero ϑ] hdiv in
 lemma toOutCodewordsCountOf0 : toOutCodewordsCount ℓ ϑ 0 = 1 := by
@@ -259,7 +263,7 @@ lemma toOutCodewordsCount_succ_eq (i : Fin ℓ) :
     rw [←h_succ];
     simp only [left_eq_ite_iff, Nat.add_eq_left, one_ne_zero, imp_false, Decidable.not_not]
     exact hv
-  · rw [isCommitmentRound]
+  · unfold isCommitmentRound
     simp only [ne_eq, hv, ↓reduceIte]
     unfold toOutCodewordsCount
     have h_i_lt_ℓ: i.castSucc.val < ℓ := by
@@ -729,8 +733,9 @@ def projectToMidSumcheckPoly (t : MultilinearPoly L ℓ)
 /-- Derive `H_{i+1}` from `H_i` by projecting the first variable -/
 def projectToNextSumcheckPoly (i : Fin (ℓ)) (Hᵢ : MultiquadraticPoly L (ℓ - i))
     (rᵢ : L) : -- the current challenge
-    MultiquadraticPoly L (ℓ - i.succ) :=
-  fixFirstVariablesOfDegreeLE (L := L) (ℓ := ℓ - i) (d := 2) (v := ⟨1, by omega⟩)
+    MultiquadraticPoly L (ℓ - i.succ) := by
+  haveI : NeZero (ℓ - i) := ⟨Nat.sub_ne_zero_of_lt i.isLt⟩
+  exact fixFirstVariablesOfDegreeLE (L := L) (ℓ := ℓ - i) (d := 2) (v := ⟨1, by omega⟩)
     (H := Hᵢ) (challenges := fun _ => rᵢ)
 
 lemma projectToNextSumcheckPoly_eval_eq (i : Fin ℓ) (Hᵢ : MultiquadraticPoly L (ℓ - i)) (rᵢ : L)
@@ -772,15 +777,15 @@ lemma projectToNextSumcheckPoly_eval_eq (i : Fin ℓ) (Hᵢ : MultiquadraticPoly
 /-- **Key Sumcheck Property**: Evaluating the sumcheck round polynomial at a challenge equals
     the sum of the projected polynomial evaluations over the boolean hypercube.
     This is the fundamental relationship for the sumcheck protocol: when we create the round
-    message polynomial `g_i = getSumcheckRoundMessage(H_i)` and evaluate it at a challenge
-    `rᵢ`, this equals the sum of evaluations of `H_{i+1} = projectToNextSumcheckPoly(H_i, rᵢ)`
-    over all boolean points.
+    polynomial `g_i = getSumcheckRoundPoly(H_i)` and evaluate it at a challenge `rᵢ`, this equals
+    the sum of evaluations of `H_{i+1} = projectToNextSumcheckPoly(H_i, rᵢ)` over all boolean
+    points.
     Mathematically: `g_i(rᵢ) = ∑_{x ∈ {0,1}^{ℓ-i-1}} H_{i+1}(x)` where
-    - `g_i` is the univariate computable fold message derived from `H_i`
+    - `g_i` is the univariate sumcheck round polynomial derived from `H_i`
     - `H_{i+1}` is obtained by fixing the first variable of `H_i` to `rᵢ`
 -/
 lemma projectToNextSumcheckPoly_sum_eq (i : Fin ℓ) (Hᵢ : MultiquadraticPoly L (ℓ - i)) (rᵢ : L) :
-    FoldMessage.eval (getSumcheckRoundMessage (L := L) (ℓ := ℓ) (𝓑 := 𝓑) i Hᵢ) rᵢ =
+    (getSumcheckRoundPoly (L := L) (ℓ := ℓ) (𝓑 := 𝓑) i Hᵢ).val.eval rᵢ =
     (∑ x ∈ (univ.map 𝓑) ^ᶠ (ℓ - i.succ),
       (projectToNextSumcheckPoly ℓ i Hᵢ rᵢ).val.eval x) :=
   by
@@ -981,8 +986,12 @@ def OracleStatement (ϑ : ℕ) [NeZero ϑ] (i : Fin (ℓ + 1)) :
 
 def firstOracleWitnessConsistencyProp (t : MultilinearPoly L ℓ)
     (f₀ : OracleFunction (𝔽q := 𝔽q) (β := β)
-      (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (ℓ := ℓ) (𝓡 := 𝓡) 0) : Prop := by
-  sorry
+      (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (ℓ := ℓ) (𝓡 := 𝓡) 0) : Prop :=
+  let P : CompPoly.CPolynomial L :=
+    computablePolynomialFromNovelCoeffsF₂ (𝔽q := 𝔽q) (β := β) ℓ (by omega)
+      (fun ω => t.val.eval (bitsOfIndex ω))
+  2 * Δ₀(f₀, fun y => P.eval y.val) <
+    BBF_CodeDistance 𝔽q β (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (i := (0 : Fin r))
 
 /-- **Oracle Access Congruence**:
 Proves equality of oracle evaluations `oStmtIn j x = oStmtIn j' x'` -/
@@ -1228,10 +1237,8 @@ lemma extractMLP_eq_some_iff_pair_UDRClose
       (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (ℓ := ℓ) (𝓡 := 𝓡) ⟨0, by omega⟩)
     (tpoly : MultilinearPoly L ℓ) :
     let P : CompPoly.CPolynomial L :=
-      ⟨CompPoly.CPolynomial.Raw.trim (Array.ofFn (fun i : Fin (2 ^ ℓ) =>
-          AdditiveNTT.novelToMonomialCoeffs 𝔽q β ℓ (by omega)
-            (fun ω => tpoly.val.eval (bitsOfIndex ω)) i)), by
-        exact CompPoly.CPolynomial.Raw.Trim.trim_twice _⟩
+      computablePolynomialFromNovelCoeffsF₂ (𝔽q := 𝔽q) (β := β) ℓ (by omega)
+        (fun ω => tpoly.val.eval (bitsOfIndex ω))
     (extractMLP 𝔽q β (h_ℓ_add_R_rate := h_ℓ_add_R_rate) 0 f = some tpoly) ↔
       2 * Δ₀(f, (fun y => P.eval y.val)) <
         BBF_CodeDistance 𝔽q β (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (i := (0 : Fin r)) := by
@@ -1326,10 +1333,19 @@ def snoc_oracle {i : Fin ℓ} {destIdx : Fin r} (h_destIdx : destIdx = i.val + 1
     (newOracleFn : OracleFunction 𝔽q β (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (domainIdx := destIdx)) :
     ∀ j : Fin (toOutCodewordsCount ℓ ϑ i.succ),
       OracleStatement 𝔽q β (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (ϑ := ϑ) i.succ j := fun j =>
-  sorry
-  /-
-
- -/
+  if hj : j.val < toOutCodewordsCount ℓ ϑ i.castSucc then
+      -- Case 1: Old oracle (index < old count)
+      oStmtIn ⟨j.val, hj⟩
+    else
+      if hi : isCommitmentRound ℓ ϑ i then
+        -- Case 2: New oracle (Commitment round, index == old count)
+        -- Derive the equality between the function's expected domain and the actual domain
+        let h_eq := snoc_oracle_dest_eq_j (h_ℓ_add_R_rate := h_ℓ_add_R_rate)
+          (ℓ := ℓ) (ϑ := ϑ) h_destIdx j hj hi
+        fun x => newOracleFn (cast (by rw [h_eq]) x)
+      else
+        -- Case 3: Impossible (Not commitment round, but index increased)
+        (snoc_oracle_impossible hj hi).elim
 
 def take_snoc_oracle (i : Fin ℓ) {destIdx : Fin r} (h_destIdx : destIdx = i.val + 1)
     (oStmtIn : (j : Fin (toOutCodewordsCount ℓ ϑ i.castSucc)) →
@@ -1349,7 +1365,11 @@ lemma take_snoc_oracle_eq_oStmtIn (i : Fin ℓ) {destIdx : Fin r} (h_destIdx : d
       OracleStatement 𝔽q β (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ i.castSucc j)
     (newOracleFn : OracleFunction 𝔽q β (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (domainIdx := destIdx)) :
     (take_snoc_oracle 𝔽q β i h_destIdx oStmtIn newOracleFn) = oStmtIn := by
-  sorry
+  unfold take_snoc_oracle snoc_oracle
+  if hi : isCommitmentRound ℓ ϑ i then
+    simp only [Fin.is_lt, ↓reduceDIte, Fin.eta]
+  else
+    simp only [Fin.is_lt, ↓reduceDIte, Fin.eta]
 
 end SnocOracleHelpers
 
@@ -1358,17 +1378,22 @@ def getFirstOracle {oracleFrontierIdx : Fin (ℓ + 1)}
     (oStmt : (∀ j, OracleStatement 𝔽q β (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ oracleFrontierIdx j)) :
     OracleFunction (𝔽q := 𝔽q) (β := β)
       (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (ℓ := ℓ) (𝓡 := 𝓡) 0 :=
-  sorry
-  /-
-
- -/
+  let rawf₀ := oStmt ⟨0, by
+    letI := instNeZeroNatToOutCodewordsCount ℓ ϑ oracleFrontierIdx
+    exact pos_of_neZero (toOutCodewordsCount ℓ ϑ oracleFrontierIdx)
+  ⟩
+  fun y => rawf₀ (cast (by simp only [Fin.mk_zero', zero_mul]) y)
 
 def getLastOracle {oracleFrontierIdx : Fin (ℓ + 1)} {destIdx : Fin r}
     (h_destIdx : destIdx.val = getLastOracleDomainIndex ℓ ϑ oracleFrontierIdx)
     (oStmt : (∀ j, OracleStatement 𝔽q β (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ
       (i := oracleFrontierIdx) j)) :
     OracleFunction 𝔽q β (h_ℓ_add_R_rate := h_ℓ_add_R_rate) destIdx :=
-  sorry
+  let res := oStmt ⟨getLastOraclePositionIndex ℓ ϑ oracleFrontierIdx, by omega⟩
+  have h_lt : getLastOracleDomainIndex ℓ ϑ oracleFrontierIdx < r := by omega
+  have h_eq : destIdx = ⟨getLastOracleDomainIndex ℓ ϑ oracleFrontierIdx, h_lt⟩
+    := Fin.eq_of_val_eq (by omega)
+  fun y => res (cast (by rw [h_eq]) y)
 end OracleReductionComponents
 
 end Binius.BinaryBasefold

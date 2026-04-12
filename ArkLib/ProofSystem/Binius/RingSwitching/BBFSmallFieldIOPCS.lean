@@ -95,12 +95,16 @@ def reducedMLPEvalStatement_to_BBF_Statement (stmt : MLPEvalStatement (L := L) (
   ctx := ⟨stmt.t_eval_point, stmt.original_claim⟩
 
 /-- Convert `WitMLP L ℓ'` to `Witness 𝔽q β 0`. -/
-noncomputable def MLPEvalWitness_to_BBF_Witness (wit : WitMLP L ℓ') :
+def MLPEvalWitness_to_BBF_Witness
+    (stmt : MLPEvalStatement (L := L) (ℓ := ℓ')) (wit : WitMLP L ℓ') :
     Witness (L := L) 𝔽q β (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (ℓ := ℓ') (0 : Fin (ℓ' + 1)) :=
+  let t := MultilinearPoly.ofCMvPoly wit.t
   {
-    t := MultilinearPoly.ofCMvPoly wit.t
-    H := 0
-    f := fun _ => 0
+    t := t
+    H := Binius.BinaryBasefold.projectToMidSumcheckPoly (L := L) (ℓ := ℓ') (t := t)
+      (m := BBF_SumcheckMultiplierParam.multpoly ⟨stmt.t_eval_point, stmt.original_claim⟩)
+      (i := (0 : Fin (ℓ' + 1))) (challenges := Fin.elim0)
+    f := getMidCodewords 𝔽q β (h_ℓ_add_R_rate := h_ℓ_add_R_rate) t Fin.elim0
   }
 
 /-! ### Large-Field Invocation Wrapper
@@ -144,11 +148,7 @@ def largeFieldInvocationCtxLens : OracleContext.Lens
   stmt := largeFieldInvocationStmtLens 𝔽q β
   wit := {
     toFunA := fun ⟨⟨stmtIn, _oStmtIn⟩, witIn⟩ =>
-      {
-        t := MultilinearPoly.ofCMvPoly witIn.t
-        H := 0
-        f := fun _ => 0
-      }
+      MLPEvalWitness_to_BBF_Witness 𝔽q β (h_ℓ_add_R_rate := h_ℓ_add_R_rate) stmtIn witIn
     toFunB := fun _ _ => ()
   }
 
@@ -164,11 +164,10 @@ def largeFieldInvocationOracleReduction :
       (WitOut := Unit)
       (pSpec := fullPSpec 𝔽q β γ_repetitions (ϑ := ϑ)
         (h_ℓ_add_R_rate := h_ℓ_add_R_rate)) :=
-  OracleReduction.liftContext
-    (lens := largeFieldInvocationCtxLens 𝔽q β
-      (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (ϑ := ϑ) (𝓡 := 𝓡))
-    (R := FullBinaryBasefold.fullOracleReduction 𝔽q β γ_repetitions (ϑ := ϑ)
-      (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (𝓑 := 𝓑))
+  (FullBinaryBasefold.fullOracleReduction 𝔽q β γ_repetitions (ϑ := ϑ)
+    (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (𝓑 := 𝓑)).liftContext
+      (lens := largeFieldInvocationCtxLens 𝔽q β
+        (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (ϑ := ϑ) (𝓡 := 𝓡))
 
 omit [SampleableType L] in
 /-- Uniqueness of the polynomial witness from first-oracle UDR-compatibility. -/
@@ -233,7 +232,7 @@ lemma witnessStructuralInvariant_MLPEvalWitness_to_BBF_Witness
     Binius.BinaryBasefold.witnessStructuralInvariant 𝔽q β
       (mp := BBF_SumcheckMultiplierParam) (h_ℓ_add_R_rate := h_ℓ_add_R_rate)
       (reducedMLPEvalStatement_to_BBF_Statement (L := L) (ℓ' := ℓ') stmt)
-      (MLPEvalWitness_to_BBF_Witness 𝔽q β (h_ℓ_add_R_rate := h_ℓ_add_R_rate) wit) := by
+      (MLPEvalWitness_to_BBF_Witness 𝔽q β (h_ℓ_add_R_rate := h_ℓ_add_R_rate) stmt wit) := by
   sorry
 
 /-- If `t(r) = s` for the outer MLP statement, then the mapped round-0 BBF witness
@@ -244,7 +243,7 @@ lemma sumcheckConsistency_MLPEvalWitness_to_BBF_Witness_of_eval
     (h_eval : CPoly.CMvPolynomial.eval stmt.t_eval_point wit.t = stmt.original_claim) :
     Binius.BinaryBasefold.sumcheckConsistencyProp (𝓑 := 𝓑)
       (sumcheckTarget := (reducedMLPEvalStatement_to_BBF_Statement (L := L) (ℓ' := ℓ') stmt).sumcheck_target)
-      (H := (MLPEvalWitness_to_BBF_Witness 𝔽q β (h_ℓ_add_R_rate := h_ℓ_add_R_rate) wit).H) := by
+      (H := (MLPEvalWitness_to_BBF_Witness 𝔽q β (h_ℓ_add_R_rate := h_ℓ_add_R_rate) stmt wit).H) := by
   sorry
 
 /-! ### AbstractOStmtIn
@@ -282,7 +281,39 @@ def bbfAbstractOStmtIn : AbstractOStmtIn L ℓ' where
   initialCompatibility_unique := fun oStmt t₁ t₂ h₁ h₂ => by
     sorry
 
+instance largeFieldInvocationCtxLens_complete :
+  (largeFieldInvocationCtxLens 𝔽q β
+    (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (ϑ := ϑ) (𝓡 := 𝓡)).toContext.IsComplete
+    (outerRelIn := (bbfAbstractOStmtIn 𝔽q β
+      (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (ϑ := ϑ)).toStrictRelInput)
+    (innerRelIn := strictRoundRelation (mp := BBF_SumcheckMultiplierParam) 𝔽q β
+      (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (𝓑 := 𝓑) (0 : Fin (ℓ' + 1)))
+    (outerRelOut := acceptRejectOracleRel)
+    (innerRelOut := acceptRejectOracleRel)
+    (compat := Reduction.compatContext (oSpec := []ₒ)
+      (pSpec := fullPSpec 𝔽q β γ_repetitions (ϑ := ϑ)
+        (h_ℓ_add_R_rate := h_ℓ_add_R_rate))
+      ((largeFieldInvocationCtxLens 𝔽q β
+        (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (ϑ := ϑ) (𝓡 := 𝓡)).toContext)
+      ((FullBinaryBasefold.fullOracleReduction 𝔽q β γ_repetitions (ϑ := ϑ)
+        (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (𝓑 := 𝓑)).toReduction)) where
+  proj_complete := by
+    sorry
+  lift_complete := by
+    sorry
+
 variable {σ : Type} {init : ProbComp σ} {impl : QueryImpl []ₒ (StateT σ ProbComp)}
+
+theorem largeFieldInvocationOracleReduction_perfectCompleteness (hInit : NeverFail init) :
+  OracleReduction.perfectCompleteness
+    (oracleReduction := largeFieldInvocationOracleReduction 𝔽q β γ_repetitions
+      (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (ϑ := ϑ) (𝓡 := 𝓡) (𝓑 := 𝓑))
+    (relIn := (bbfAbstractOStmtIn 𝔽q β
+      (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (ϑ := ϑ)).toStrictRelInput)
+    (relOut := acceptRejectOracleRel)
+    (init := init)
+    (impl := impl) := by
+  sorry
 
 lemma MLPEvalRelation_of_round0_local_and_structural
     (stmt : MLPEvalStatement (L := L) (ℓ := ℓ'))
@@ -361,7 +392,7 @@ instance largeFieldInvocationExtractorLens_rbr_knowledge_soundness
 
 This wraps the full Binary Basefold protocol (core interaction + query phase)
 as a multilinear polynomial commitment scheme over the large field `L`. -/
-noncomputable def bbfMLIOPCS : MLIOPCS L ℓ' :=
+def bbfMLIOPCS : MLIOPCS L ℓ' :=
   let _ := 𝔽q
   let _ := β
   let _ := γ_repetitions

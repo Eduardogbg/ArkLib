@@ -100,6 +100,39 @@ def indexToSDomainZero (k : Fin (2 ^ (ℓ + R_rate))) :
   indexToSDomain (𝔽q := 𝔽q) (β := β) (ℓ := ℓ) (R_rate := R_rate)
     (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (i := 0) k
 
+/-- Embed a local stage-`i` index into a global loose index by padding `i` low bits with `0`. -/
+def localIndexToGlobalIndex (i : Fin r) (h_i : i < ℓ + R_rate)
+    (idx : Fin (2 ^ (ℓ + R_rate - i.val))) :
+    Fin (2 ^ (ℓ + R_rate)) := by
+  let lowZeros : Fin (2 ^ i.val) := 0
+  let fullIdx : Fin (2 ^ ((ℓ + R_rate - i.val) + i.val)) :=
+    Nat.joinBits (low := lowZeros) (high := idx)
+  have h_bits : (ℓ + R_rate - i.val) + i.val = ℓ + R_rate := by
+    exact Nat.sub_add_cancel (Nat.le_of_lt h_i)
+  exact cast (by simpa [h_bits]) fullIdx
+
+/-- Decode a local stage-`i` index to a computable `sDomainComp i` point. -/
+def localIndexToSDomain (i : Fin r) (h_i : i < ℓ + R_rate)
+    (idx : Fin (2 ^ (ℓ + R_rate - i.val))) :
+    sDomain (𝔽q := 𝔽q) (β := β) (ℓ := ℓ) (R_rate := R_rate)
+      (h_ℓ_add_R_rate := h_ℓ_add_R_rate) i :=
+  indexToSDomain (𝔽q := 𝔽q) (β := β) (ℓ := ℓ) (R_rate := R_rate)
+    (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (i := i)
+    (localIndexToGlobalIndex (i := i) h_i idx)
+
+/-- Deterministic local-index decoder for computable `sDomainComp`.
+Falls back to `0` only if exhaustive search unexpectedly fails. -/
+def sDomainPointToLocalIndex (i : Fin r) (h_i : i < ℓ + R_rate)
+    (x : sDomain (𝔽q := 𝔽q) (β := β) (ℓ := ℓ) (R_rate := R_rate)
+      (h_ℓ_add_R_rate := h_ℓ_add_R_rate) i) :
+    Fin (2 ^ (ℓ + R_rate - i.val)) :=
+  match (List.finRange (2 ^ (ℓ + R_rate - i.val))).find? (fun idx =>
+      decide (((localIndexToSDomain (𝔽q := 𝔽q) (β := β) (ℓ := ℓ) (R_rate := R_rate)
+        (h_ℓ_add_R_rate := h_ℓ_add_R_rate) i h_i idx : sDomain (𝔽q := 𝔽q) (β := β)
+        (ℓ := ℓ) (R_rate := R_rate) (h_ℓ_add_R_rate := h_ℓ_add_R_rate) i) : L) = x.val)) with
+  | some idx => idx
+  | none => 0
+
 /-- At stage `0`, the executable normalized evaluation map is the identity. -/
 lemma evalNormalizedWLinearMap_zero_apply (x : L) :
     AdditiveNTT.evalNormalizedWLinearMap

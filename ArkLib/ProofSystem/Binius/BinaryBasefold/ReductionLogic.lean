@@ -356,10 +356,7 @@ def commitStepHEq (i : Fin ℓ) (hCR : isCommitmentRound ℓ ϑ i) :
 
 /-- The Logic Instance for the commit step.
 This is a trivial 1-message protocol where the prover just sends an oracle and the verifier
-accepts it.
-**Computability note:** The `honestProverTranscript` and `proverOut` fields are sorry'd so that
-the structure is computable. The actual prover logic is in
-`commitStepLogic_honestProverTranscript` / `commitStepLogic_proverOut`. -/
+accepts it. -/
 def commitStepLogic (i : Fin ℓ) (hCR : isCommitmentRound ℓ ϑ i) :
     ReductionLogicStep
       (Statement (L := L) Context i.succ)
@@ -391,49 +388,6 @@ def commitStepLogic (i : Fin ℓ) (hCR : isCommitmentRound ℓ ϑ i) :
       snoc_oracle 𝔽q β (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate)
         (destIdx := ⟨i.val + 1, by omega⟩) (h_destIdx := by rfl) oStmtIn (newOracleFn := wit.f)
     ((stmt, oStmtOut), wit)
-
-/-- Actual (noncomputable) honest prover transcript for the commit step. -/
-noncomputable def commitStepLogic_honestProverTranscript (i : Fin ℓ) :
-    Statement (L := L) Context i.succ →
-    Witness (L := L) 𝔽q β (h_ℓ_add_R_rate := h_ℓ_add_R_rate) i.succ →
-    (∀ j, OracleStatement 𝔽q β (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate) i.castSucc j) →
-    (pSpecCommit 𝔽q β (h_ℓ_add_R_rate := h_ℓ_add_R_rate) i).Challenges →
-    FullTranscript (pSpecCommit 𝔽q β (h_ℓ_add_R_rate := h_ℓ_add_R_rate) i) :=
-  by
-    sorry
-
-/-- Actual (noncomputable) prover output for the commit step. -/
-noncomputable def commitStepLogic_proverOut (i : Fin ℓ) (hCR : isCommitmentRound ℓ ϑ i) :
-    Statement (L := L) Context i.succ →
-    Witness (L := L) 𝔽q β (h_ℓ_add_R_rate := h_ℓ_add_R_rate) i.succ →
-    (∀ j, OracleStatement 𝔽q β (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate) i.castSucc j) →
-    FullTranscript (pSpecCommit 𝔽q β (h_ℓ_add_R_rate := h_ℓ_add_R_rate) i) →
-    ((Statement (L := L) Context i.succ ×
-      (∀ j, OracleStatement 𝔽q β (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate) i.succ j)) ×
-      Witness (L := L) 𝔽q β (h_ℓ_add_R_rate := h_ℓ_add_R_rate) i.succ) :=
-  by
-  intro stmt wit oStmtIn _transcript
-  let newOracleFn : OracleFunction 𝔽q β (h_ℓ_add_R_rate := h_ℓ_add_R_rate)
-      (domainIdx := ⟨i.val + 1, by omega⟩) := fun x => wit.f x
-  let oStmtOut :=
-    snoc_oracle 𝔽q β (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate)
-      (destIdx := ⟨i.val + 1, by omega⟩) (h_destIdx := by rfl) oStmtIn newOracleFn
-  exact ((stmt, oStmtOut), wit)
-
-@[simp] lemma commitStepLogic_honestProverTranscript_eq (i : Fin ℓ)
-    (hCR : isCommitmentRound ℓ ϑ i) :
-    (commitStepLogic (mp := mp) 𝔽q β (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (𝓑 := 𝓑)
-      i hCR).honestProverTranscript =
-    commitStepLogic_honestProverTranscript 𝔽q β
-      (h_ℓ_add_R_rate := h_ℓ_add_R_rate) i := by
-  sorry
-
-@[simp] lemma commitStepLogic_proverOut_eq (i : Fin ℓ) (hCR : isCommitmentRound ℓ ϑ i) :
-    (commitStepLogic (mp := mp) 𝔽q β (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (𝓑 := 𝓑)
-      i hCR).proverOut =
-    commitStepLogic_proverOut 𝔽q β (ϑ := ϑ)
-      (h_ℓ_add_R_rate := h_ℓ_add_R_rate) i hCR := by
-  sorry
 
 /-! Helper lemma: snoc_oracle matches mkVerifierOStmtOut for commit steps.
 

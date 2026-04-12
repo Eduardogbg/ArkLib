@@ -403,7 +403,7 @@ Since f^(0) is always available, we can invoke the extractMLP function directly.
 
 Key design: WitMid at the final round (m=2) is Witness i.succ, matching WitOut.
 This allows extractOut to be identity and simplifies toFun_full proofs. -/
-noncomputable def foldRbrExtractor (i : Fin ℓ) :
+def foldRbrExtractor (i : Fin ℓ) :
   Extractor.RoundByRound []ₒ
     (StmtIn := (Statement (L := L) Context i.castSucc) × (∀ j,
       OracleStatement 𝔽q β (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate) i.castSucc j))
@@ -444,7 +444,7 @@ def foldKStateProp {i : Fin ℓ} (m : Fin (2 + 1))
       (localChecks := sumcheckConsistencyProp (𝓑 := 𝓑) stmtMid.sumcheck_target witMid.H)
   | ⟨1, _⟩ => -- After P sends hᵢ(X), before V sends r_i'
     let h_star : FoldMessage L :=
-      getSumcheckRoundMessage (L := L) (ℓ := ℓ) (𝓑 := 𝓑) (i := i) witMid.H
+      getSumcheckRoundPoly (L := L) (ℓ := ℓ) (𝓑 := 𝓑) (i := i) witMid.H
     let h_i : FoldMessage L := tr.messages ⟨0, rfl⟩
     masterKStateProp (mp := mp) 𝔽q β (h_ℓ_add_R_rate := h_ℓ_add_R_rate)
       (stmtIdx := i.castSucc) (oracleIdx := OracleFrontierIndex.mkFromStmtIdx i.castSucc)
@@ -527,7 +527,7 @@ def foldKnowledgeStateFunction (i : Fin ℓ) :
       have h_sumcheck : sumcheckConsistencyProp (𝓑 := 𝓑) stmtMid.sumcheck_target witMid.H := by
         simp_rw [h_localized] at h_explicit
         rw [h_explicit.symm]
-        exact getSumcheckRoundMessage_sum_eq (L := L) (ℓ := ℓ) (𝓑 := 𝓑)
+        exact getSumcheckRoundPoly_sum_eq (L := L) (ℓ := ℓ) (𝓑 := 𝓑)
           (i := i) witMid.H
       exact Or.inr ⟨h_sumcheck, h_struct, h_init, h_fold⟩
   toFun_full := fun ⟨stmtIn, oStmtIn⟩ tr witOut probEvent_relOut_gt_0 => by sorry
@@ -547,7 +547,7 @@ def foldKStateProps {i : Fin ℓ} (m : Fin (2 + 1))
       (localChecks := sumcheckConsistencyProp (𝓑 := 𝓑) stmtMid.sumcheck_target witMid.H)
   | ⟨1, _⟩ => -- After P sends hᵢ(X), before V sends r_i'
     let h_star : FoldMessage L :=
-      getSumcheckRoundMessage (L := L) (ℓ := ℓ) (𝓑 := 𝓑) (i := i) witMid.H
+      getSumcheckRoundPoly (L := L) (ℓ := ℓ) (𝓑 := 𝓑) (i := i) witMid.H
     let h_i : FoldMessage L := tr.messages ⟨0, rfl⟩
     masterKStateProp (mp := mp) 𝔽q β (h_ℓ_add_R_rate := h_ℓ_add_R_rate)
       (stmtIdx := i.castSucc) (oracleIdx := OracleFrontierIndex.mkFromStmtIdx i.castSucc)
@@ -586,8 +586,7 @@ The fold-step extraction failure event implies either:
 2. an incremental folding bad event at the current oracle frontier.
 
 More precisely:
-- **Sumcheck bad**: `h_i ≠ h_star ∧ h_i.eval r_i' = h_star.eval r_i'`,
-  where `h_star = getSumcheckRoundMessage ℓ 𝓑 i witIn.H`.
+  where `h_star = getSumcheckRoundPoly ℓ 𝓑 i witIn.H`.
 - **Folding bad**: an incremental bad-event witness exists at frontier `i.castSucc`
   using challenges extended by `r_i'`.
 
@@ -644,7 +643,7 @@ lemma firstOracleWitnessConsistency_unique (i : Fin ℓ)
 /-! Extract the round-`i` witness (before the verifier challenge) from a fold-step output
 witness. -/
 @[reducible]
-noncomputable def foldStepWitBeforeFromWitMid (i : Fin ℓ)
+def foldStepWitBeforeFromWitMid (i : Fin ℓ)
     (stmtOStmtIn : (Statement (L := L) Context i.castSucc) × (∀ j,
       OracleStatement 𝔽q β (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate) i.castSucc j))
     (h_i : (pSpecFold (L := L)).Message ⟨0, rfl⟩) (r_i' : L)
@@ -655,7 +654,7 @@ noncomputable def foldStepWitBeforeFromWitMid (i : Fin ℓ)
 
 /-! Canonical fold-step round polynomial extracted from a specific `witMid`. -/
 @[reducible]
-noncomputable def foldStepHStarFromWitMid (i : Fin ℓ)
+def foldStepHStarFromWitMid (i : Fin ℓ)
     (stmtOStmtIn : (Statement (L := L) Context i.castSucc) × (∀ j,
       OracleStatement 𝔽q β (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate) i.castSucc j))
     (h_i : (pSpecFold (L := L)).Message ⟨0, rfl⟩) (r_i' : L)
@@ -663,7 +662,7 @@ noncomputable def foldStepHStarFromWitMid (i : Fin ℓ)
     FoldMessage L :=
   let witBefore := foldStepWitBeforeFromWitMid
     (mp := mp) 𝔽q β (h_ℓ_add_R_rate := h_ℓ_add_R_rate) i stmtOStmtIn h_i r_i' witMid
-  getSumcheckRoundMessage (L := L) (ℓ := ℓ) (𝓑 := 𝓑) (i := i) witBefore.H
+  getSumcheckRoundPoly (L := L) (ℓ := ℓ) (𝓑 := 𝓑) (i := i) witBefore.H
 
 /-! At the same fold-step output state, `witnessStructuralInvariant`
 and `firstOracleWitnessConsistencyProp` determine a unique witness.

@@ -41,7 +41,7 @@ namespace Binius.BinaryBasefold
 
 open scoped NNReal ProbabilityTheory Polynomial
 
-variable {L : Type} [Field L] [Fintype L]
+variable {L : Type} [Field L] [Fintype L] [BEq L] [LawfulBEq L]
 
 /-- **Probability bound for the bad sumcheck event** (Schwartz-Zippel).
 When the verifier challenge `r_i'` is uniform over `L`, the probability that two distinct

@@ -50,58 +50,93 @@ instance betaFun_linearIndependent : Fact (LinearIndependent K (fun i => β i)) 
   exact ⟨β.linearIndependent⟩
 
 instance betaFun_zero_eq_one : Fact ((fun i => β i) 0 = 1) := by
-  simpa using h_β₀_eq_1
+  exact h_β₀_eq_1
 
 section Pspec
 
-end Pspec
-
-/-- Canonical executable batching ∪ core interaction spec. -/
-@[reducible]
-def batchingCorePspec
+private def batchingCorePspecExec
     (βfun : Fin (2 ^ κ) → L) [Fact (LinearIndependent K βfun)] [Fact (βfun 0 = 1)] :=
   (RingSwitching.pSpecBatching κ L K) ++ₚ
     (BinaryBasefold.pSpecCoreInteraction K βfun
       (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate))
 
-/-- Canonical executable full protocol spec. -/
-@[reducible]
-def fullPspec
+private def fullPspecExec
     (βfun : Fin (2 ^ κ) → L) [Fact (LinearIndependent K βfun)] [Fact (βfun 0 = 1)] :=
-  (batchingCorePspec κ L K ℓ' 𝓡 ϑ h_ℓ_add_R_rate βfun) ++ₚ
+  (batchingCorePspecExec κ L K ℓ' 𝓡 ϑ h_ℓ_add_R_rate βfun) ++ₚ
     (BinaryBasefold.pSpecQuery K βfun γ_repetitions (h_ℓ_add_R_rate := h_ℓ_add_R_rate))
 
 instance
     (βfun : Fin (2 ^ κ) → L) [Fact (LinearIndependent K βfun)] [Fact (βfun 0 = 1)] :
-    ∀ j, OracleInterface ((batchingCorePspec κ L K ℓ' 𝓡 ϑ h_ℓ_add_R_rate βfun).Message j) :=
+    ∀ j, OracleInterface ((batchingCorePspecExec κ L K ℓ' 𝓡 ϑ h_ℓ_add_R_rate βfun).Message j) :=
   instOracleInterfaceMessageAppend (pSpec₁ := RingSwitching.pSpecBatching κ L K)
     (pSpec₂ := BinaryBasefold.pSpecCoreInteraction K βfun
       (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate))
 
 instance
     (βfun : Fin (2 ^ κ) → L) [Fact (LinearIndependent K βfun)] [Fact (βfun 0 = 1)] :
-    ∀ j, SampleableType ((batchingCorePspec κ L K ℓ' 𝓡 ϑ h_ℓ_add_R_rate βfun).Challenge j) :=
+    ∀ j, SampleableType ((batchingCorePspecExec κ L K ℓ' 𝓡 ϑ h_ℓ_add_R_rate βfun).Challenge j) :=
   instSampleableTypeChallengeAppend (pSpec₁ := RingSwitching.pSpecBatching κ L K)
     (pSpec₂ := BinaryBasefold.pSpecCoreInteraction K βfun
       (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate))
 
 instance
     (βfun : Fin (2 ^ κ) → L) [Fact (LinearIndependent K βfun)] [Fact (βfun 0 = 1)] :
-    ∀ j, OracleInterface ((fullPspec κ L K ℓ' 𝓡 ϑ γ_repetitions h_ℓ_add_R_rate βfun).Message j) :=
+    ∀ j, OracleInterface ((fullPspecExec κ L K ℓ' 𝓡 ϑ γ_repetitions h_ℓ_add_R_rate βfun).Message j) :=
   instOracleInterfaceMessageAppend
-    (pSpec₁ := batchingCorePspec κ L K ℓ' 𝓡 ϑ h_ℓ_add_R_rate βfun)
+    (pSpec₁ := batchingCorePspecExec κ L K ℓ' 𝓡 ϑ h_ℓ_add_R_rate βfun)
     (pSpec₂ := BinaryBasefold.pSpecQuery K βfun γ_repetitions (h_ℓ_add_R_rate := h_ℓ_add_R_rate))
 
 instance
     (βfun : Fin (2 ^ κ) → L) [Fact (LinearIndependent K βfun)] [Fact (βfun 0 = 1)] :
-    ∀ j, SampleableType ((fullPspec κ L K ℓ' 𝓡 ϑ γ_repetitions h_ℓ_add_R_rate βfun).Challenge j) :=
+    ∀ j, SampleableType ((fullPspecExec κ L K ℓ' 𝓡 ϑ γ_repetitions h_ℓ_add_R_rate βfun).Challenge j) :=
   instSampleableTypeChallengeAppend
-    (pSpec₁ := batchingCorePspec κ L K ℓ' 𝓡 ϑ h_ℓ_add_R_rate βfun)
+    (pSpec₁ := batchingCorePspecExec κ L K ℓ' 𝓡 ϑ h_ℓ_add_R_rate βfun)
     (pSpec₂ := BinaryBasefold.pSpecQuery K βfun γ_repetitions (h_ℓ_add_R_rate := h_ℓ_add_R_rate))
 
-/-- Canonical executable batching + core-interaction verifier. -/
 @[reducible]
-def batchingCoreVerifier
+def batchingCorePspec
+    (βfun : Fin (2 ^ κ) → L)
+    [Fact (LinearIndependent K βfun)] [Fact (βfun 0 = 1)] :=
+  batchingCorePspecExec κ L K ℓ' 𝓡 ϑ h_ℓ_add_R_rate βfun
+
+@[reducible]
+def fullPspec
+    (βfun : Fin (2 ^ κ) → L)
+    [Fact (LinearIndependent K βfun)] [Fact (βfun 0 = 1)] :=
+  fullPspecExec κ L K ℓ' 𝓡 ϑ γ_repetitions h_ℓ_add_R_rate βfun
+
+instance
+    (βfun : Fin (2 ^ κ) → L)
+    [Fact (LinearIndependent K βfun)] [Fact (βfun 0 = 1)] :
+    ∀ j, OracleInterface ((batchingCorePspec κ L K ℓ' 𝓡 ϑ h_ℓ_add_R_rate βfun).Message j) := by
+  unfold batchingCorePspec
+  infer_instance
+
+instance
+    (βfun : Fin (2 ^ κ) → L)
+    [Fact (LinearIndependent K βfun)] [Fact (βfun 0 = 1)] :
+    ∀ j, SampleableType ((batchingCorePspec κ L K ℓ' 𝓡 ϑ h_ℓ_add_R_rate βfun).Challenge j) := by
+  unfold batchingCorePspec
+  infer_instance
+
+instance
+    (βfun : Fin (2 ^ κ) → L)
+    [Fact (LinearIndependent K βfun)] [Fact (βfun 0 = 1)] :
+    ∀ j, OracleInterface ((fullPspec κ L K ℓ' 𝓡 ϑ γ_repetitions h_ℓ_add_R_rate βfun).Message j) := by
+  unfold fullPspec
+  infer_instance
+
+instance
+    (βfun : Fin (2 ^ κ) → L)
+    [Fact (LinearIndependent K βfun)] [Fact (βfun 0 = 1)] :
+    ∀ j, SampleableType ((fullPspec κ L K ℓ' 𝓡 ϑ γ_repetitions h_ℓ_add_R_rate βfun).Challenge j) := by
+  unfold fullPspec
+  infer_instance
+
+end Pspec
+
+/-- Canonical executable batching + core-interaction verifier. -/
+private def batchingCoreVerifierExec
     (βfun : Fin (2 ^ κ) → L)
     [Fact (LinearIndependent K βfun)] [Fact (βfun 0 = 1)]
     (βcube : Basis (Fin κ → Fin 2) K L)
@@ -113,7 +148,7 @@ def batchingCoreVerifier
       (StmtOut := BinaryBasefold.FinalSumcheckStatementOut (L := L) (ℓ := ℓ'))
       (OStmtOut := BinaryBasefold.OracleStatement K βfun
         (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ (Fin.last ℓ'))
-      (pSpec := batchingCorePspec κ L K ℓ' 𝓡 ϑ h_ℓ_add_R_rate βfun) :=
+      (pSpec := batchingCorePspecExec κ L K ℓ' 𝓡 ϑ h_ℓ_add_R_rate βfun) :=
   OracleVerifier.append (oSpec := []ₒ)
     (Stmt₁ := BatchingStmtIn (L := L) (ℓ := ℓ))
     (Stmt₂ := Statement (L := L) (ℓ := ℓ') (RingSwitching.RingSwitchingBaseContext κ L K ℓ) 0)
@@ -131,30 +166,26 @@ def batchingCoreVerifier
       (𝓑 := 𝓑)
       (aOStmtIn := Binius.RingSwitching.BBFSmallFieldIOPCS.bbfAbstractOStmtIn (𝔽q := K)
         (β := βfun) (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (ϑ := ϑ)))
-    (V₂ := coreInteractionOracleVerifier (κ := κ) (L := L) (K := K) (βfun := βfun)
+    (V₂ := coreInteractionOracleVerifierExec (κ := κ) (L := L) (K := K) (βfun := βfun)
       (ℓ := ℓ) (ℓ' := ℓ') (𝓡 := 𝓡) (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate)
       (h_l := h_l) (𝓑 := 𝓑) mp)
 
-/-- Canonical executable batching + core-interaction reduction. -/
 @[reducible]
-def batchingCoreReduction
+def batchingCoreVerifier
     (βfun : Fin (2 ^ κ) → L)
     [Fact (LinearIndependent K βfun)] [Fact (βfun 0 = 1)]
     (βcube : Basis (Fin κ → Fin 2) K L)
-    (mp : SumcheckMultiplierParam L ℓ' (RingSwitchingBaseContext κ L K ℓ))
-    (coreInteractionProver :
-      OracleProver
-        (oSpec := []ₒ)
-        (StmtIn := Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) 0)
-        (OStmtIn := BinaryBasefold.OracleStatement K βfun
-          (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ 0)
-        (WitIn := RingSwitching.SumcheckWitness L ℓ' 0)
-        (StmtOut := BinaryBasefold.FinalSumcheckStatementOut (L := L) (ℓ := ℓ'))
-        (OStmtOut := BinaryBasefold.OracleStatement K βfun
-          (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ (Fin.last ℓ'))
-        (WitOut := Unit)
-        (pSpec := BinaryBasefold.pSpecCoreInteraction K βfun (ϑ := ϑ)
-          (h_ℓ_add_R_rate := h_ℓ_add_R_rate))) :
+    (mp : SumcheckMultiplierParam L ℓ' (RingSwitchingBaseContext κ L K ℓ)) :=
+  batchingCoreVerifierExec (κ := κ) (L := L) (K := K) (ℓ := ℓ) (ℓ' := ℓ')
+    (𝓡 := 𝓡) (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (h_l := h_l)
+    (𝓑 := 𝓑) βfun βcube mp
+
+/-- Canonical executable batching + core-interaction reduction. -/
+private def batchingCoreReductionExec
+    (βfun : Fin (2 ^ κ) → L)
+    [Fact (LinearIndependent K βfun)] [Fact (βfun 0 = 1)]
+    (βcube : Basis (Fin κ → Fin 2) K L)
+    (mp : SumcheckMultiplierParam L ℓ' (RingSwitchingBaseContext κ L K ℓ)) :
     OracleReduction (oSpec := []ₒ)
       (StmtIn := BatchingStmtIn (L := L) (ℓ := ℓ))
       (OStmtIn := (Binius.RingSwitching.BBFSmallFieldIOPCS.bbfAbstractOStmtIn (𝔽q := K)
@@ -164,7 +195,7 @@ def batchingCoreReduction
       (OStmtOut := BinaryBasefold.OracleStatement K βfun
         (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ (Fin.last ℓ'))
       (WitOut := Unit)
-      (pSpec := batchingCorePspec κ L K ℓ' 𝓡 ϑ h_ℓ_add_R_rate βfun) :=
+      (pSpec := batchingCorePspecExec κ L K ℓ' 𝓡 ϑ h_ℓ_add_R_rate βfun) :=
   OracleReduction.append (oSpec := []ₒ)
     (Stmt₁ := BatchingStmtIn (L := L) (ℓ := ℓ))
     (Stmt₂ := Statement (L := L) (ℓ := ℓ') (RingSwitching.RingSwitchingBaseContext κ L K ℓ) 0)
@@ -187,11 +218,20 @@ def batchingCoreReduction
         (β := βfun) (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (ϑ := ϑ)))
     (R₂ := coreInteractionOracleReduction (κ := κ) (L := L) (K := K) (βfun := βfun)
       (ℓ := ℓ) (ℓ' := ℓ') (𝓡 := 𝓡) (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate)
-      (h_l := h_l) (𝓑 := 𝓑) mp coreInteractionProver)
+      (h_l := h_l) (𝓑 := 𝓑) mp)
+
+@[reducible]
+def batchingCoreReduction
+    (βfun : Fin (2 ^ κ) → L)
+    [Fact (LinearIndependent K βfun)] [Fact (βfun 0 = 1)]
+    (βcube : Basis (Fin κ → Fin 2) K L)
+    (mp : SumcheckMultiplierParam L ℓ' (RingSwitchingBaseContext κ L K ℓ)) :=
+  batchingCoreReductionExec (κ := κ) (L := L) (K := K) (ℓ := ℓ) (ℓ' := ℓ')
+    (𝓡 := 𝓡) (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (h_l := h_l)
+    (𝓑 := 𝓑) βfun βcube mp
 
 /-- Canonical computable full verifier over explicit executable basis/multiplier inputs. -/
-@[reducible]
-def fullOracleVerifier
+private def fullOracleVerifierExec
     (βfun : Fin (2 ^ κ) → L)
     [Fact (LinearIndependent K βfun)] [Fact (βfun 0 = 1)]
     (βcube : Basis (Fin κ → Fin 2) K L)
@@ -202,7 +242,7 @@ def fullOracleVerifier
         (β := βfun) (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (ϑ := ϑ)).OStmtIn)
       (StmtOut := Bool)
       (OStmtOut := fun _ : Empty => Unit)
-      (pSpec := fullPspec κ L K ℓ' 𝓡 ϑ γ_repetitions h_ℓ_add_R_rate βfun) :=
+      (pSpec := fullPspecExec κ L K ℓ' 𝓡 ϑ γ_repetitions h_ℓ_add_R_rate βfun) :=
   OracleVerifier.append (oSpec := []ₒ)
     (Stmt₁ := BatchingStmtIn (L := L) (ℓ := ℓ))
     (Stmt₂ := BinaryBasefold.FinalSumcheckStatementOut (L := L) (ℓ := ℓ'))
@@ -212,35 +252,32 @@ def fullOracleVerifier
     (OStmt₂ := BinaryBasefold.OracleStatement K βfun
       (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ (Fin.last ℓ'))
     (OStmt₃ := fun _ : Empty => Unit)
-    (pSpec₁ := batchingCorePspec κ L K ℓ' 𝓡 ϑ h_ℓ_add_R_rate βfun)
+    (pSpec₁ := batchingCorePspecExec κ L K ℓ' 𝓡 ϑ h_ℓ_add_R_rate βfun)
     (pSpec₂ := BinaryBasefold.pSpecQuery K βfun γ_repetitions
       (h_ℓ_add_R_rate := h_ℓ_add_R_rate))
-    (V₁ := batchingCoreVerifier (κ := κ) (L := L) (K := K) (ℓ := ℓ) (ℓ' := ℓ')
+    (V₁ := batchingCoreVerifierExec (κ := κ) (L := L) (K := K) (ℓ := ℓ) (ℓ' := ℓ')
       (𝓡 := 𝓡) (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (h_l := h_l) (𝓑 := 𝓑)
       βfun βcube mp)
     (V₂ := QueryPhase.queryOracleVerifier K βfun γ_repetitions (ϑ := ϑ)
       (h_ℓ_add_R_rate := h_ℓ_add_R_rate))
 
-/-- Canonical computable full reduction over explicit executable basis/multiplier inputs. -/
 @[reducible]
-def fullOracleReduction
+def fullOracleVerifier
     (βfun : Fin (2 ^ κ) → L)
     [Fact (LinearIndependent K βfun)] [Fact (βfun 0 = 1)]
     (βcube : Basis (Fin κ → Fin 2) K L)
-    (mp : SumcheckMultiplierParam L ℓ' (RingSwitchingBaseContext κ L K ℓ))
-    (coreInteractionProver :
-      OracleProver
-        (oSpec := []ₒ)
-        (StmtIn := Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) 0)
-        (OStmtIn := BinaryBasefold.OracleStatement K βfun
-          (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ 0)
-        (WitIn := RingSwitching.SumcheckWitness L ℓ' 0)
-        (StmtOut := BinaryBasefold.FinalSumcheckStatementOut (L := L) (ℓ := ℓ'))
-        (OStmtOut := BinaryBasefold.OracleStatement K βfun
-          (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ (Fin.last ℓ'))
-        (WitOut := Unit)
-        (pSpec := BinaryBasefold.pSpecCoreInteraction K βfun (ϑ := ϑ)
-          (h_ℓ_add_R_rate := h_ℓ_add_R_rate))) :
+    (mp : SumcheckMultiplierParam L ℓ' (RingSwitchingBaseContext κ L K ℓ)) :=
+  fullOracleVerifierExec (κ := κ) (L := L) (K := K) (ℓ := ℓ) (ℓ' := ℓ')
+    (𝓡 := 𝓡) (ϑ := ϑ) (γ_repetitions := γ_repetitions)
+    (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (h_l := h_l) (𝓑 := 𝓑)
+    βfun βcube mp
+
+/-- Canonical computable full reduction over explicit executable basis/multiplier inputs. -/
+private def fullOracleReductionExec
+    (βfun : Fin (2 ^ κ) → L)
+    [Fact (LinearIndependent K βfun)] [Fact (βfun 0 = 1)]
+    (βcube : Basis (Fin κ → Fin 2) K L)
+    (mp : SumcheckMultiplierParam L ℓ' (RingSwitchingBaseContext κ L K ℓ)) :
     OracleReduction (oSpec := []ₒ)
       (StmtIn := BatchingStmtIn (L := L) (ℓ := ℓ))
       (OStmtIn := (Binius.RingSwitching.BBFSmallFieldIOPCS.bbfAbstractOStmtIn (𝔽q := K)
@@ -249,7 +286,7 @@ def fullOracleReduction
       (StmtOut := Bool)
       (OStmtOut := fun _ : Empty => Unit)
       (WitOut := Unit)
-      (pSpec := fullPspec κ L K ℓ' 𝓡 ϑ γ_repetitions h_ℓ_add_R_rate βfun) :=
+      (pSpec := fullPspecExec κ L K ℓ' 𝓡 ϑ γ_repetitions h_ℓ_add_R_rate βfun) :=
   OracleReduction.append (oSpec := []ₒ)
     (Stmt₁ := BatchingStmtIn (L := L) (ℓ := ℓ))
     (Stmt₂ := BinaryBasefold.FinalSumcheckStatementOut (L := L) (ℓ := ℓ'))
@@ -262,45 +299,53 @@ def fullOracleReduction
     (OStmt₂ := BinaryBasefold.OracleStatement K βfun
       (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ (Fin.last ℓ'))
     (OStmt₃ := fun _ : Empty => Unit)
-    (pSpec₁ := batchingCorePspec κ L K ℓ' 𝓡 ϑ h_ℓ_add_R_rate βfun)
+    (pSpec₁ := batchingCorePspecExec κ L K ℓ' 𝓡 ϑ h_ℓ_add_R_rate βfun)
     (pSpec₂ := BinaryBasefold.pSpecQuery K βfun γ_repetitions
       (h_ℓ_add_R_rate := h_ℓ_add_R_rate))
-    (R₁ := batchingCoreReduction (κ := κ) (L := L) (K := K) (ℓ := ℓ) (ℓ' := ℓ')
+    (R₁ := batchingCoreReductionExec (κ := κ) (L := L) (K := K) (ℓ := ℓ) (ℓ' := ℓ')
       (𝓡 := 𝓡) (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (h_l := h_l) (𝓑 := 𝓑)
-      βfun βcube mp coreInteractionProver)
+      βfun βcube mp)
     (R₂ := QueryPhase.queryOracleReduction K βfun γ_repetitions (ϑ := ϑ)
       (h_ℓ_add_R_rate := h_ℓ_add_R_rate))
 
-/-- Canonical computable full proof over explicit executable basis/multiplier inputs. -/
 @[reducible]
-def fullOracleProof
+def fullOracleReduction
     (βfun : Fin (2 ^ κ) → L)
     [Fact (LinearIndependent K βfun)] [Fact (βfun 0 = 1)]
     (βcube : Basis (Fin κ → Fin 2) K L)
-    (mp : SumcheckMultiplierParam L ℓ' (RingSwitchingBaseContext κ L K ℓ))
-    (coreInteractionProver :
-      OracleProver
-        (oSpec := []ₒ)
-        (StmtIn := Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) 0)
-        (OStmtIn := BinaryBasefold.OracleStatement K βfun
-          (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ 0)
-        (WitIn := RingSwitching.SumcheckWitness L ℓ' 0)
-        (StmtOut := BinaryBasefold.FinalSumcheckStatementOut (L := L) (ℓ := ℓ'))
-        (OStmtOut := BinaryBasefold.OracleStatement K βfun
-          (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ (Fin.last ℓ'))
-        (WitOut := Unit)
-        (pSpec := BinaryBasefold.pSpecCoreInteraction K βfun (ϑ := ϑ)
-          (h_ℓ_add_R_rate := h_ℓ_add_R_rate))) :
+    (mp : SumcheckMultiplierParam L ℓ' (RingSwitchingBaseContext κ L K ℓ)) :=
+  fullOracleReductionExec (κ := κ) (L := L) (K := K) (ℓ := ℓ) (ℓ' := ℓ')
+    (𝓡 := 𝓡) (ϑ := ϑ) (γ_repetitions := γ_repetitions)
+    (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (h_l := h_l) (𝓑 := 𝓑)
+    βfun βcube mp
+
+/-- Canonical computable full proof over explicit executable basis/multiplier inputs. -/
+private def fullOracleProofExec
+    (βfun : Fin (2 ^ κ) → L)
+    [Fact (LinearIndependent K βfun)] [Fact (βfun 0 = 1)]
+    (βcube : Basis (Fin κ → Fin 2) K L)
+    (mp : SumcheckMultiplierParam L ℓ' (RingSwitchingBaseContext κ L K ℓ)) :
     OracleProof []ₒ
       (Statement := BatchingStmtIn (L := L) (ℓ := ℓ))
       (OStatement := (Binius.RingSwitching.BBFSmallFieldIOPCS.bbfAbstractOStmtIn (𝔽q := K)
         (β := βfun) (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (ϑ := ϑ)).OStmtIn)
       (Witness := BatchingWitIn L K ℓ ℓ')
-      (pSpec := fullPspec κ L K ℓ' 𝓡 ϑ γ_repetitions h_ℓ_add_R_rate βfun) :=
-  fullOracleReduction (κ := κ) (L := L) (K := K) (ℓ := ℓ)
+      (pSpec := fullPspecExec κ L K ℓ' 𝓡 ϑ γ_repetitions h_ℓ_add_R_rate βfun) :=
+  fullOracleReductionExec (κ := κ) (L := L) (K := K) (ℓ := ℓ)
     (ℓ' := ℓ') (𝓡 := 𝓡) (ϑ := ϑ) (γ_repetitions := γ_repetitions)
     (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (h_l := h_l) (𝓑 := 𝓑)
-    βfun βcube mp coreInteractionProver
+    βfun βcube mp
+
+@[reducible]
+def fullOracleProof
+    (βfun : Fin (2 ^ κ) → L)
+    [Fact (LinearIndependent K βfun)] [Fact (βfun 0 = 1)]
+    (βcube : Basis (Fin κ → Fin 2) K L)
+    (mp : SumcheckMultiplierParam L ℓ' (RingSwitchingBaseContext κ L K ℓ)) :=
+  fullOracleProofExec (κ := κ) (L := L) (K := K) (ℓ := ℓ) (ℓ' := ℓ')
+    (𝓡 := 𝓡) (ϑ := ϑ) (γ_repetitions := γ_repetitions)
+    (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (h_l := h_l) (𝓑 := 𝓑)
+    βfun βcube mp
 
 /-!
 ## Security Properties
@@ -323,8 +368,7 @@ noncomputable def batchingCoreRbrKnowledgeError
 
 /-- Combined RBR knowledge error for full FRI-Binius. -/
 noncomputable def fullRbrKnowledgeError
-    (i : (fullPspec κ L K ℓ' 𝓡 ϑ γ_repetitions h_ℓ_add_R_rate
-      (fun j => β j)).ChallengeIdx) : ℝ≥0 :=
+    (i : (fullPspec κ L K ℓ' 𝓡 ϑ γ_repetitions h_ℓ_add_R_rate (fun j => β j)).ChallengeIdx) : ℝ≥0 :=
   Sum.elim
     (f := batchingCoreRbrKnowledgeError κ L K β ℓ' 𝓡 ϑ h_ℓ_add_R_rate)
     (g := QueryPhase.queryRbrKnowledgeError K (fun i => β i) γ_repetitions
@@ -378,30 +422,16 @@ local notation "aOStmtIn" =>
 
 /-- Perfect completeness for the full Binary Basefold protocol (reduction) -/
 theorem fullOracleReduction_perfectCompleteness
-    (coreInteractionProver :
-      OracleProver
-        (oSpec := []ₒ)
-        (StmtIn := Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) 0)
-        (OStmtIn := BinaryBasefold.OracleStatement K (fun i => β i)
-          (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ 0)
-        (WitIn := RingSwitching.SumcheckWitness L ℓ' 0)
-        (StmtOut := BinaryBasefold.FinalSumcheckStatementOut (L := L) (ℓ := ℓ'))
-        (OStmtOut := BinaryBasefold.OracleStatement K (fun i => β i)
-          (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ (Fin.last ℓ'))
-        (WitOut := Unit)
-        (pSpec := BinaryBasefold.pSpecCoreInteraction K (fun i => β i) (ϑ := ϑ)
-          (h_ℓ_add_R_rate := h_ℓ_add_R_rate)))
     (hInit : NeverFail init) :
   OracleReduction.perfectCompleteness
     (oracleReduction :=
       fullOracleReduction (κ := κ) (L := L) (K := K) (ℓ := ℓ)
         (ℓ' := ℓ') (ϑ := ϑ) (γ_repetitions := γ_repetitions)
         (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (h_l := h_l) (𝓑 := 𝓑)
-        (βfun := (fun i => β i))
+        (βfun := fun i => β i)
         (βcube := booleanHypercubeBasis κ L K β)
         (mp := RingSwitching_SumcheckMultParam κ L K
-          (β := booleanHypercubeBasis κ L K β) ℓ ℓ' h_l)
-        (coreInteractionProver := coreInteractionProver))
+          (β := booleanHypercubeBasis κ L K β) ℓ ℓ' h_l))
     (relIn := BatchingPhase.strictBatchingInputRelation κ L K
       (β := booleanHypercubeBasis κ L K β)
       ℓ ℓ' h_l aOStmtIn)
@@ -415,7 +445,8 @@ theorem fullOracleVerifier_rbrKnowledgeSoundness :
   (fullOracleVerifier (κ := κ) (L := L) (K := K) (ℓ := ℓ)
     (ℓ' := ℓ') (ϑ := ϑ) (γ_repetitions := γ_repetitions)
     (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (h_l := h_l) (𝓑 := 𝓑)
-    (βfun := (fun i => β i)) (βcube := booleanHypercubeBasis κ L K β)
+    (βfun := fun i => β i)
+    (βcube := booleanHypercubeBasis κ L K β)
     (mp := RingSwitching_SumcheckMultParam κ L K
       (β := booleanHypercubeBasis κ L K β) ℓ ℓ' h_l)
     ).rbrKnowledgeSoundness init impl
@@ -428,8 +459,7 @@ theorem fullOracleVerifier_rbrKnowledgeSoundness :
 
 /-- `∑ᵢ εᵢ` for the full verifier is at most **DP24 §5.2 eq. (43)**. -/
 theorem fullRbrKnowledgeError_sum_le_concrete :
-    (∑ i : (fullPspec κ L K ℓ' 𝓡 ϑ γ_repetitions h_ℓ_add_R_rate
-      (fun j => β j)).ChallengeIdx,
+    (∑ i : (fullPspec κ L K ℓ' 𝓡 ϑ γ_repetitions h_ℓ_add_R_rate (fun j => β j)).ChallengeIdx,
       fullRbrKnowledgeError κ L K β ℓ' 𝓡 ϑ γ_repetitions h_ℓ_add_R_rate i)
     ≤ concreteFRIBiniusKnowledgeError κ L ℓ' 𝓡 γ_repetitions := by sorry
 
@@ -439,7 +469,8 @@ theorem fullOracleVerifier_knowledgeSoundness :
     (fullOracleVerifier (κ := κ) (L := L) (K := K) (ℓ := ℓ)
       (ℓ' := ℓ') (ϑ := ϑ) (γ_repetitions := γ_repetitions)
       (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (h_l := h_l) (𝓑 := 𝓑)
-      (βfun := (fun i => β i)) (βcube := booleanHypercubeBasis κ L K β)
+      (βfun := fun i => β i)
+      (βcube := booleanHypercubeBasis κ L K β)
       (mp := RingSwitching_SumcheckMultParam κ L K
         (β := booleanHypercubeBasis κ L K β) ℓ ℓ' h_l)
     ).toVerifier.knowledgeSoundness

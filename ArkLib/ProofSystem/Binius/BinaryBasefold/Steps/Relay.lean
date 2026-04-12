@@ -243,7 +243,7 @@ def relayKnowledgeError (m : pSpecRelay.ChallengeIdx) : ℝ≥0 :=
 
 /-! The round-by-round extractor for a single round.
 Since f^(0) is always available, we can invoke the extractMLP function directly. -/
-noncomputable def relayRbrExtractor (i : Fin ℓ) :
+def relayRbrExtractor (i : Fin ℓ) :
   Extractor.RoundByRound []ₒ
     (StmtIn := (Statement (L := L) Context i.succ) × (∀ j, OracleStatement 𝔽q β (ϑ := ϑ)
       (h_ℓ_add_R_rate := h_ℓ_add_R_rate) i.castSucc j))

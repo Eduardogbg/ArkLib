@@ -195,6 +195,10 @@ noncomputable instance instFintypeFoldMessage {L : Type} [CommRing L] [Fintype L
     CPoly.CMvPolynomial.coeff (foldMessageMonomial d) (msg : CPoly.CMvPolynomial 1 L)
   have hcoeffVec : Function.Injective coeffVec := by
     intro p q h
+    suffices hpq : (p : CPoly.CMvPolynomial 1 L) = (q : CPoly.CMvPolynomial 1 L) by
+      exact Subtype.eq hpq
+    apply CPoly.CMvPolynomial.ext
+    intro m
     sorry
   letI : Finite (FoldMessage L) := Finite.of_injective coeffVec hcoeffVec
   exact Fintype.ofFinite (FoldMessage L)
@@ -202,12 +206,17 @@ noncomputable instance instFintypeFoldMessage {L : Type} [CommRing L] [Fintype L
 namespace FoldMessage
 variable {L : Type} [CommRing L] [BEq L] [LawfulBEq L]
 
+def val (msg : FoldMessage L) : CompPoly.CPolynomial L :=
+  ⟨CompPoly.CPolynomial.Raw.trim (Array.ofFn (fun i : Fin 3 =>
+      CPoly.CMvPolynomial.coeff (foldMessageMonomial i) (msg : CPoly.CMvPolynomial 1 L))), by
+    exact CompPoly.CPolynomial.Raw.Trim.trim_twice _⟩
+
 def eval (msg : FoldMessage L) (r : L) : L :=
-  CPoly.CMvPolynomial.eval (n := 1) (R := L) (fun _ => r) (msg : CPoly.CMvPolynomial 1 L)
+  (val msg).eval r
 
 lemma eval_eq_val_eval (msg : FoldMessage L) (r : L) :
-    (CPoly.fromCMvPolynomial (msg : CPoly.CMvPolynomial 1 L)).eval (fun _ => r) = eval msg r := by
-  rw [eval, CPoly.eval_equiv]
+    eval msg r = (val msg).eval r := by
+  rfl
 
 end FoldMessage
 
@@ -448,14 +457,6 @@ def fixFirstVariablesOfCMvPoly [BEq L] [LawfulBEq L] (v : Fin (ℓ + 1))
         CPoly.CMvPolynomial.X (n := ℓ - v) (R := L) ⟨j.val - v, by omega⟩)
     H
 
-def fixFirstVariablesOfDegreeLE [BEq L] [LawfulBEq L] (d : ℕ) (v : Fin (ℓ + 1))
-    (H : CPoly.CMvPolynomial.degreeLE ℓ L d) (challenges : Fin v → L) :
-    CPoly.CMvPolynomial.degreeLE (ℓ - v) L d :=
-  ⟨fixFirstVariablesOfCMvPoly (L := L) (ℓ := ℓ) v (H : CPoly.CMvPolynomial ℓ L) challenges, by
-    intro i
-    sorry
-  ⟩
-
 lemma fixFirstVariablesOfCMvPoly_val_eq [BEq L] [LawfulBEq L] (v : Fin (ℓ + 1))
     {challenges : Fin v → L} (H : CPoly.CMvPolynomial ℓ L) :
     CPoly.fromCMvPolynomial (fixFirstVariablesOfCMvPoly (L := L) (ℓ := ℓ) v H challenges) =
@@ -475,6 +476,47 @@ lemma fixFirstVariablesOfCMvPoly_eval_eq [BEq L] [LawfulBEq L] (v : Fin (ℓ + 1
   exact fixFirstVariablesOfMQP_eval_eq (L := L) (ℓ := ℓ) (v := v)
     (poly := CPoly.fromCMvPolynomial H) (x := x)
 
+def fixFirstVariablesOfDegreeLE [BEq L] [LawfulBEq L] (d : ℕ) (v : Fin (ℓ + 1))
+    (H : CPoly.CMvPolynomial.degreeLE ℓ L d) (challenges : Fin v → L) :
+    CPoly.CMvPolynomial.degreeLE (ℓ - v) L d := by
+  refine ⟨fixFirstVariablesOfCMvPoly (L := L) (ℓ := ℓ) v (H : CPoly.CMvPolynomial ℓ L) challenges, ?_⟩
+  intro i
+  have h_base :
+      CPoly.fromCMvPolynomial (H : CPoly.CMvPolynomial ℓ L) ∈ L⦃≤ d⦄[X Fin ℓ] :=
+    CPoly.CMvPolynomial.degreeLE.property H
+  have h_fix :
+      fixFirstVariablesOfMQP (L := L) ℓ v
+          (CPoly.fromCMvPolynomial (H : CPoly.CMvPolynomial ℓ L)) challenges ∈
+        L⦃≤ d⦄[X Fin (ℓ - v)] := by
+    exact fixFirstVariablesOfMQP_degreeLE (L := L) (ℓ := ℓ) (deg := d) (v := v)
+      (poly := CPoly.fromCMvPolynomial (H : CPoly.CMvPolynomial ℓ L))
+      (challenges := challenges) h_base
+  have h_fix' :
+      CPoly.fromCMvPolynomial
+          (fixFirstVariablesOfCMvPoly (L := L) (ℓ := ℓ) v
+            (H : CPoly.CMvPolynomial ℓ L) challenges) ∈
+        L⦃≤ d⦄[X Fin (ℓ - v)] := by
+    simpa [fixFirstVariablesOfCMvPoly_val_eq (L := L) (ℓ := ℓ) (v := v)
+      (challenges := challenges) (H := (H : CPoly.CMvPolynomial ℓ L))] using h_fix
+  have h_mv_deg :
+      MvPolynomial.degreeOf i
+          (CPoly.fromCMvPolynomial
+            (fixFirstVariablesOfCMvPoly (L := L) (ℓ := ℓ) v
+              (H : CPoly.CMvPolynomial ℓ L) challenges)) ≤ d := by
+    exact ((MvPolynomial.mem_restrictDegree_iff_degreeOf_le _ _).mp h_fix') i
+  have h_equiv :
+      MvPolynomial.degreeOf i
+          (CPoly.fromCMvPolynomial
+            (fixFirstVariablesOfCMvPoly (L := L) (ℓ := ℓ) v
+              (H : CPoly.CMvPolynomial ℓ L) challenges)) =
+        (fixFirstVariablesOfCMvPoly (L := L) (ℓ := ℓ) v
+          (H : CPoly.CMvPolynomial ℓ L) challenges).degreeOf i := by
+    simpa using
+      (congrFun (CPoly.degreeOf_equiv (S := L)
+        (p := fixFirstVariablesOfCMvPoly (L := L) (ℓ := ℓ) v
+          (H : CPoly.CMvPolynomial ℓ L) challenges)) i).symm
+  exact h_equiv ▸ h_mv_deg
+
 private def sumcheckRoundMessagePoly [BEq L] [LawfulBEq L] (i : Fin ℓ)
     (h : MultiquadraticPoly L (ℓ - ↑i.castSucc)) : CPoly.CMvPolynomial 1 L :=
   let X0 : CPoly.CMvPolynomial 1 L := CPoly.CMvPolynomial.X (n := 1) (R := L) ⟨0, by decide⟩
@@ -490,20 +532,10 @@ private def sumcheckRoundMessagePoly [BEq L] [LawfulBEq L] (i : Fin ℓ)
             omega⟩))
       h
 
-def getSumcheckRoundMessage [BEq L] [LawfulBEq L] (i : Fin ℓ)
+def getSumcheckRoundPoly [BEq L] [LawfulBEq L] (i : Fin ℓ)
     (h : MultiquadraticPoly L (ℓ - ↑i.castSucc)) : FoldMessage L :=
   let msgPoly := sumcheckRoundMessagePoly (L := L) (ℓ := ℓ) (𝓑 := 𝓑) i h
-  ⟨msgPoly, by
-    intro j
-    sorry
-  ⟩
-
-lemma getSumcheckRoundMessage_sum_eq [BEq L] [LawfulBEq L] (i : Fin ℓ)
-    (h : MultiquadraticPoly L (ℓ - ↑i.castSucc)) :
-    FoldMessage.eval (getSumcheckRoundMessage (L := L) (ℓ := ℓ) (𝓑 := 𝓑) i h) (𝓑 0) +
-      FoldMessage.eval (getSumcheckRoundMessage (L := L) (ℓ := ℓ) (𝓑 := 𝓑) i h) (𝓑 1) =
-    ∑ x ∈ (univ.map 𝓑) ^ᶠ (ℓ - ↑i.castSucc), MvPolynomial.eval x (MultiquadraticPoly.val h) := by
-  sorry
+  CPoly.CMvPolynomial.ofDegreeLE (n := 1) (R := L) 2 msgPoly
 
 private lemma cube_eval_sum_cons (n : ℕ) (p : L[X Fin (n + 1)]) :
     ∑ y ∈ (univ.map 𝓑) ^ᶠ (n + 1), MvPolynomial.eval y p =
@@ -517,7 +549,7 @@ private lemma cube_eval_sum_cons (n : ℕ) (p : L[X Fin (n + 1)]) :
 lemma getSumcheckRoundPoly_eval_eq [BEq L] [LawfulBEq L] (i : Fin ℓ)
     (h_poly : MultiquadraticPoly L (ℓ - ↑i.castSucc))
     (r : L) :
-    FoldMessage.eval (getSumcheckRoundMessage (L := L) (ℓ := ℓ) (𝓑 := 𝓑) i h_poly) r =
+    (getSumcheckRoundPoly (L := L) (ℓ := ℓ) (𝓑 := 𝓑) i h_poly).val.eval r =
     ∑ x ∈ (univ.map 𝓑) ^ᶠ (ℓ - ↑i.castSucc - 1),
       MvPolynomial.eval (Fin.cons r x ∘ Fin.cast (by
         exact (Nat.sub_add_cancel (Nat.one_le_of_lt (Nat.sub_pos_of_lt i.isLt))).symm
@@ -526,10 +558,10 @@ lemma getSumcheckRoundPoly_eval_eq [BEq L] [LawfulBEq L] (i : Fin ℓ)
 
 lemma getSumcheckRoundPoly_sum_eq [BEq L] [LawfulBEq L] (i : Fin ℓ)
     (h : MultiquadraticPoly L (ℓ - ↑i.castSucc)) :
-    FoldMessage.eval (getSumcheckRoundMessage (L := L) (ℓ := ℓ) (𝓑 := 𝓑) i h) (𝓑 0) +
-      FoldMessage.eval (getSumcheckRoundMessage (L := L) (ℓ := ℓ) (𝓑 := 𝓑) i h) (𝓑 1) =
+    (getSumcheckRoundPoly (L := L) (ℓ := ℓ) (𝓑 := 𝓑) i h).val.eval (𝓑 0) +
+      (getSumcheckRoundPoly (L := L) (ℓ := ℓ) (𝓑 := 𝓑) i h).val.eval (𝓑 1) =
     ∑ x ∈ (univ.map 𝓑) ^ᶠ (ℓ - ↑i.castSucc), MvPolynomial.eval x (MultiquadraticPoly.val h) := by
-  simpa using getSumcheckRoundMessage_sum_eq (L := L) (ℓ := ℓ) (𝓑 := 𝓑) (i := i) h
+  sorry
 
 /-- Helper to convert an index `k` into a vector of bits (as field elements). -/
 def bitsOfIndex {n : ℕ} (k : Fin (2 ^ n)) : Fin n → L :=
@@ -599,10 +631,10 @@ abbrev OracleFunction (domainIdx : Fin r) :=
     (h_ℓ_add_R_rate := h_ℓ_add_R_rate) domainIdx → L
 
 /-- Computable canonical univariate counterpart of `polynomialFromNovelCoeffsF₂`. -/
-noncomputable def computablePolynomialFromNovelCoeffsF₂ (ℓ : ℕ) (h_ℓ : ℓ ≤ r)
+def computablePolynomialFromNovelCoeffsF₂ (ℓ : ℕ) (h_ℓ : ℓ ≤ r)
     (a : Fin (2 ^ ℓ) → L) : CompPoly.CPolynomial L :=
   ⟨CompPoly.CPolynomial.Raw.trim (Array.ofFn (fun i : Fin (2 ^ ℓ) =>
-      AdditiveNTT.novelToMonomialCoeffs 𝔽q β ℓ h_ℓ a i)), by
+      AdditiveNTT.computableNovelToMonomialCoeffs (𝔽q := 𝔽q) (β := β) ℓ h_ℓ a i)), by
     exact CompPoly.CPolynomial.Raw.Trim.trim_twice _⟩
 
 /-- Evaluation of the computable novel-basis polynomial matches the abstract polynomial. -/

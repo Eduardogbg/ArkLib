@@ -328,6 +328,54 @@ def queryOracleProof : OracleProof
   queryOracleReduction 𝔽q β (ϑ := ϑ) γ_repetitions
     (h_ℓ_add_R_rate := h_ℓ_add_R_rate)
 
+/-- Relation used in the inner fold loop of `checkSingleRepetition`.
+At index `0`, folded value is `0`. At later positions, folded value equals the
+iterated fold at that oracle position, with suffix derived from query point `v`. -/
+@[reducible]
+def checkSingleRepetition_foldRel
+    (stmtIn : FinalSumcheckStatementOut (L := L) (ℓ := ℓ))
+    (oStmtIn : ∀ j, OracleStatement 𝔽q β (ϑ := ϑ)
+      (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (Fin.last ℓ) j)
+    (v : AdditiveNTT.Comp.sDomain (𝔽q := 𝔽q) (β := β) (ℓ := ℓ)
+      (R_rate := 𝓡) (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ⟨0, by omega⟩) :
+    Fin ((List.finRange (ℓ / ϑ)).length + 1) → L → Prop :=
+  let f₀ := getFirstOracle 𝔽q β oStmtIn
+  fun oraclePositionIdx val_folded_point =>
+    if hk : oraclePositionIdx.val = 0 then
+      val_folded_point = 0
+    else
+      have h_toCodewordCount : toOutCodewordsCount ℓ ϑ (Fin.last ℓ) = ℓ / ϑ :=
+        toOutCodewordsCount_last ℓ ϑ
+      have h_le : oraclePositionIdx ≤ ℓ / ϑ := by
+        have h_lt := oraclePositionIdx.isLt
+        simp only [List.length_finRange] at h_lt
+        exact Nat.le_of_lt_succ h_lt
+      have h_mul_eq : (ℓ / ϑ) * ϑ = ℓ := by
+        rw [Nat.div_mul_cancel (hdiv.out)]
+      have h_mul_le : oraclePositionIdx.val * ϑ ≤ ℓ := by
+        calc
+          oraclePositionIdx.val * ϑ ≤ (ℓ / ϑ) * ϑ := Nat.mul_le_mul_right ϑ h_le
+          _ = ℓ := h_mul_eq
+      let destIdx : Fin r := ⟨oraclePositionIdx * ϑ, by omega⟩
+      let suffix_point_from_v : AdditiveNTT.Comp.sDomain (𝔽q := 𝔽q) (β := β) (ℓ := ℓ)
+          (R_rate := 𝓡) (h_ℓ_add_R_rate := h_ℓ_add_R_rate) destIdx :=
+        extractSuffixFromChallenge 𝔽q β (h_ℓ_add_R_rate := h_ℓ_add_R_rate)
+          (v := v) (destIdx := destIdx) (h_destIdx_le := h_mul_le)
+      let folded_fn :=
+        iterated_fold
+        (i := 0) (steps := oraclePositionIdx * ϑ) (destIdx := destIdx)
+        (h_destIdx := by
+          simp only [Fin.coe_ofNat_eq_mod, Nat.zero_mod, zero_add]
+          rfl)
+        (h_destIdx_le := by
+          exact h_mul_le)
+        (f := f₀)
+        (r_challenges := getFoldingChallenges (𝓡 := 𝓡) (r := r) (Fin.last ℓ) stmtIn.challenges 0
+          (by
+            simp only [zero_add, Fin.val_last]
+            omega))
+      val_folded_point = folded_fn suffix_point_from_v
+
 lemma OracleComp.liftM_query_eq_liftM_liftM.{u, v, z}
     {ι : Type u} {spec : OracleSpec ι} {m : Type v → Type z}
     [MonadLift (OracleComp spec) m] {α : Type v}

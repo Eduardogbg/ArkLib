@@ -86,22 +86,18 @@ def φ₁ (L K : Type*) [Field K] [Field L] [Algebra K L] : L →+* TensorAlgebr
   map_add' α β := by simp only [tmul_add]
 
 open Module
-/-- Decompose `ŝ` into row components `(ŝ =: Σ_{u ∈ {0,1}^κ} β_u ⊗ ŝ_u)`.
-This views `L ⊗ L` as a module over `L` (right action)
-and finds the coordinates of `ŝ` with respect to the basis lifted from `β`. -/
-private def decompose_tensor_algebra_rowsBilin {σ : Type*} (β : Basis σ K L) :
+private def decomposeTensorAlgebraRowsBilinear {σ : Type*} (β : Basis σ K L) :
     L →ₗ[K] L →ₗ[K] (σ → L) where
-  toFun a := {
-    toFun := fun b u => (β.repr a u) • b
-    map_add' := by
-      intro b₁ b₂
-      funext u
-      simp [smul_add]
-    map_smul' := by
-      intro c b
-      funext u
-      simp [smul_smul, mul_comm]
-  }
+  toFun := fun a =>
+    { toFun := fun b u => (β.repr a u) • b
+      map_add' := by
+        intro x y
+        funext u
+        simp [add_smul]
+      map_smul' := by
+        intro c x
+        funext u
+        simp [smul_smul, mul_assoc, mul_left_comm, mul_comm] }
   map_add' := by
     intro a₁ a₂
     ext b u
@@ -109,53 +105,20 @@ private def decompose_tensor_algebra_rowsBilin {σ : Type*} (β : Basis σ K L) 
   map_smul' := by
     intro c a
     ext b u
-    simp [smul_smul, mul_comm]
+    simp [smul_smul, mul_assoc, mul_left_comm, mul_comm]
 
-def decompose_tensor_algebra_rows {σ : Type*} (β : Basis σ K L)
-  (s_hat : TensorAlgebra K L) : σ → L :=
-  TensorProduct.lift (decompose_tensor_algebra_rowsBilin (L := L) (K := K) β) s_hat
-
-@[simp] lemma decompose_tensor_algebra_rows_zero {σ : Type*} (β : Basis σ K L) :
-    decompose_tensor_algebra_rows (L := L) (K := K) (β := β) 0 = 0 := by
-  simp [decompose_tensor_algebra_rows]
-
-@[simp] lemma decompose_tensor_algebra_rows_tmul {σ : Type*} (β : Basis σ K L)
-    (a b) :
-    decompose_tensor_algebra_rows (L := L) (K := K) (β := β) (a ⊗ₜ[K] b) =
-      fun u => (β.repr a u) • b := by
-  ext u
-  rfl
-
-@[simp] lemma decompose_tensor_algebra_rows_add {σ : Type*} (β : Basis σ K L)
-    (x y : TensorAlgebra K L) :
-    decompose_tensor_algebra_rows (L := L) (K := K) (β := β) (x + y) =
-      decompose_tensor_algebra_rows (L := L) (K := K) (β := β) x +
-        decompose_tensor_algebra_rows (L := L) (K := K) (β := β) y := by
-  simp [decompose_tensor_algebra_rows]
-
-lemma decompose_tensor_algebra_rows_sum {σ ι : Type*} (β : Basis σ K L)
-    (s : Finset ι) (f : ι → TensorAlgebra K L) :
-    decompose_tensor_algebra_rows (L := L) (K := K) (β := β) (Finset.sum s f) =
-      Finset.sum s fun i => decompose_tensor_algebra_rows (L := L) (K := K) (β := β) (f i) := by
-  simpa [decompose_tensor_algebra_rows] using
-    (TensorProduct.lift (decompose_tensor_algebra_rowsBilin (L := L) (K := K) β)).map_sum f s
-
-/-- Decompose `ŝ` into column components `(ŝ =: Σ_{v ∈ {0,1}^κ} ŝ_v ⊗ β_v)`.
-This views `L ⊗ L` as a module over `L` (left action)
-and finds the coordinates of `ŝ` with respect to the basis lifted from `β`. -/
-private def decompose_tensor_algebra_columnsBilin {σ : Type*} (β : Basis σ K L) :
+private def decomposeTensorAlgebraColumnsBilinear {σ : Type*} (β : Basis σ K L) :
     L →ₗ[K] L →ₗ[K] (σ → L) where
-  toFun a := {
-    toFun := fun b v => (β.repr b v) • a
-    map_add' := by
-      intro b₁ b₂
-      funext v
-      simp [add_smul]
-    map_smul' := by
-      intro c b
-      funext v
-      simp [smul_smul]
-  }
+  toFun := fun a =>
+    { toFun := fun b v => (β.repr b v) • a
+      map_add' := by
+        intro x y
+        funext v
+        simp [add_smul]
+      map_smul' := by
+        intro c x
+        funext v
+        simp [smul_smul, mul_assoc, mul_left_comm, mul_comm] }
   map_add' := by
     intro a₁ a₂
     ext b v
@@ -163,14 +126,56 @@ private def decompose_tensor_algebra_columnsBilin {σ : Type*} (β : Basis σ K 
   map_smul' := by
     intro c a
     ext b v
-    simp [smul_smul, mul_comm]
+    simp [smul_smul, mul_assoc, mul_left_comm, mul_comm]
 
+/-- Decompose `ŝ` into row components `(ŝ =: Σ_{u ∈ {0,1}^κ} β_u ⊗ ŝ_u)`.
+This views `L ⊗ L` as a module over `L` (right action)
+and finds the coordinates of `ŝ` with respect to the basis lifted from `β`. -/
+def decompose_tensor_algebra_rows {σ : Type*} (β : Basis σ K L)
+  (s_hat : TensorAlgebra K L) : σ → L :=
+  TensorProduct.lift (decomposeTensorAlgebraRowsBilinear (L := L) (K := K) β) s_hat
+
+@[simp] lemma decompose_tensor_algebra_rows_zero {σ : Type*} (β : Basis σ K L) :
+    decompose_tensor_algebra_rows (L := L) (K := K) (β := β) 0 = 0 := by
+  ext u
+  simp [decompose_tensor_algebra_rows]
+
+@[simp] lemma decompose_tensor_algebra_rows_tmul {σ : Type*} (β : Basis σ K L)
+    (a b) :
+    decompose_tensor_algebra_rows (L := L) (K := K) (β := β) (a ⊗ₜ[K] b) =
+      fun u => (β.repr a u) • b := by
+  ext u
+  simp [decompose_tensor_algebra_rows, decomposeTensorAlgebraRowsBilinear]
+
+@[simp] lemma decompose_tensor_algebra_rows_add {σ : Type*} (β : Basis σ K L)
+    (x y : TensorAlgebra K L) :
+    decompose_tensor_algebra_rows (L := L) (K := K) (β := β) (x + y) =
+      decompose_tensor_algebra_rows (L := L) (K := K) (β := β) x +
+        decompose_tensor_algebra_rows (L := L) (K := K) (β := β) y := by
+  ext u
+  simp [decompose_tensor_algebra_rows]
+
+lemma decompose_tensor_algebra_rows_sum {σ ι : Type*} (β : Basis σ K L)
+    (s : Finset ι) (f : ι → TensorAlgebra K L) :
+    decompose_tensor_algebra_rows (L := L) (K := K) (β := β) (Finset.sum s f) =
+      Finset.sum s fun i => decompose_tensor_algebra_rows (L := L) (K := K) (β := β) (f i) := by
+  classical
+  induction s using Finset.induction_on with
+  | empty =>
+      simp
+  | @insert a s ha hs =>
+      simp [Finset.sum_insert, ha, decompose_tensor_algebra_rows_add, hs]
+
+/-- Decompose `ŝ` into column components `(ŝ =: Σ_{v ∈ {0,1}^κ} ŝ_v ⊗ β_v)`.
+This views `L ⊗ L` as a module over `L` (left action)
+and finds the coordinates of `ŝ` with respect to the basis lifted from `β`. -/
 def decompose_tensor_algebra_columns {σ : Type*} (β : Basis σ K L)
     (s_hat : L ⊗[K] L) : σ → L :=
-  TensorProduct.lift (decompose_tensor_algebra_columnsBilin (L := L) (K := K) β) s_hat
+  TensorProduct.lift (decomposeTensorAlgebraColumnsBilinear (L := L) (K := K) β) s_hat
 
 @[simp] lemma decompose_tensor_algebra_columns_zero {σ : Type*} (β : Basis σ K L) :
     decompose_tensor_algebra_columns (L := L) (K := K) (β := β) 0 = 0 := by
+  ext v
   simp [decompose_tensor_algebra_columns]
 
 @[simp] lemma decompose_tensor_algebra_columns_tmul {σ : Type*} (β : Basis σ K L)
@@ -178,21 +183,26 @@ def decompose_tensor_algebra_columns {σ : Type*} (β : Basis σ K L)
     decompose_tensor_algebra_columns (L := L) (K := K) (β := β) (a ⊗ₜ[K] b) =
       fun v => (β.repr b v) • a := by
   ext v
-  rfl
+  simp [decompose_tensor_algebra_columns, decomposeTensorAlgebraColumnsBilinear]
 
 @[simp] lemma decompose_tensor_algebra_columns_add {σ : Type*} (β : Basis σ K L)
     (x y : TensorAlgebra K L) :
     decompose_tensor_algebra_columns (L := L) (K := K) (β := β) (x + y) =
       decompose_tensor_algebra_columns (L := L) (K := K) (β := β) x +
         decompose_tensor_algebra_columns (L := L) (K := K) (β := β) y := by
+  ext v
   simp [decompose_tensor_algebra_columns]
 
 lemma decompose_tensor_algebra_columns_sum {σ ι : Type*} (β : Basis σ K L)
     (s : Finset ι) (f : ι → TensorAlgebra K L) :
     decompose_tensor_algebra_columns (L := L) (K := K) (β := β) (Finset.sum s f) =
       Finset.sum s fun i => decompose_tensor_algebra_columns (L := L) (K := K) (β := β) (f i) := by
-  simpa [decompose_tensor_algebra_columns] using
-    (TensorProduct.lift (decompose_tensor_algebra_columnsBilin (L := L) (K := K) β)).map_sum f s
+  classical
+  induction s using Finset.induction_on with
+  | empty =>
+      simp
+  | @insert a s ha hs =>
+      simp [Finset.sum_insert, ha, decompose_tensor_algebra_columns_add, hs]
 
 /--
 **Definition 2.2 (MLE packing)**.
@@ -292,10 +302,6 @@ structure SumcheckWitness (i : Fin (ℓ' + 1)) where
   -- `h(X_0, ..., X_{ℓ'-1}) := A(X_0, ..., X_{ℓ'-1}) ⋅ t'(X_0, ..., X_{ℓ'-1})`
   H : CPoly.CMvPolynomial (ℓ' - i) L
 
-def SumcheckWitness.legacyH {i : Fin (ℓ' + 1)}
-    (wit : SumcheckWitness L ℓ' i) : MultiquadraticPoly L (ℓ' - i) :=
-  CPoly.CMvPolynomial.ofDegreeLE (n := ℓ' - i) (R := L) 2 wit.H
-
 section MLIOPCS
 -- Define the specific Stmt/Wit types Π' expects.
 structure MLIOPCSStmt where
@@ -303,7 +309,7 @@ structure MLIOPCSStmt where
   evaluation : L
 
 /-- Standard input relation for MLIOPCS: polynomial evaluation at point equals claimed evaluation -/
-def rsMLPEvalInputRelation (ιₛᵢ : Type) (OStmtIn : ιₛᵢ → Type)
+def MLPEvalRelation (ιₛᵢ : Type) (OStmtIn : ιₛᵢ → Type)
     (input : ((MLPEvalStatement L ℓ') × (∀ j, OStmtIn j)) × (WitMLP L ℓ')) : Prop :=
   let ⟨⟨stmt, _⟩, wit⟩ := input
   CPoly.CMvPolynomial.eval stmt.t_eval_point wit.t = stmt.original_claim
@@ -313,7 +319,7 @@ structure AbstractOStmtIn where
   OStmtIn : ιₛᵢ → Type
   Oₛᵢ : ∀ i, OracleInterface (OStmtIn i)
   -- The abstract initial compatibility relation, which along with
-  -- `rsMLPEvalInputRelation`, forms the initial input relation for the MLIOPCS.
+  -- `MLPEvalRelation`, forms the initial input relation for the MLIOPCS.
   initialCompatibility : (CPoly.CMvPolynomial ℓ' L) × (∀ j, OStmtIn j) → Prop
   -- Strict compatibility relation used by perfect-completeness statements.
   strictInitialCompatibility : (CPoly.CMvPolynomial ℓ' L) × (∀ j, OStmtIn j) → Prop
@@ -333,14 +339,14 @@ structure AbstractOStmtIn where
 def AbstractOStmtIn.toRelInput (aOStmtIn : AbstractOStmtIn L ℓ') :
   Set (((MLPEvalStatement L ℓ') × (∀ j, aOStmtIn.OStmtIn j)) × (WitMLP L ℓ')) :=
   {input |
-    (rsMLPEvalInputRelation (L := L) (ℓ' := ℓ') aOStmtIn.ιₛᵢ aOStmtIn.OStmtIn input) ∧
+    (MLPEvalRelation (L := L) (ℓ' := ℓ') aOStmtIn.ιₛᵢ aOStmtIn.OStmtIn input) ∧
     aOStmtIn.initialCompatibility ⟨input.2.t, input.1.2⟩}
 
 /-- Strict relation used for perfect-completeness statements. -/
 def AbstractOStmtIn.toStrictRelInput (aOStmtIn : AbstractOStmtIn L ℓ') :
   Set (((MLPEvalStatement L ℓ') × (∀ j, aOStmtIn.OStmtIn j)) × (WitMLP L ℓ')) :=
   {input |
-    (rsMLPEvalInputRelation (L := L) (ℓ' := ℓ') aOStmtIn.ιₛᵢ aOStmtIn.OStmtIn input) ∧
+    (MLPEvalRelation (L := L) (ℓ' := ℓ') aOStmtIn.ιₛᵢ aOStmtIn.OStmtIn input) ∧
     aOStmtIn.strictInitialCompatibility ⟨input.2.t, input.1.2⟩}
 
 omit [Fintype L] [DecidableEq L] [CharP L 2] [NeZero ℓ'] in
@@ -466,7 +472,8 @@ lemma embedded_MLP_eval_of_pack_eq_rs_embedded_packMLE
   sorry
 
 /-- Step 2 (V): Check 1: s ?= Σ_{v ∈ {0,1}^κ} eqTilde(v, r_{0..κ-1}) ⋅ ŝ_v. -/
-def performCheckOriginalEvaluation (s : L) (r : Fin ℓ → L) (s_hat : TensorAlgebra K L) : Bool :=
+def performCheckOriginalEvaluation (s : L) (r : Fin ℓ → L)
+    (s_hat : TensorAlgebra K L) : Bool :=
   let r_prefix : Fin κ → L := fun i => r ⟨i.val, by omega⟩
   let check_sum := Finset.sum Finset.univ fun (v : Fin κ → Fin 2) =>
     let v_as_L : Fin κ → L := fun i => if (v i == 1) then 1 else 0
@@ -554,15 +561,10 @@ private lemma decompose_embedded_MLP_eval_columns
   rw [embedded_MLP_eval_eq_sum (κ := κ) (L := L) (K := K) (ℓ := ℓ) (ℓ' := ℓ')
     (h_l := h_l) (tm := tm) (r := r)]
   rw [decompose_tensor_algebra_columns_sum]
-  rw [Finset.sum_apply]
+  rw [Fintype.sum_apply]
   apply Finset.sum_congr rfl
   intro w hw
-  rw [φ₀, φ₁]
-  change decompose_tensor_algebra_columns (L := L) (K := K) (β := β)
-    (((eqTilde (fun i => r ⟨i.val + κ, by { rw [h_l]; omega }⟩) (w : Fin ℓ' → L)) ⊗ₜ[K] (1 : L)) *
-      ((1 : L) ⊗ₜ[K] MvPolynomial.eval (w : Fin ℓ' → L) tm.val)) v = _
-  rw [Algebra.TensorProduct.tmul_mul_tmul, mul_one, one_mul]
-  simp [decompose_tensor_algebra_columns, decompose_tensor_algebra_columnsBilin]
+  simp [φ₀, φ₁, Algebra.TensorProduct.tmul_mul_tmul]
 
 private lemma decompose_embedded_MLP_eval_rows
     (tm : MultilinearPoly L ℓ') (r : Fin ℓ → L) (u : Fin κ → Fin 2) :
@@ -576,17 +578,10 @@ private lemma decompose_embedded_MLP_eval_rows
   rw [embedded_MLP_eval_eq_sum (κ := κ) (L := L) (K := K) (ℓ := ℓ) (ℓ' := ℓ')
     (h_l := h_l) (tm := tm) (r := r)]
   rw [decompose_tensor_algebra_rows_sum]
-  rw [Finset.sum_apply]
+  rw [Fintype.sum_apply]
   apply Finset.sum_congr rfl
   intro w hw
-  rw [φ₀, φ₁]
-  change decompose_tensor_algebra_rows (L := L) (K := K) (β := β)
-    (((eqTilde (fun i => r ⟨i.val + κ, by
-      rw [h_l]
-      omega⟩) (w : Fin ℓ' → L)) ⊗ₜ[K] (1 : L)) *
-      ((1 : L) ⊗ₜ[K] MvPolynomial.eval (w : Fin ℓ' → L) tm.val)) u = _
-  rw [Algebra.TensorProduct.tmul_mul_tmul, mul_one, one_mul]
-  simp [decompose_tensor_algebra_rows, decompose_tensor_algebra_rowsBilin]
+  simp [φ₀, φ₁, Algebra.TensorProduct.tmul_mul_tmul]
 
 private lemma repr_packMLE_eval
     (t : MultilinearPoly K ℓ)
@@ -792,7 +787,7 @@ private lemma batchingCheckSummand_split
   congr 1
   rw [mul_comm]
 
-set_option maxHeartbeats 400000 in
+set_option maxHeartbeats 200000 in
 lemma batching_check_correctness
     (t_small : MultilinearPoly K ℓ)
     (eval_point : Fin ℓ → L) :
@@ -847,76 +842,43 @@ def RingSwitching_SumcheckMultParam :
       (r''_batching := ctx.r_batching)
 }
 
-/-- Computable substitution of the first `v` variables of a `CMvPolynomial`. -/
-def fixFirstVariablesOfCMvPoly {n : ℕ} (v : Fin (n + 1))
-    (H : CPoly.CMvPolynomial n L) (challenges : Fin v → L) :
-    CPoly.CMvPolynomial (n - v) L :=
-  CPoly.CMvPolynomial.bind₁ (n := n) (m := n - v) (R := L)
-    (f := fun j =>
-      if hj : j.val < v then
-        CPoly.CMvPolynomial.C (n := n - v) (R := L) (challenges ⟨j.val, hj⟩)
-      else
-        CPoly.CMvPolynomial.X (n := n - v) (R := L) ⟨j.val - v, by omega⟩)
-    H
-
 /-- Computable initial sumcheck witness after fixing the first `i` challenges. -/
 def projectToMidSumcheckPoly (t : CPoly.CMvPolynomial ℓ' L)
     (m : MultilinearPoly L ℓ') (i : Fin (ℓ' + 1))
     (challenges : Fin i → L) :
     CPoly.CMvPolynomial (ℓ' - i) L :=
-  let h0 : CPoly.CMvPolynomial ℓ' L := by
-    simpa using (MultilinearPoly.toCMvPoly m * t)
-  fixFirstVariablesOfCMvPoly (κ := κ) (L := L) (ℓ := ℓ) (ℓ' := ℓ') (v := i)
-    (H := CPoly.CMvPolynomial.restrictDegree 2 h0)
-    (challenges := challenges)
+  let _ : ℕ := κ
+  let _ : ℕ := ℓ
+  let t_ml : MultilinearPoly L ℓ' := MultilinearPoly.ofCMvPoly t
+  let H_mid : MultiquadraticPoly L (ℓ' - i) :=
+    Binius.BinaryBasefold.projectToMidSumcheckPoly (L := L) (ℓ := ℓ')
+      (t := t_ml) (m := m) (i := i) (challenges := challenges)
+  (H_mid : CPoly.CMvPolynomial (ℓ' - i) L)
 
 /-- Computable single-round sumcheck witness update. -/
 def projectToNextSumcheckPoly (i : Fin ℓ')
     (H : CPoly.CMvPolynomial (ℓ' - i) L) (rᵢ : L) :
     CPoly.CMvPolynomial (ℓ' - i.succ) L :=
-  CPoly.CMvPolynomial.bind₁ (n := ℓ' - i) (m := ℓ' - i.succ) (R := L)
-    (f := fun j =>
-      if h0 : j.val = 0 then
-        CPoly.CMvPolynomial.C (n := ℓ' - i.succ) (R := L) rᵢ
-      else
-        CPoly.CMvPolynomial.X (n := ℓ' - i.succ) (R := L) ⟨j.val - 1, by
-          have hj_pos : 0 < j.val := Nat.pos_of_ne_zero h0
-          have hj_lt : j.val < ℓ' - i := j.isLt
-          simp only [Fin.val_succ] at hj_lt ⊢
-          omega⟩)
-    H
+  let _ : ℕ := κ
+  let _ : ℕ := ℓ
+  let H_i : MultiquadraticPoly L (ℓ' - i) := MultiquadraticPoly.ofCMvPoly H
+  let H_next : MultiquadraticPoly L (ℓ' - i.succ) :=
+    Binius.BinaryBasefold.projectToNextSumcheckPoly (L := L) (ℓ := ℓ') i H_i rᵢ
+  (H_next : CPoly.CMvPolynomial (ℓ' - i.succ) L)
 
-/-- Computable univariate raw CMv polynomial for the current sumcheck round message. -/
-private def sumcheckRoundMessagePoly (i : Fin ℓ')
-    (H : CPoly.CMvPolynomial (ℓ' - i) L) : CPoly.CMvPolynomial 1 L :=
-  let X0 : CPoly.CMvPolynomial 1 L := CPoly.CMvPolynomial.X (n := 1) (R := L) ⟨0, by decide⟩
-  ∑ x ∈ (univ.map 𝓑) ^ᶠ (ℓ' - i.succ),
-    CPoly.CMvPolynomial.bind₁ (n := ℓ' - i) (m := 1) (R := L)
-      (f := fun j =>
-        if h0 : j.val = 0 then
-          X0
-        else
-          CPoly.CMvPolynomial.C (n := 1) (R := L) (x ⟨j.val - 1, by
-            have hj_pos : 0 < j.val := Nat.pos_of_ne_zero h0
-            have hj_lt : j.val < ℓ' - i := j.isLt
-            simp only [Fin.val_succ] at hj_lt ⊢
-            omega⟩))
-      H
-
-/-- Computable bounded-degree sumcheck-round message from the raw CMv witness. -/
-def getSumcheckRoundMessage (i : Fin ℓ')
+/-- Computable bounded-degree sumcheck-round polynomial from the raw CMv witness. -/
+def getSumcheckRoundPoly (i : Fin ℓ')
     (H : CPoly.CMvPolynomial (ℓ' - i) L) : FoldMessage L :=
-  let msgPoly := sumcheckRoundMessagePoly
-    (κ := κ) (L := L) (ℓ := ℓ) (ℓ' := ℓ') (𝓑 := 𝓑) (i := i) H
-  ⟨msgPoly, by
-    intro j
-    sorry
-  ⟩
+  let _ : ℕ := κ
+  let _ : ℕ := ℓ
+  let H_i : MultiquadraticPoly L (ℓ' - i) := MultiquadraticPoly.ofCMvPoly H
+  Binius.BinaryBasefold.getSumcheckRoundPoly (L := L) (ℓ := ℓ') (𝓑 := 𝓑) i H_i
 
 /-- Sumcheck consistency on the computable CMv witness carrier. -/
 def sumcheckConsistencyProp {k : ℕ} (sumcheckTarget : L)
-    (H : CPoly.CMvPolynomial k L) : Prop := by
-  sorry
+    (H : CPoly.CMvPolynomial k L) : Prop :=
+  Binius.BinaryBasefold.sumcheckConsistencyProp (𝓑 := 𝓑) sumcheckTarget
+    (MultiquadraticPoly.ofCMvPoly H)
 
 /-- Step 5 (V): Compute `s₀ := Σ_{u ∈ {0,1}^κ} eqTilde(u, r'') ⋅ ŝ_u`,
 where ŝ_u is the row components of ŝ. -/
@@ -987,15 +949,10 @@ private lemma decompose_compute_final_eq_tensor_rows
   rw [compute_final_eq_tensor_eq_sum (κ := κ) (L := L) (K := K) (ℓ := ℓ) (ℓ' := ℓ')
     (h_l := h_l) (r_eval := r_eval) (r'_challenges := r'_challenges)]
   rw [decompose_tensor_algebra_rows_sum]
-  rw [Finset.sum_apply]
+  rw [Fintype.sum_apply]
   apply Finset.sum_congr rfl
   intro w hw
-  rw [φ₀, φ₁]
-  change decompose_tensor_algebra_rows (L := L) (K := K) (β := β)
-    (((eqTilde (getEvaluationPointSuffix κ L ℓ ℓ' h_l r_eval) (w : Fin ℓ' → L)) ⊗ₜ[K] (1 : L)) *
-      ((1 : L) ⊗ₜ[K] eqTilde (w : Fin ℓ' → L) r'_challenges)) u = _
-  rw [Algebra.TensorProduct.tmul_mul_tmul, mul_one, one_mul]
-  simp [decompose_tensor_algebra_rows, decompose_tensor_algebra_rowsBilin]
+  simp [φ₀, φ₁, Algebra.TensorProduct.tmul_mul_tmul]
 
 private lemma zeroOnePoint_eq_coe {n : ℕ} (x : Fin n → Fin 2) :
     (fun i => if x i == 1 then (1 : L) else 0) = (x : Fin n → L) := by
@@ -1133,8 +1090,10 @@ lemma compute_A_MLE_eval_eq_final_eq_value
 correct structure `A(...) * t'(...)` -/
 def witnessStructuralInvariant {i : Fin (ℓ' + 1)}
     (stmt : Statement (L := L) (RingSwitchingBaseContext κ L K ℓ) i)
-    (wit : SumcheckWitness L ℓ' i) : Prop := by
-  sorry
+    (wit : SumcheckWitness L ℓ' i) : Prop :=
+  wit.H = projectToMidSumcheckPoly (κ := κ) (L := L) (ℓ := ℓ') (t := wit.t')
+    (m := (RingSwitching_SumcheckMultParam κ L K β ℓ ℓ' h_l).multpoly stmt.ctx)
+    (i := i) (challenges := stmt.challenges)
 
 def masterKStateProp (aOStmtIn : AbstractOStmtIn L ℓ') (stmtIdx : Fin (ℓ' + 1))
     (stmt : Statement (L := L) (RingSwitchingBaseContext κ L K ℓ) stmtIdx)
@@ -1143,7 +1102,8 @@ def masterKStateProp (aOStmtIn : AbstractOStmtIn L ℓ') (stmtIdx : Fin (ℓ' + 
     (localChecks : Prop) : Prop :=
   localChecks
   -- Should witnessStructuralInvariant be part of localChecks?
-  ∧ witnessStructuralInvariant κ L K ℓ ℓ' stmt wit
+  ∧ witnessStructuralInvariant (κ := κ) (L := L) (K := K) (β := β) (ℓ := ℓ)
+      (ℓ' := ℓ') (h_l := h_l) stmt wit
   ∧ aOStmtIn.initialCompatibility ⟨wit.t', oStmt⟩
 
 def masterStrictKStateProp (aOStmtIn : AbstractOStmtIn L ℓ') (stmtIdx : Fin (ℓ' + 1))
@@ -1152,44 +1112,54 @@ def masterStrictKStateProp (aOStmtIn : AbstractOStmtIn L ℓ') (stmtIdx : Fin (�
     (wit : SumcheckWitness L ℓ' stmtIdx)
     (localChecks : Prop) : Prop :=
   localChecks
-  ∧ witnessStructuralInvariant κ L K ℓ ℓ' stmt wit
+  ∧ witnessStructuralInvariant (κ := κ) (L := L) (K := K) (β := β) (ℓ := ℓ)
+      (ℓ' := ℓ') (h_l := h_l) stmt wit
   ∧ aOStmtIn.strictInitialCompatibility ⟨wit.t', oStmt⟩
 
 def sumcheckRoundRelationProp (aOStmtIn : AbstractOStmtIn L ℓ') (i : Fin (ℓ' + 1))
     (stmt : Statement (L := L) (RingSwitchingBaseContext κ L K ℓ) i)
     (oStmt : ∀ j, aOStmtIn.OStmtIn j)
     (wit : SumcheckWitness L ℓ' i) : Prop :=
-  masterKStateProp κ L K ℓ ℓ' aOStmtIn i stmt oStmt wit
-    (localChecks := sumcheckConsistencyProp (sumcheckTarget := stmt.sumcheck_target)
-      (H := wit.H))
+  masterKStateProp (κ := κ) (L := L) (K := K) (β := β) (ℓ := ℓ) (ℓ' := ℓ')
+    (h_l := h_l) aOStmtIn i stmt oStmt wit
+    (localChecks := sumcheckConsistencyProp (𝓑 := 𝓑)
+      (sumcheckTarget := stmt.sumcheck_target) (H := wit.H))
 
 /-- Input relation for single round: proper sumcheck statement -/
 def sumcheckRoundRelation (aOStmtIn : AbstractOStmtIn L ℓ') (i : Fin (ℓ' + 1)) :
   Set (((Statement (L := L) (RingSwitchingBaseContext κ L K ℓ) i) ×
     (∀ j, aOStmtIn.OStmtIn j)) × SumcheckWitness L ℓ' i) :=
-  { ((stmt, oStmt), wit) | sumcheckRoundRelationProp κ L K ℓ ℓ'
-    aOStmtIn i stmt oStmt wit }
+  { ((stmt, oStmt), wit) |
+      sumcheckRoundRelationProp (κ := κ) (L := L) (K := K) (β := β) (ℓ := ℓ)
+        (ℓ' := ℓ') (h_l := h_l) (𝓑 := 𝓑) aOStmtIn i stmt oStmt wit }
 
 def strictSumcheckRoundRelationProp (aOStmtIn : AbstractOStmtIn L ℓ') (i : Fin (ℓ' + 1))
     (stmt : Statement (L := L) (RingSwitchingBaseContext κ L K ℓ) i)
     (oStmt : ∀ j, aOStmtIn.OStmtIn j)
     (wit : SumcheckWitness L ℓ' i) : Prop :=
-  masterStrictKStateProp κ L K ℓ ℓ' aOStmtIn i stmt oStmt wit
-    (localChecks := sumcheckConsistencyProp (sumcheckTarget := stmt.sumcheck_target)
-      (H := wit.H))
+  masterStrictKStateProp (κ := κ) (L := L) (K := K) (β := β) (ℓ := ℓ) (ℓ' := ℓ')
+    (h_l := h_l) aOStmtIn i stmt oStmt wit
+    (localChecks := sumcheckConsistencyProp (𝓑 := 𝓑)
+      (sumcheckTarget := stmt.sumcheck_target) (H := wit.H))
 
 /-- Strict round relation for completeness proofs. -/
 def strictSumcheckRoundRelation (aOStmtIn : AbstractOStmtIn L ℓ') (i : Fin (ℓ' + 1)) :
   Set (((Statement (L := L) (RingSwitchingBaseContext κ L K ℓ) i) ×
     (∀ j, aOStmtIn.OStmtIn j)) × SumcheckWitness L ℓ' i) :=
-  { ((stmt, oStmt), wit) | strictSumcheckRoundRelationProp κ L K ℓ ℓ'
-    aOStmtIn i stmt oStmt wit }
+  { ((stmt, oStmt), wit) |
+      strictSumcheckRoundRelationProp (κ := κ) (L := L) (K := K) (β := β) (ℓ := ℓ)
+        (ℓ' := ℓ') (h_l := h_l) (𝓑 := 𝓑) aOStmtIn i stmt oStmt wit }
 
 lemma strictSumcheckRoundRelation_subset_sumcheckRoundRelation (aOStmtIn : AbstractOStmtIn L ℓ')
     (i : Fin (ℓ' + 1)) :
-    strictSumcheckRoundRelation κ L K ℓ ℓ' aOStmtIn i ⊆
-      sumcheckRoundRelation κ L K ℓ ℓ' aOStmtIn i := by
-  sorry
+    strictSumcheckRoundRelation κ L K β ℓ ℓ' h_l (𝓑 := 𝓑) aOStmtIn i ⊆
+      sumcheckRoundRelation κ L K β ℓ ℓ' h_l (𝓑 := 𝓑) aOStmtIn i := by
+  intro input h_input
+  rcases input with ⟨⟨stmt, oStmt⟩, wit⟩
+  rcases h_input with ⟨h_local, h_struct, h_compat_strict⟩
+  exact ⟨h_local, h_struct,
+    aOStmtIn.strictInitialCompatibility_implies_initialCompatibility oStmt wit.t'
+      h_compat_strict⟩
 
 private def castEmb : Fin 2 ↪ L := ⟨fun b => (b : L), by
   intro a b h

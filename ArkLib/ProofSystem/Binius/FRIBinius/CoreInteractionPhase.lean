@@ -83,8 +83,8 @@ def sumcheckFoldStmtLens : OracleStatement.Lens
   toFunA := fun ⟨outerStmtIn, outerOStmtIn⟩ => ⟨outerStmtIn, outerOStmtIn⟩
   toFunB := fun ⟨_, _⟩ ⟨innerStmtOut, innerOStmtOut⟩ => ⟨innerStmtOut, innerOStmtOut⟩
 
-/-- Function-parameterized statement lens for the executable verifier companion track. -/
-def sumcheckFoldStmtLensFun
+/-- Executable statement lens over explicit basis values. -/
+private def sumcheckFoldStmtLensExec
     (βfun : Fin (2 ^ κ) → L)
     [Fact (LinearIndependent K βfun)] [Fact (βfun 0 = 1)] : OracleStatement.Lens
     (OuterStmtIn := Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) 0)
@@ -99,6 +99,77 @@ def sumcheckFoldStmtLensFun
       (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ (Fin.last ℓ')) where
   toFunA := fun ⟨outerStmtIn, outerOStmtIn⟩ => ⟨outerStmtIn, outerOStmtIn⟩
   toFunB := fun ⟨_, _⟩ ⟨innerStmtOut, innerOStmtOut⟩ => ⟨innerStmtOut, innerOStmtOut⟩
+
+/-- Oracle context lens for sumcheck fold lifting -/
+noncomputable def sumcheckFoldCtxLens : OracleContext.Lens
+    (OuterStmtIn := Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) 0)
+    (OuterStmtOut := Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) (Fin.last ℓ'))
+    (InnerStmtIn := Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) 0)
+    (InnerStmtOut := Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) (Fin.last ℓ'))
+    (OuterOStmtIn := BinaryBasefold.OracleStatement K β (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ 0)
+    (OuterOStmtOut := BinaryBasefold.OracleStatement K β
+      (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ (Fin.last ℓ'))
+    (InnerOStmtIn := BinaryBasefold.OracleStatement K β (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ 0)
+    (InnerOStmtOut := BinaryBasefold.OracleStatement K β
+      (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ (Fin.last ℓ'))
+    (OuterWitIn := RingSwitching.SumcheckWitness L ℓ' 0)
+    (OuterWitOut := BinaryBasefold.Witness K β
+      (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (ℓ:=ℓ') (Fin.last ℓ'))
+    (InnerWitIn := BinaryBasefold.Witness K β (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (ℓ:=ℓ') 0)
+    (InnerWitOut := BinaryBasefold.Witness K β
+      (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (ℓ:=ℓ') (Fin.last ℓ')) where
+  wit := {
+    toFunA := fun ⟨⟨outerStmtIn, outerOStmtIn⟩, outerWitIn⟩ => by
+      let t : BinaryBasefold.MultilinearPoly L ℓ' :=
+        BinaryBasefold.MultilinearPoly.ofCMvPoly outerWitIn.t'
+      let H : BinaryBasefold.MultiquadraticPoly L (ℓ' - 0) :=
+        BinaryBasefold.MultiquadraticPoly.ofCMvPoly outerWitIn.H
+      let f₀ : OracleFunction K β (h_ℓ_add_R_rate := h_ℓ_add_R_rate)
+        ⟨0, by omega⟩ :=
+        BinaryBasefold.getMidCodewords K β (h_ℓ_add_R_rate := h_ℓ_add_R_rate)
+          (i := (0 : Fin (ℓ' + 1))) (t := t) (challenges := outerStmtIn.challenges)
+      exact { t := t, H := H, f := f₀ }
+    toFunB := fun ⟨⟨outerStmtIn, outerOStmtIn⟩, outerWitIn⟩
+      ⟨⟨innerStmtOut, innerOStmtOut⟩, innerWitOut⟩ => innerWitOut
+  }
+  stmt := sumcheckFoldStmtLens κ L K β ℓ ℓ' 𝓡 ϑ (h_ℓ_add_R_rate := h_ℓ_add_R_rate)
+
+/-- Executable oracle context lens over explicit basis values. -/
+private def sumcheckFoldCtxLensExec
+    (βfun : Fin (2 ^ κ) → L)
+    [Fact (LinearIndependent K βfun)] [Fact (βfun 0 = 1)] : OracleContext.Lens
+    (OuterStmtIn := Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) 0)
+    (OuterStmtOut := Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) (Fin.last ℓ'))
+    (InnerStmtIn := Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) 0)
+    (InnerStmtOut := Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) (Fin.last ℓ'))
+    (OuterOStmtIn := BinaryBasefold.OracleStatement K βfun (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ 0)
+    (OuterOStmtOut := BinaryBasefold.OracleStatement K βfun
+      (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ (Fin.last ℓ'))
+    (InnerOStmtIn := BinaryBasefold.OracleStatement K βfun (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ 0)
+    (InnerOStmtOut := BinaryBasefold.OracleStatement K βfun
+      (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ (Fin.last ℓ'))
+    (OuterWitIn := RingSwitching.SumcheckWitness L ℓ' 0)
+    (OuterWitOut := BinaryBasefold.Witness K βfun
+      (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (ℓ:=ℓ') (Fin.last ℓ'))
+    (InnerWitIn := BinaryBasefold.Witness K βfun (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (ℓ:=ℓ') 0)
+    (InnerWitOut := BinaryBasefold.Witness K βfun
+      (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (ℓ:=ℓ') (Fin.last ℓ')) where
+  wit := {
+    toFunA := fun ⟨⟨outerStmtIn, _outerOStmtIn⟩, outerWitIn⟩ => by
+      let t : BinaryBasefold.MultilinearPoly L ℓ' :=
+        BinaryBasefold.MultilinearPoly.ofCMvPoly outerWitIn.t'
+      let H : BinaryBasefold.MultiquadraticPoly L (ℓ' - 0) :=
+        BinaryBasefold.MultiquadraticPoly.ofCMvPoly outerWitIn.H
+      let f₀ : OracleFunction K βfun (h_ℓ_add_R_rate := h_ℓ_add_R_rate)
+        ⟨0, by omega⟩ :=
+        BinaryBasefold.getMidCodewords K βfun (h_ℓ_add_R_rate := h_ℓ_add_R_rate)
+          (i := (0 : Fin (ℓ' + 1))) (t := t) (challenges := outerStmtIn.challenges)
+      exact { t := t, H := H, f := f₀ }
+    toFunB := fun ⟨⟨_outerStmtIn, _outerOStmtIn⟩, _outerWitIn⟩
+      ⟨⟨_innerStmtOut, _innerOStmtOut⟩, innerWitOut⟩ => innerWitOut
+  }
+  stmt := sumcheckFoldStmtLensExec (κ := κ) (L := L) (K := K) (ℓ := ℓ) (ℓ' := ℓ')
+    (𝓡 := 𝓡) (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate) βfun
 
 /-- Extractor lens for sumcheck fold lifting -/
 def sumcheckFoldExtractorLens : Extractor.Lens
@@ -126,60 +197,43 @@ def sumcheckFoldExtractorLens : Extractor.Lens
       exact outerWitIn
   }
 
-/-- Executable verifier companion: use an explicit basis-value function instead of `Basis`. -/
-def sumcheckFoldOracleVerifierFunOfMultiplier
+private def sumcheckFoldOracleVerifierExec
     (βfun : Fin (2 ^ κ) → L)
     [Fact (LinearIndependent K βfun)] [Fact (βfun 0 = 1)]
     (mp : SumcheckMultiplierParam L ℓ' (RingSwitchingBaseContext κ L K ℓ)) :=
   (BinaryBasefold.CoreInteraction.sumcheckFoldOracleVerifier K βfun (ϑ := ϑ)
     (mp := mp) (𝓑 := 𝓑) (h_ℓ_add_R_rate := h_ℓ_add_R_rate)).liftContext
-      (lens := sumcheckFoldStmtLensFun (κ := κ) (L := L) (K := K) (ℓ := ℓ) (ℓ' := ℓ')
+      (lens := sumcheckFoldStmtLensExec (κ := κ) (L := L) (K := K) (ℓ := ℓ) (ℓ' := ℓ')
         (𝓡 := 𝓡) (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate) βfun)
 
-/-- Canonical executable sumcheck-fold verifier API over explicit basis/multiplier inputs. -/
-@[reducible]
-def sumcheckFoldOracleVerifier
+private def sumcheckFoldOracleReductionExec
     (βfun : Fin (2 ^ κ) → L)
     [Fact (LinearIndependent K βfun)] [Fact (βfun 0 = 1)]
     (mp : SumcheckMultiplierParam L ℓ' (RingSwitchingBaseContext κ L K ℓ)) :=
-  sumcheckFoldOracleVerifierFunOfMultiplier (κ := κ) (L := L) (K := K) (ℓ := ℓ) (ℓ' := ℓ')
-    (𝓡 := 𝓡) (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate)
-    (𝓑 := 𝓑) βfun mp
+  (BinaryBasefold.CoreInteraction.sumcheckFoldOracleReduction K βfun (ϑ := ϑ)
+    (mp := mp) (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (𝓑 := 𝓑)).liftContext
+      (lens := sumcheckFoldCtxLensExec (κ := κ) (L := L) (K := K) (ℓ := ℓ) (ℓ' := ℓ')
+        (𝓡 := 𝓡) (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (h_l := h_l) βfun)
 
-/-- Canonical executable sumcheck-fold reduction API with external prover input. -/
-@[reducible]
-def sumcheckFoldOracleReduction
-    (βfun : Fin (2 ^ κ) → L)
-    [Fact (LinearIndependent K βfun)] [Fact (βfun 0 = 1)]
-    (mp : SumcheckMultiplierParam L ℓ' (RingSwitchingBaseContext κ L K ℓ))
-    (prover : OracleProver
-      (oSpec := []ₒ)
-      (StmtIn := Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) 0)
-      (OStmtIn := BinaryBasefold.OracleStatement K βfun (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ 0)
-      (WitIn := RingSwitching.SumcheckWitness L ℓ' 0)
-      (StmtOut := Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) (Fin.last ℓ'))
-      (OStmtOut := BinaryBasefold.OracleStatement K βfun
-        (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ (Fin.last ℓ'))
-      (WitOut := BinaryBasefold.Witness K βfun
-        (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (ℓ := ℓ') (Fin.last ℓ'))
-      (pSpec := BinaryBasefold.pSpecSumcheckFold (ℓ := ℓ') (ϑ := ϑ) K βfun
-        (h_ℓ_add_R_rate := h_ℓ_add_R_rate))) :
-    OracleReduction
-      (oSpec := []ₒ)
-      (StmtIn := Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) 0)
-      (OStmtIn := BinaryBasefold.OracleStatement K βfun (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ 0)
-      (WitIn := RingSwitching.SumcheckWitness L ℓ' 0)
-      (StmtOut := Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) (Fin.last ℓ'))
-      (OStmtOut := BinaryBasefold.OracleStatement K βfun
-        (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ (Fin.last ℓ'))
-      (WitOut := BinaryBasefold.Witness K βfun
-        (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (ℓ := ℓ') (Fin.last ℓ'))
-      (pSpec := BinaryBasefold.pSpecSumcheckFold (ℓ := ℓ') (ϑ := ϑ) K βfun
-        (h_ℓ_add_R_rate := h_ℓ_add_R_rate)) where
-  prover := prover
-  verifier := sumcheckFoldOracleVerifier (κ := κ) (L := L) (K := K) (ℓ := ℓ) (ℓ' := ℓ')
-    (𝓡 := 𝓡) (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate)
-    (𝓑 := 𝓑) βfun mp
+-- The lifted oracle verifier
+noncomputable def sumcheckFoldOracleVerifier :=
+  let βfun : Fin (2 ^ κ) → L := fun i => β i
+  let _ : Fact (LinearIndependent K βfun) := ⟨β.linearIndependent⟩
+  let _ : Fact (βfun 0 = 1) := ⟨h_β₀_eq_1.out⟩
+  (BinaryBasefold.CoreInteraction.sumcheckFoldOracleVerifier K βfun (ϑ:=ϑ)
+    (mp := RingSwitching_SumcheckMultParam κ L K (β := booleanHypercubeBasis κ L K β) ℓ ℓ' h_l)
+    (𝓑 := 𝓑) (h_ℓ_add_R_rate := h_ℓ_add_R_rate)).liftContext
+      (lens := sumcheckFoldStmtLens κ L K β ℓ ℓ' 𝓡 ϑ (h_ℓ_add_R_rate := h_ℓ_add_R_rate))
+
+-- The lifted oracle reduction
+noncomputable def sumcheckFoldOracleReduction :=
+  let βfun : Fin (2 ^ κ) → L := fun i => β i
+  let _ : Fact (LinearIndependent K βfun) := ⟨β.linearIndependent⟩
+  let _ : Fact (βfun 0 = 1) := ⟨h_β₀_eq_1.out⟩
+  (BinaryBasefold.CoreInteraction.sumcheckFoldOracleReduction K βfun (ϑ := ϑ)
+    (mp := RingSwitching_SumcheckMultParam κ L K (β := booleanHypercubeBasis κ L K β) ℓ ℓ' h_l)
+    (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (𝓑 := 𝓑)).liftContext
+      (lens := sumcheckFoldCtxLens κ L K β ℓ ℓ' 𝓡 ϑ (h_ℓ_add_R_rate := h_ℓ_add_R_rate) h_l)
 
 -- Security properties for the lifted oracle reduction
 
@@ -187,25 +241,59 @@ section Security
 
 variable {σ : Type} {init : ProbComp σ} {impl : QueryImpl []ₒ (StateT σ ProbComp)}
 
+-- Completeness instance for the context lens
+instance sumcheckFoldCtxLens_complete :
+  (sumcheckFoldCtxLens κ L K β ℓ ℓ' 𝓡 ϑ (h_ℓ_add_R_rate := h_ℓ_add_R_rate)
+    h_l).toContext.IsComplete
+    (OuterStmtIn := Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) 0 ×
+      (∀ i, BinaryBasefold.OracleStatement K (⇑β) ϑ (h_ℓ_add_R_rate := h_ℓ_add_R_rate) 0 i))
+    (OuterStmtOut := Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) (Fin.last ℓ') ×
+      (∀ i, BinaryBasefold.OracleStatement K (⇑β) ϑ
+        (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (Fin.last ℓ') i))
+    (InnerStmtIn := Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) 0 ×
+      (∀ i, BinaryBasefold.OracleStatement K (⇑β) ϑ (h_ℓ_add_R_rate := h_ℓ_add_R_rate) 0 i))
+    (InnerStmtOut := Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) (Fin.last ℓ') ×
+      (∀ i, BinaryBasefold.OracleStatement K (⇑β) ϑ
+        (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (Fin.last ℓ') i))
+    (OuterWitIn := RingSwitching.SumcheckWitness L ℓ' 0)
+    (OuterWitOut := BinaryBasefold.Witness K β
+      (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (ℓ:=ℓ') (Fin.last ℓ'))
+    (InnerWitIn := Witness K β (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (ℓ:=ℓ') 0)
+    (InnerWitOut := Witness K β (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (ℓ:=ℓ') (Fin.last ℓ'))
+    (outerRelIn := RingSwitching.strictSumcheckRoundRelation κ L K
+      (β := booleanHypercubeBasis κ L K β) ℓ ℓ' h_l (𝓑 := 𝓑)
+      (aOStmtIn := BinaryBasefoldAbstractOStmtIn
+        (κ := κ) (L := L) (K := K) (β := β)
+        (ℓ' := ℓ') (𝓡 := 𝓡) (ϑ := ϑ)
+        (h_ℓ_add_R_rate := h_ℓ_add_R_rate)) 0)
+    (outerRelOut :=
+      BinaryBasefold.strictRoundRelation (mp := RingSwitching_SumcheckMultParam κ L K
+        (β := booleanHypercubeBasis κ L K β) ℓ ℓ' h_l) K β (ϑ:=ϑ)
+        (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (𝓑:=𝓑) (Fin.last ℓ')
+    )
+    (innerRelIn :=
+      BinaryBasefold.strictRoundRelation (mp := RingSwitching_SumcheckMultParam κ L K
+        (β := booleanHypercubeBasis κ L K β) ℓ ℓ' h_l) K β (ϑ:=ϑ)
+        (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (𝓑:=𝓑) 0
+    )
+    (innerRelOut :=
+      BinaryBasefold.strictRoundRelation (mp := RingSwitching_SumcheckMultParam κ L K
+        (β := booleanHypercubeBasis κ L K β) ℓ ℓ' h_l) K β (ϑ:=ϑ)
+        (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (𝓑:=𝓑) (Fin.last ℓ')
+    )
+    (compat :=
+      let originalReduction := (CoreInteraction.sumcheckFoldOracleReduction K β (ϑ:=ϑ)
+        (mp := RingSwitching_SumcheckMultParam κ L K (β := booleanHypercubeBasis κ L K β) ℓ ℓ' h_l)
+        (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (𝓑 := 𝓑)).toReduction
+      Reduction.compatContext (oSpec := []ₒ) (pSpec :=
+        pSpecSumcheckFold K β (h_ℓ_add_R_rate := h_ℓ_add_R_rate))
+        (sumcheckFoldCtxLens κ L K β ℓ ℓ' 𝓡 ϑ h_ℓ_add_R_rate h_l).toContext originalReduction
+    ) := by
+  sorry
+
 omit [NeZero κ] [NeZero ℓ] in
 -- Perfect completeness for the lifted oracle reduction
-theorem sumcheckFoldOracleReduction_perfectCompleteness
-    (prover :
-      OracleProver
-        (oSpec := []ₒ)
-        (StmtIn := Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) 0)
-        (OStmtIn := BinaryBasefold.OracleStatement K (fun i => β i)
-          (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ 0)
-        (WitIn := RingSwitching.SumcheckWitness L ℓ' 0)
-        (StmtOut := Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ)
-          (Fin.last ℓ'))
-        (OStmtOut := BinaryBasefold.OracleStatement K (fun i => β i)
-          (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ (Fin.last ℓ'))
-        (WitOut := BinaryBasefold.Witness K (fun i => β i)
-          (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (ℓ := ℓ') (Fin.last ℓ'))
-        (pSpec := BinaryBasefold.pSpecSumcheckFold K (fun i => β i)
-          (h_ℓ_add_R_rate := h_ℓ_add_R_rate)))
-    (hInit : NeverFail init) :
+theorem sumcheckFoldOracleReduction_perfectCompleteness (hInit : NeverFail init) :
   OracleReduction.perfectCompleteness
     (oSpec := []ₒ)
     (StmtIn := Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) 0)
@@ -217,20 +305,17 @@ theorem sumcheckFoldOracleReduction_perfectCompleteness
     (WitOut := BinaryBasefold.Witness K β
       (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (ℓ:=ℓ') (Fin.last ℓ'))
     (pSpec := BinaryBasefold.pSpecSumcheckFold K β (h_ℓ_add_R_rate := h_ℓ_add_R_rate))
-    (relIn := RingSwitching.strictSumcheckRoundRelation κ L K ℓ ℓ'
-      (BinaryBasefoldAbstractOStmtIn (β := β) (ϑ := ϑ)
+    (relIn := RingSwitching.strictSumcheckRoundRelation κ L K
+      (β := booleanHypercubeBasis κ L K β) ℓ ℓ' h_l (𝓑 := 𝓑)
+      (aOStmtIn := BinaryBasefoldAbstractOStmtIn (β := β) (ϑ := ϑ)
         (h_ℓ_add_R_rate := h_ℓ_add_R_rate)) 0)
     (relOut :=
       BinaryBasefold.strictRoundRelation (mp := RingSwitching_SumcheckMultParam κ L K
         (β := booleanHypercubeBasis κ L K β) ℓ ℓ' h_l) K β (ϑ:=ϑ)
         (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (𝓑:=𝓑) (Fin.last ℓ')
     )
-    (oracleReduction := sumcheckFoldOracleReduction (κ := κ) (L := L) (K := K) (ℓ := ℓ)
-      (ℓ' := ℓ') (𝓡 := 𝓡) (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate)
-      (𝓑 := 𝓑)
-      (fun i => β i)
-      (RingSwitching_SumcheckMultParam κ L K (β := booleanHypercubeBasis κ L K β) ℓ ℓ' h_l)
-      prover)
+    (oracleReduction := sumcheckFoldOracleReduction κ L K β ℓ ℓ' 𝓡 ϑ
+      (h_ℓ_add_R_rate := h_ℓ_add_R_rate) h_l (𝓑 := 𝓑))
     (init := init)
     (impl := impl) := by
   sorry
@@ -259,7 +344,8 @@ instance sumcheckFoldExtractorLens_rbr_knowledge_soundness
         (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (ℓ:=ℓ') (Fin.last ℓ'))
       (InnerWitIn := Witness K β (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (ℓ:=ℓ') 0)
       (InnerWitOut := Witness K β (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (ℓ:=ℓ') (Fin.last ℓ'))
-      (outerRelIn := RingSwitching.sumcheckRoundRelation κ L K ℓ ℓ'
+      (outerRelIn := RingSwitching.sumcheckRoundRelation κ L K
+        (β := booleanHypercubeBasis κ L K β) ℓ ℓ' h_l (𝓑 := 𝓑)
         (BinaryBasefoldAbstractOStmtIn
           (κ := κ) (L := L) (K := K) (β := β)
           (ℓ' := ℓ') (𝓡 := 𝓡) (ϑ := ϑ)
@@ -298,7 +384,8 @@ theorem sumcheckFoldOracleVerifier_rbrKnowledgeSoundness [Fintype L] :
       (WitOut := BinaryBasefold.Witness K β
         (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (ℓ:=ℓ') (Fin.last ℓ'))
       (pSpec := BinaryBasefold.pSpecSumcheckFold K β (h_ℓ_add_R_rate := h_ℓ_add_R_rate))
-      (relIn := RingSwitching.sumcheckRoundRelation κ L K ℓ ℓ'
+      (relIn := RingSwitching.sumcheckRoundRelation κ L K
+        (β := booleanHypercubeBasis κ L K β) ℓ ℓ' h_l (𝓑 := 𝓑)
         (BinaryBasefoldAbstractOStmtIn
           (κ := κ) (L := L) (K := K) (β := β)
           (ℓ' := ℓ') (𝓡 := 𝓡) (ϑ := ϑ)
@@ -308,10 +395,8 @@ theorem sumcheckFoldOracleVerifier_rbrKnowledgeSoundness [Fintype L] :
           (β := booleanHypercubeBasis κ L K β) ℓ ℓ' h_l) K β (ϑ:=ϑ)
           (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (𝓑:=𝓑)  (Fin.last ℓ')
       )
-      (verifier := sumcheckFoldOracleVerifier (κ := κ) (L := L) (K := K) (ℓ := ℓ) (ℓ' := ℓ')
-        (𝓡 := 𝓡) (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate)
-        (𝓑 := 𝓑) (fun i => β i)
-        (RingSwitching_SumcheckMultParam κ L K (β := booleanHypercubeBasis κ L K β) ℓ ℓ' h_l))
+      (verifier := sumcheckFoldOracleVerifier κ L K β ℓ ℓ' (h_l := h_l) (𝓑 := 𝓑) 𝓡 ϑ
+        (h_ℓ_add_R_rate := h_ℓ_add_R_rate))
       (init := init)
       (impl := impl)
       (rbrKnowledgeError := BinaryBasefold.CoreInteraction.sumcheckFoldKnowledgeError
@@ -339,15 +424,6 @@ def finalSumcheckVerifierCheck
     stmtIn.ctx.t_eval_point stmtIn.challenges stmtIn.ctx.r_batching
   stmtIn.sumcheck_target = eq_tilde_eval * c
 
-/-- Final-sumcheck verifier check specialized by an external multiplier parameter. -/
-@[reducible]
-def finalSumcheckVerifierCheckOfMultiplier
-    (mp : SumcheckMultiplierParam L ℓ' (RingSwitchingBaseContext κ L K ℓ))
-    (stmtIn : Statement (L := L) (ℓ := ℓ')
-      (RingSwitchingBaseContext κ L K ℓ) (Fin.last ℓ'))
-    (c : L) : Prop :=
-  stmtIn.sumcheck_target = ((mp.multpoly stmtIn.ctx).val.eval stmtIn.challenges) * c
-
 /-- Pure verifier output for FRI final sumcheck step. -/
 @[reducible]
 def finalSumcheckVerifierStmtOut
@@ -374,9 +450,16 @@ def finalSumcheckProverComputeMsg
 @[reducible]
 def finalSumcheckProverWitOut : Unit := ()
 
-/-- Pure prover message computation for the function-parameterized companion track. -/
-@[reducible]
-def finalSumcheckProverComputeMsgFun
+/-- Executable verifier check using explicit multiplier data. -/
+private def finalSumcheckVerifierCheckExec
+    (mp : SumcheckMultiplierParam L ℓ' (RingSwitchingBaseContext κ L K ℓ))
+    (stmtIn : Statement (L := L) (ℓ := ℓ')
+      (RingSwitchingBaseContext κ L K ℓ) (Fin.last ℓ'))
+    (c : L) : Prop :=
+  stmtIn.sumcheck_target = ((mp.multpoly stmtIn.ctx).val.eval stmtIn.challenges) * c
+
+/-- Executable prover message computation over explicit basis values. -/
+private def finalSumcheckProverComputeMsgExec
     (βfun : Fin (2 ^ κ) → L)
     [Fact (LinearIndependent K βfun)] [Fact (βfun 0 = 1)]
     (witIn : BinaryBasefold.Witness K βfun
@@ -418,41 +501,7 @@ def finalSumcheckStepLogic :
       let stmtOut := finalSumcheckVerifierStmtOut κ L K ℓ ℓ' h_l stmtIn c
       ((stmtOut, oStmtIn), ()) }
 
-/-- Final-sumcheck logic specialized by an external multiplier parameter. -/
-def finalSumcheckStepLogicOfMultiplier
-    (mp : SumcheckMultiplierParam L ℓ' (RingSwitchingBaseContext κ L K ℓ)) :
-    Binius.BinaryBasefold.ReductionLogicStep
-      (Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) (Fin.last ℓ'))
-      (BinaryBasefold.Witness K β (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (ℓ := ℓ') (Fin.last ℓ'))
-      (BinaryBasefold.OracleStatement K β (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ (Fin.last ℓ'))
-      (BinaryBasefold.OracleStatement K β (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ (Fin.last ℓ'))
-      (BinaryBasefold.FinalSumcheckStatementOut (L := L) (ℓ := ℓ'))
-      Unit
-      (BinaryBasefold.pSpecFinalSumcheckStep (L := L)) where
-  completeness_relIn := fun ((stmt, oStmt), wit) =>
-    ((stmt, oStmt), wit) ∈ BinaryBasefold.strictRoundRelation (mp := mp) K β (ϑ := ϑ)
-      (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (𝓑 := 𝓑) (Fin.last ℓ')
-  completeness_relOut := fun ((stmtOut, oStmtOut), witOut) =>
-    ((stmtOut, oStmtOut), witOut) ∈ BinaryBasefold.strictFinalSumcheckRelOut K β
-      (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate)
-  verifierCheck := fun stmtIn transcript =>
-    finalSumcheckVerifierCheckOfMultiplier (κ := κ) (L := L) (K := K) (ℓ := ℓ) (ℓ' := ℓ')
-      (mp := mp) stmtIn (transcript.messages ⟨0, rfl⟩)
-  verifierOut := fun stmtIn transcript =>
-    finalSumcheckVerifierStmtOut κ L K ℓ ℓ' h_l stmtIn (transcript.messages ⟨0, rfl⟩)
-  embed := ⟨fun j => Sum.inl j, fun a b h => by cases h; rfl⟩
-  hEq := fun _ => rfl
-  honestProverTranscript := fun _stmtIn witIn _oStmtIn _chal =>
-    let c : L := finalSumcheckProverComputeMsg (κ := κ) (L := L) (K := K) (β := β)
-      (ℓ' := ℓ') (𝓡 := 𝓡) (h_ℓ_add_R_rate := h_ℓ_add_R_rate) witIn
-    FullTranscript.mk1 c
-  proverOut := fun stmtIn _witIn oStmtIn transcript =>
-    let c : L := transcript.messages ⟨0, rfl⟩
-    let stmtOut := finalSumcheckVerifierStmtOut κ L K ℓ ℓ' h_l stmtIn c
-    ((stmtOut, oStmtIn), ())
-
-/-- Function-parameterized final-sumcheck logic for the executable verifier companion track. -/
-def finalSumcheckStepLogicFunOfMultiplier
+private def finalSumcheckStepLogicExec
     (βfun : Fin (2 ^ κ) → L)
     [Fact (LinearIndependent K βfun)] [Fact (βfun 0 = 1)]
     (mp : SumcheckMultiplierParam L ℓ' (RingSwitchingBaseContext κ L K ℓ)) :
@@ -471,14 +520,14 @@ def finalSumcheckStepLogicFunOfMultiplier
     ((stmtOut, oStmtOut), witOut) ∈ BinaryBasefold.strictFinalSumcheckRelOut K βfun
       (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate)
   verifierCheck := fun stmtIn transcript =>
-    finalSumcheckVerifierCheckOfMultiplier (κ := κ) (L := L) (K := K) (ℓ := ℓ) (ℓ' := ℓ')
+    finalSumcheckVerifierCheckExec (κ := κ) (L := L) (K := K) (ℓ := ℓ) (ℓ' := ℓ')
       (mp := mp) stmtIn (transcript.messages ⟨0, rfl⟩)
   verifierOut := fun stmtIn transcript =>
     finalSumcheckVerifierStmtOut κ L K ℓ ℓ' h_l stmtIn (transcript.messages ⟨0, rfl⟩)
   embed := ⟨fun j => Sum.inl j, fun a b h => by cases h; rfl⟩
   hEq := fun _ => rfl
   honestProverTranscript := fun _stmtIn witIn _oStmtIn _chal =>
-    let c : L := finalSumcheckProverComputeMsgFun (κ := κ) (L := L) (K := K)
+    let c : L := finalSumcheckProverComputeMsgExec (κ := κ) (L := L) (K := K)
       (ℓ' := ℓ') (𝓡 := 𝓡) (h_ℓ_add_R_rate := h_ℓ_add_R_rate) βfun witIn
     FullTranscript.mk1 c
   proverOut := fun stmtIn _witIn oStmtIn transcript =>
@@ -486,9 +535,151 @@ def finalSumcheckStepLogicFunOfMultiplier
     let stmtOut := finalSumcheckVerifierStmtOut κ L K ℓ ℓ' h_l stmtIn c
     ((stmtOut, oStmtIn), ())
 
-/-- Final-sumcheck verifier specialized by an external multiplier parameter. -/
-def finalSumcheckVerifierOfMultiplier
+private def finalSumcheckVerifierExec
+    (βfun : Fin (2 ^ κ) → L)
+    [Fact (LinearIndependent K βfun)] [Fact (βfun 0 = 1)]
     (mp : SumcheckMultiplierParam L ℓ' (RingSwitchingBaseContext κ L K ℓ)) :
+  OracleVerifier
+    (oSpec := []ₒ)
+    (StmtIn := Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) (Fin.last ℓ'))
+    (OStmtIn := BinaryBasefold.OracleStatement K βfun
+      (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ (Fin.last ℓ'))
+    (StmtOut := BinaryBasefold.FinalSumcheckStatementOut (L := L) (ℓ := ℓ'))
+    (OStmtOut := BinaryBasefold.OracleStatement K βfun
+      (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ (Fin.last ℓ'))
+    (pSpec := BinaryBasefold.pSpecFinalSumcheckStep (L := L)) where
+  verify := fun stmtIn _ => do
+    let s' : L ← query (spec := [(BinaryBasefold.pSpecFinalSumcheckStep
+      (L := L)).Message]ₒ) ⟨⟨0, by rfl⟩, (by exact ())⟩
+    let c : L := s'
+    let t := FullTranscript.mk1 (pSpec := BinaryBasefold.pSpecFinalSumcheckStep (L := L)) s'
+    have : Decidable
+        (finalSumcheckVerifierCheckExec (κ := κ) (L := L) (K := K) (ℓ := ℓ) (ℓ' := ℓ')
+          (mp := mp) stmtIn c) := by
+      change Decidable
+        (stmtIn.sumcheck_target =
+          ((mp.multpoly stmtIn.ctx).val.eval stmtIn.challenges) * c)
+      infer_instance
+    guard (finalSumcheckVerifierCheckExec (κ := κ) (L := L) (K := K) (ℓ := ℓ) (ℓ' := ℓ')
+      (mp := mp) stmtIn c)
+    pure (finalSumcheckVerifierStmtOut κ L K ℓ ℓ' h_l stmtIn c)
+  embed := (finalSumcheckStepLogicExec (κ := κ) (L := L) (K := K)
+    (ℓ := ℓ) (ℓ' := ℓ') (𝓡 := 𝓡) (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate)
+    (h_l := h_l) (𝓑 := 𝓑) βfun mp).embed
+  hEq := (finalSumcheckStepLogicExec (κ := κ) (L := L) (K := K)
+    (ℓ := ℓ) (ℓ' := ℓ') (𝓡 := 𝓡) (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate)
+    (h_l := h_l) (𝓑 := 𝓑) βfun mp).hEq
+
+/-- Executable prover for the final sumcheck step. -/
+private def finalSumcheckProverExec
+    (βfun : Fin (2 ^ κ) → L)
+    [Fact (LinearIndependent K βfun)] [Fact (βfun 0 = 1)]
+    (mp : SumcheckMultiplierParam L ℓ' (RingSwitchingBaseContext κ L K ℓ)) :
+  OracleProver
+    (oSpec := []ₒ)
+    (StmtIn := Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) (Fin.last ℓ'))
+    (OStmtIn := BinaryBasefold.OracleStatement K βfun
+      (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ (Fin.last ℓ'))
+    (WitIn := BinaryBasefold.Witness K βfun
+      (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (ℓ := ℓ') (Fin.last ℓ'))
+    (StmtOut := BinaryBasefold.FinalSumcheckStatementOut (L := L) (ℓ := ℓ'))
+    (OStmtOut := BinaryBasefold.OracleStatement K βfun
+      (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ (Fin.last ℓ'))
+    (WitOut := Unit)
+    (pSpec := BinaryBasefold.pSpecFinalSumcheckStep (L := L)) where
+  PrvState := fun
+    | 0 => Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) (Fin.last ℓ')
+      × (∀ j, BinaryBasefold.OracleStatement K βfun
+        (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ (Fin.last ℓ') j)
+      × BinaryBasefold.Witness K βfun
+        (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (ℓ := ℓ') (Fin.last ℓ')
+    | _ => Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) (Fin.last ℓ')
+      × (∀ j, BinaryBasefold.OracleStatement K βfun
+        (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ (Fin.last ℓ') j)
+      × BinaryBasefold.Witness K βfun
+        (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (ℓ := ℓ') (Fin.last ℓ')
+      × L
+  input := fun ⟨⟨stmt, oStmt⟩, wit⟩ => (stmt, oStmt, wit)
+  sendMessage
+    | ⟨0, _⟩ => fun ⟨stmtIn, oStmtIn, witIn⟩ => do
+      let c : L := finalSumcheckProverComputeMsgExec (κ := κ) (L := L) (K := K)
+        (ℓ' := ℓ') (𝓡 := 𝓡) (h_ℓ_add_R_rate := h_ℓ_add_R_rate) βfun witIn
+      pure ⟨c, (stmtIn, oStmtIn, witIn, c)⟩
+  receiveChallenge
+    | ⟨0, h⟩ => nomatch h
+  output := fun ⟨stmtIn, oStmtIn, witIn, s'⟩ => do
+    let logic := finalSumcheckStepLogicExec (κ := κ) (L := L) (K := K)
+      (ℓ := ℓ) (ℓ' := ℓ') (𝓡 := 𝓡) (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate)
+      (h_l := h_l) (𝓑 := 𝓑) βfun mp
+    let t := FullTranscript.mk1 (pSpec := BinaryBasefold.pSpecFinalSumcheckStep (L := L)) s'
+    pure (logic.proverOut stmtIn witIn oStmtIn t)
+
+/-- Executable reduction for the final sumcheck step. -/
+private def finalSumcheckOracleReductionExec
+    (βfun : Fin (2 ^ κ) → L)
+    [Fact (LinearIndependent K βfun)] [Fact (βfun 0 = 1)]
+    (mp : SumcheckMultiplierParam L ℓ' (RingSwitchingBaseContext κ L K ℓ)) :
+    OracleReduction
+        (oSpec := []ₒ)
+        (StmtIn := Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ)
+          (Fin.last ℓ'))
+        (OStmtIn := BinaryBasefold.OracleStatement K βfun
+          (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ (Fin.last ℓ'))
+        (WitIn := BinaryBasefold.Witness K βfun
+          (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (ℓ := ℓ') (Fin.last ℓ'))
+        (StmtOut := BinaryBasefold.FinalSumcheckStatementOut (L := L) (ℓ := ℓ'))
+        (OStmtOut := BinaryBasefold.OracleStatement K βfun
+          (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ (Fin.last ℓ'))
+        (WitOut := Unit)
+        (pSpec := BinaryBasefold.pSpecFinalSumcheckStep (L := L)) where
+  prover := finalSumcheckProverExec (κ := κ) (L := L) (K := K) (ℓ := ℓ)
+    (ℓ' := ℓ') (𝓡 := 𝓡) (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (h_l := h_l)
+    (𝓑 := 𝓑) βfun mp
+  verifier := finalSumcheckVerifierExec (κ := κ) (L := L) (K := K) (ℓ := ℓ)
+    (ℓ' := ℓ') (𝓡 := 𝓡) (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (h_l := h_l)
+    (𝓑 := 𝓑) βfun mp
+
+/-- The prover for the final sumcheck step -/
+def finalSumcheckProver :
+  OracleProver
+    (oSpec := []ₒ)
+    (StmtIn := Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) (Fin.last ℓ'))
+    (OStmtIn := BinaryBasefold.OracleStatement K β
+      (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ (Fin.last ℓ'))
+    (WitIn := BinaryBasefold.Witness K β
+      (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (ℓ := ℓ') (Fin.last ℓ'))
+    (StmtOut := BinaryBasefold.FinalSumcheckStatementOut (L := L) (ℓ := ℓ'))
+    (OStmtOut := BinaryBasefold.OracleStatement K β
+      (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ (Fin.last ℓ'))
+    (WitOut := Unit)
+    (pSpec := BinaryBasefold.pSpecFinalSumcheckStep (L := L)) where
+  PrvState := fun
+    | 0 => Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) (Fin.last ℓ')
+      × (∀ j, BinaryBasefold.OracleStatement K β
+        (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ (Fin.last ℓ') j)
+      × BinaryBasefold.Witness K β
+        (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (ℓ := ℓ') (Fin.last ℓ')
+    | _ => Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) (Fin.last ℓ')
+      × (∀ j, BinaryBasefold.OracleStatement K β
+        (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ (Fin.last ℓ') j)
+      × BinaryBasefold.Witness K β
+        (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (ℓ := ℓ') (Fin.last ℓ')
+      × L
+  input := fun ⟨⟨stmt, oStmt⟩, wit⟩ => (stmt, oStmt, wit)
+  sendMessage
+    | ⟨0, _⟩ => fun ⟨stmtIn, oStmtIn, witIn⟩ => do
+      let c : L := finalSumcheckProverComputeMsg (κ := κ) (L := L) (K := K) (β := β)
+        (ℓ' := ℓ') (𝓡 := 𝓡) (h_ℓ_add_R_rate := h_ℓ_add_R_rate) witIn
+      pure ⟨c, (stmtIn, oStmtIn, witIn, c)⟩
+  receiveChallenge
+    | ⟨0, h⟩ => nomatch h
+  output := fun ⟨stmtIn, oStmtIn, witIn, s'⟩ => do
+    let logic := finalSumcheckStepLogic κ L K β ℓ ℓ' 𝓡 ϑ h_ℓ_add_R_rate h_l (𝓑 := 𝓑)
+    let t := FullTranscript.mk1 (pSpec := BinaryBasefold.pSpecFinalSumcheckStep (L := L)) s'
+    pure (logic.proverOut stmtIn witIn oStmtIn t)
+
+/-- The verifier for the final sumcheck step -/
+noncomputable def finalSumcheckVerifier :
   OracleVerifier
     (oSpec := []ₒ)
     (StmtIn := Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) (Fin.last ℓ'))
@@ -502,89 +693,36 @@ def finalSumcheckVerifierOfMultiplier
     let s' : L ← query (spec := [(BinaryBasefold.pSpecFinalSumcheckStep
       (L:=L)).Message]ₒ) ⟨⟨0, by rfl⟩, (by exact ())⟩
     let t := FullTranscript.mk1 (pSpec := BinaryBasefold.pSpecFinalSumcheckStep (L := L)) s'
-    let logic := finalSumcheckStepLogicOfMultiplier κ L K β ℓ ℓ' 𝓡 ϑ h_ℓ_add_R_rate h_l
-      (𝓑 := 𝓑) mp
+    let logic := finalSumcheckStepLogic κ L K β ℓ ℓ' 𝓡 ϑ h_ℓ_add_R_rate h_l (𝓑 := 𝓑)
     have : Decidable (logic.verifierCheck stmtIn t) := by
       change Decidable
-        (finalSumcheckVerifierCheckOfMultiplier (κ := κ) (L := L) (K := K) (ℓ := ℓ)
-          (ℓ' := ℓ') mp stmtIn (t.messages ⟨0, rfl⟩))
+        (finalSumcheckVerifierCheck (κ := κ) (L := L) (K := K) (β := β)
+          (ℓ := ℓ) (ℓ' := ℓ') (h_l := h_l) stmtIn (t.messages ⟨0, rfl⟩))
       infer_instance
     guard (logic.verifierCheck stmtIn t)
     pure (logic.verifierOut stmtIn t)
-  embed := (finalSumcheckStepLogicOfMultiplier κ L K β ℓ ℓ' 𝓡 ϑ h_ℓ_add_R_rate h_l
-    (𝓑 := 𝓑) mp).embed
-  hEq := (finalSumcheckStepLogicOfMultiplier κ L K β ℓ ℓ' 𝓡 ϑ h_ℓ_add_R_rate h_l
-    (𝓑 := 𝓑) mp).hEq
+  embed := (finalSumcheckStepLogic κ L K β ℓ ℓ' 𝓡 ϑ h_ℓ_add_R_rate h_l
+    (𝓑 := 𝓑)).embed
+  hEq := (finalSumcheckStepLogic κ L K β ℓ ℓ' 𝓡 ϑ h_ℓ_add_R_rate h_l
+    (𝓑 := 𝓑)).hEq
 
-/-- Executable final-sumcheck verifier companion using an explicit basis-value function. -/
-def finalSumcheckVerifierFunOfMultiplier
-    (βfun : Fin (2 ^ κ) → L)
-    [Fact (LinearIndependent K βfun)] [Fact (βfun 0 = 1)]
-    (mp : SumcheckMultiplierParam L ℓ' (RingSwitchingBaseContext κ L K ℓ)) :
-  OracleVerifier
-    (oSpec := []ₒ)
-    (StmtIn := Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) (Fin.last ℓ'))
-    (OStmtIn := BinaryBasefold.OracleStatement K βfun
-      (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ (Fin.last ℓ'))
-    (StmtOut := BinaryBasefold.FinalSumcheckStatementOut (L:=L) (ℓ:=ℓ'))
-    (OStmtOut := BinaryBasefold.OracleStatement K βfun
-      (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ (Fin.last ℓ'))
-    (pSpec := BinaryBasefold.pSpecFinalSumcheckStep (L:=L)) where
-  verify := fun stmtIn _ => do
-    let s' : L ← query (spec := [(BinaryBasefold.pSpecFinalSumcheckStep
-      (L:=L)).Message]ₒ) ⟨⟨0, by rfl⟩, (by exact ())⟩
-    let t := FullTranscript.mk1 (pSpec := BinaryBasefold.pSpecFinalSumcheckStep (L := L)) s'
-    let logic := finalSumcheckStepLogicFunOfMultiplier (κ := κ) (L := L) (K := K)
-      (ℓ := ℓ) (ℓ' := ℓ') (𝓡 := 𝓡) (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate)
-      (h_l := h_l) (𝓑 := 𝓑) βfun mp
-    have : Decidable (logic.verifierCheck stmtIn t) := by
-      change Decidable
-        (finalSumcheckVerifierCheckOfMultiplier (κ := κ) (L := L) (K := K) (ℓ := ℓ)
-          (ℓ' := ℓ') mp stmtIn (t.messages ⟨0, rfl⟩))
-      infer_instance
-    guard (logic.verifierCheck stmtIn t)
-    pure (logic.verifierOut stmtIn t)
-  embed := (finalSumcheckStepLogicFunOfMultiplier (κ := κ) (L := L) (K := K)
-    (ℓ := ℓ) (ℓ' := ℓ') (𝓡 := 𝓡) (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate)
-    (h_l := h_l) (𝓑 := 𝓑) βfun mp).embed
-  hEq := (finalSumcheckStepLogicFunOfMultiplier (κ := κ) (L := L) (K := K)
-    (ℓ := ℓ) (ℓ' := ℓ') (𝓡 := 𝓡) (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate)
-    (h_l := h_l) (𝓑 := 𝓑) βfun mp).hEq
-
-/-- Canonical executable final-sumcheck reduction API with external prover input. -/
-@[reducible]
-def finalSumcheckOracleReduction
-    (βfun : Fin (2 ^ κ) → L)
-    [Fact (LinearIndependent K βfun)] [Fact (βfun 0 = 1)]
-    (mp : SumcheckMultiplierParam L ℓ' (RingSwitchingBaseContext κ L K ℓ))
-    (prover : OracleProver
-      (oSpec := []ₒ)
-      (StmtIn := Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) (Fin.last ℓ'))
-      (OStmtIn := BinaryBasefold.OracleStatement K βfun
-        (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ (Fin.last ℓ'))
-      (WitIn := BinaryBasefold.Witness K βfun
-        (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (ℓ := ℓ') (Fin.last ℓ'))
-      (StmtOut := BinaryBasefold.FinalSumcheckStatementOut (L := L) (ℓ := ℓ'))
-      (OStmtOut := BinaryBasefold.OracleStatement K βfun
-        (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ (Fin.last ℓ'))
-      (WitOut := Unit)
-      (pSpec := BinaryBasefold.pSpecFinalSumcheckStep (L := L))) :
-    OracleReduction
-      (oSpec := []ₒ)
-      (StmtIn := Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) (Fin.last ℓ'))
-      (OStmtIn := BinaryBasefold.OracleStatement K βfun
-        (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ (Fin.last ℓ'))
-      (WitIn := BinaryBasefold.Witness K βfun
-        (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (ℓ := ℓ') (Fin.last ℓ'))
-      (StmtOut := BinaryBasefold.FinalSumcheckStatementOut (L := L) (ℓ := ℓ'))
-      (OStmtOut := BinaryBasefold.OracleStatement K βfun
-        (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ (Fin.last ℓ'))
-      (WitOut := Unit)
-      (pSpec := BinaryBasefold.pSpecFinalSumcheckStep (L := L)) where
-  prover := prover
-  verifier := finalSumcheckVerifierFunOfMultiplier (κ := κ) (L := L) (K := K)
-    (ℓ := ℓ) (ℓ' := ℓ') (𝓡 := 𝓡) (ϑ := ϑ)
-    (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (h_l := h_l) (𝓑 := 𝓑) βfun mp
+/-- The oracle reduction for the final sumcheck step -/
+noncomputable def finalSumcheckOracleReduction
+    : OracleReduction
+        (oSpec := []ₒ)
+        (StmtIn := Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ)
+          (Fin.last ℓ'))
+        (OStmtIn := BinaryBasefold.OracleStatement K β
+          (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ (Fin.last ℓ'))
+        (WitIn := BinaryBasefold.Witness K β
+          (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (ℓ := ℓ') (Fin.last ℓ'))
+        (StmtOut := BinaryBasefold.FinalSumcheckStatementOut (L := L) (ℓ := ℓ'))
+        (OStmtOut := BinaryBasefold.OracleStatement K β
+          (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ (Fin.last ℓ'))
+        (WitOut := Unit)
+        (pSpec := BinaryBasefold.pSpecFinalSumcheckStep (L := L)) where
+  prover := finalSumcheckProver κ L K β ℓ ℓ' 𝓡 ϑ h_ℓ_add_R_rate h_l (𝓑 := 𝓑)
+  verifier := finalSumcheckVerifier κ L K β ℓ ℓ' 𝓡 ϑ h_ℓ_add_R_rate h_l (𝓑 := 𝓑)
 
 /-- At `Fin.last ℓ'`, sumcheck consistency simplifies to a single evaluation. -/
 lemma sumcheckConsistency_at_last_simplifies
@@ -963,19 +1101,6 @@ lemma finalSumcheckStep_is_logic_complete :
 
 /-- Perfect completeness for the final sumcheck step -/
 theorem finalSumcheckOracleReduction_perfectCompleteness {σ : Type}
-  (prover :
-    OracleProver
-      (oSpec := []ₒ)
-      (StmtIn := Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) (Fin.last ℓ'))
-      (OStmtIn := BinaryBasefold.OracleStatement K (fun i => β i)
-        (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ (Fin.last ℓ'))
-      (WitIn := BinaryBasefold.Witness K (fun i => β i)
-        (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (ℓ := ℓ') (Fin.last ℓ'))
-      (StmtOut := BinaryBasefold.FinalSumcheckStatementOut (L := L) (ℓ := ℓ'))
-      (OStmtOut := BinaryBasefold.OracleStatement K (fun i => β i)
-        (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ (Fin.last ℓ'))
-      (WitOut := Unit)
-      (pSpec := BinaryBasefold.pSpecFinalSumcheckStep (L := L)))
   (init : ProbComp σ) (hInit : NeverFail init)
   (impl : QueryImpl []ₒ (StateT σ ProbComp)) :
   OracleReduction.perfectCompleteness
@@ -985,12 +1110,9 @@ theorem finalSumcheckOracleReduction_perfectCompleteness {σ : Type}
       (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (𝓑:=𝓑) (Fin.last ℓ'))
     (relOut := BinaryBasefold.strictFinalSumcheckRelOut K β (ϑ:=ϑ)
       (h_ℓ_add_R_rate := h_ℓ_add_R_rate))
-    (oracleReduction := finalSumcheckOracleReduction (κ := κ) (L := L) (K := K) (ℓ := ℓ)
+    (oracleReduction := finalSumcheckOracleReduction (κ := κ) (L := L) (K := K) (β := β) (ℓ := ℓ)
       (ℓ' := ℓ') (𝓡 := 𝓡) (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate)
-      (h_l := h_l) (𝓑 := 𝓑)
-      (fun i => β i)
-      (RingSwitching_SumcheckMultParam κ L K (β := booleanHypercubeBasis κ L K β) ℓ ℓ' h_l)
-      prover)
+      (h_l := h_l) (𝓑 := 𝓑))
     (init := init) (impl := impl) := by
   sorry
 
@@ -1083,10 +1205,8 @@ def finalSumcheckKStateProp {m : Fin (1 + 1)} (tr : Transcript m (pSpecFinalSumc
 /-- The knowledge state function for the final sumcheck step -/
 def finalSumcheckKnowledgeStateFunction {σ : Type} (init : ProbComp σ)
     (impl : QueryImpl []ₒ (StateT σ ProbComp)) :
-    (finalSumcheckVerifierOfMultiplier κ L K β ℓ ℓ' 𝓡 ϑ h_ℓ_add_R_rate h_l
-      (𝓑 := 𝓑)
-      (RingSwitching_SumcheckMultParam κ L K
-        (β := booleanHypercubeBasis κ L K β) ℓ ℓ' h_l)).KnowledgeStateFunction init impl
+    (finalSumcheckVerifier κ L K β ℓ ℓ' 𝓡 ϑ h_ℓ_add_R_rate h_l
+      (𝓑 := 𝓑)).KnowledgeStateFunction init impl
     (relIn := roundRelation K β (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate)
       (𝓑 := 𝓑) (mp := RingSwitching_SumcheckMultParam κ L K
         (β := booleanHypercubeBasis κ L K β) ℓ ℓ' h_l) (Fin.last ℓ'))
@@ -1110,10 +1230,8 @@ def finalSumcheckKnowledgeStateFunction {σ : Type} (init : ProbComp σ)
 /-- Round-by-round knowledge soundness for the final sumcheck step -/
 theorem finalSumcheckOracleVerifier_rbrKnowledgeSoundness [Fintype L] {σ : Type}
     (init : ProbComp σ) (impl : QueryImpl []ₒ (StateT σ ProbComp)) :
-    (finalSumcheckVerifierOfMultiplier κ L K β ℓ ℓ' 𝓡 ϑ h_ℓ_add_R_rate h_l
-      (𝓑 := 𝓑)
-      (RingSwitching_SumcheckMultParam κ L K (β := booleanHypercubeBasis κ L K β) ℓ ℓ' h_l)
-      ).rbrKnowledgeSoundness init impl
+    (finalSumcheckVerifier κ L K β ℓ ℓ' 𝓡 ϑ h_ℓ_add_R_rate h_l
+      (𝓑 := 𝓑)).rbrKnowledgeSoundness init impl
       (relIn := roundRelation K β (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate)
         (𝓑 := 𝓑) (mp := RingSwitching_SumcheckMultParam κ L K
           (β := booleanHypercubeBasis κ L K β) ℓ ℓ' h_l) (Fin.last ℓ'))
@@ -1125,9 +1243,17 @@ end FinalSumcheckStep
 
 section CoreInteractionPhaseReduction
 
-/-- Executable core-interaction verifier companion using an explicit basis-value function. -/
+instance coreInteractionBetaFun_linearIndependent :
+    Fact (LinearIndependent K (fun i => β i)) := by
+  exact ⟨β.linearIndependent⟩
+
+instance coreInteractionBetaFun_zero_eq_one :
+    Fact ((fun i => β i) 0 = 1) := by
+  exact h_β₀_eq_1
+
+/-- Executable core-interaction verifier over explicit basis/multiplier inputs. -/
 @[reducible]
-def coreInteractionOracleVerifierFunOfMultiplier
+def coreInteractionOracleVerifierExec
     (βfun : Fin (2 ^ κ) → L)
     [Fact (LinearIndependent K βfun)] [Fact (βfun 0 = 1)]
     (mp : SumcheckMultiplierParam L ℓ' (RingSwitchingBaseContext κ L K ℓ)) :=
@@ -1142,76 +1268,19 @@ def coreInteractionOracleVerifierFunOfMultiplier
       (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ (Fin.last ℓ'))
     (pSpec₁ := BinaryBasefold.pSpecSumcheckFold K βfun (h_ℓ_add_R_rate := h_ℓ_add_R_rate))
     (pSpec₂ := pSpecFinalSumcheckStep (L:=L))
-    (V₁ := sumcheckFoldOracleVerifierFunOfMultiplier (κ := κ) (L := L) (K := K) (ℓ := ℓ)
-      (ℓ' := ℓ') (𝓑 := 𝓑) (𝓡 := 𝓡) (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate) βfun mp)
-    (V₂ := finalSumcheckVerifierFunOfMultiplier (κ := κ) (L := L) (K := K) (ℓ := ℓ)
+    (V₁ := sumcheckFoldOracleVerifierExec (κ := κ) (L := L) (K := K) (ℓ := ℓ)
+      (ℓ' := ℓ') (𝓡 := 𝓡) (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate)
+      (𝓑 := 𝓑) βfun mp)
+    (V₂ := finalSumcheckVerifierExec (κ := κ) (L := L) (K := K) (ℓ := ℓ)
       (ℓ' := ℓ') (𝓡 := 𝓡) (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate)
       (h_l := h_l) (𝓑 := 𝓑) βfun mp)
 
-/-- Canonical executable core-interaction verifier API over explicit basis/multiplier inputs. -/
-@[reducible]
-def coreInteractionOracleVerifier
-    (βfun : Fin (2 ^ κ) → L)
-    [Fact (LinearIndependent K βfun)] [Fact (βfun 0 = 1)]
-    (mp : SumcheckMultiplierParam L ℓ' (RingSwitchingBaseContext κ L K ℓ)) :=
-  coreInteractionOracleVerifierFunOfMultiplier (κ := κ) (L := L) (K := K)
-    (ℓ := ℓ) (ℓ' := ℓ') (𝓡 := 𝓡) (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate)
-    (h_l := h_l) (𝓑 := 𝓑) βfun mp
-
-/-- Executable core-interaction reduction companion parameterized by an external prover. -/
-@[reducible]
-def coreInteractionOracleReductionFunOfMultiplier
-    (βfun : Fin (2 ^ κ) → L)
-    [Fact (LinearIndependent K βfun)] [Fact (βfun 0 = 1)]
-    (mp : SumcheckMultiplierParam L ℓ' (RingSwitchingBaseContext κ L K ℓ))
-    (prover :
-      OracleProver
-        (oSpec := []ₒ)
-        (StmtIn := Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) 0)
-        (OStmtIn := BinaryBasefold.OracleStatement K βfun
-          (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ 0)
-        (WitIn := RingSwitching.SumcheckWitness L ℓ' 0)
-        (StmtOut := BinaryBasefold.FinalSumcheckStatementOut (L := L) (ℓ := ℓ'))
-        (OStmtOut := BinaryBasefold.OracleStatement K βfun
-          (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ (Fin.last ℓ'))
-        (WitOut := Unit)
-        (pSpec := BinaryBasefold.pSpecCoreInteraction K βfun (ϑ := ϑ)
-          (h_ℓ_add_R_rate := h_ℓ_add_R_rate))) :
-    OracleReduction (oSpec := []ₒ)
-      (StmtIn := Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) 0)
-      (OStmtIn := BinaryBasefold.OracleStatement K βfun
-        (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ 0)
-      (WitIn := RingSwitching.SumcheckWitness L ℓ' 0)
-      (StmtOut := BinaryBasefold.FinalSumcheckStatementOut (L := L) (ℓ := ℓ'))
-      (OStmtOut := BinaryBasefold.OracleStatement K βfun
-        (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ (Fin.last ℓ'))
-      (WitOut := Unit)
-      (pSpec := BinaryBasefold.pSpecCoreInteraction K βfun (ϑ := ϑ)
-        (h_ℓ_add_R_rate := h_ℓ_add_R_rate)) where
-  prover := prover
-  verifier := coreInteractionOracleVerifierFunOfMultiplier (κ := κ) (L := L) (K := K)
-    (ℓ := ℓ) (ℓ' := ℓ') (𝓡 := 𝓡) (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate)
-    (h_l := h_l) (𝓑 := 𝓑) βfun mp
-
-/-- Canonical executable core-interaction reduction API with external prover input. -/
+/-- Executable core-interaction reduction over explicit basis/multiplier inputs. -/
 @[reducible]
 def coreInteractionOracleReduction
     (βfun : Fin (2 ^ κ) → L)
     [Fact (LinearIndependent K βfun)] [Fact (βfun 0 = 1)]
-    (mp : SumcheckMultiplierParam L ℓ' (RingSwitchingBaseContext κ L K ℓ))
-    (prover :
-      OracleProver
-        (oSpec := []ₒ)
-        (StmtIn := Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) 0)
-        (OStmtIn := BinaryBasefold.OracleStatement K βfun
-          (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ 0)
-        (WitIn := RingSwitching.SumcheckWitness L ℓ' 0)
-        (StmtOut := BinaryBasefold.FinalSumcheckStatementOut (L := L) (ℓ := ℓ'))
-        (OStmtOut := BinaryBasefold.OracleStatement K βfun
-          (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ (Fin.last ℓ'))
-        (WitOut := Unit)
-        (pSpec := BinaryBasefold.pSpecCoreInteraction K βfun (ϑ := ϑ)
-          (h_ℓ_add_R_rate := h_ℓ_add_R_rate))) :
+    (mp : SumcheckMultiplierParam L ℓ' (RingSwitchingBaseContext κ L K ℓ)) :
     OracleReduction (oSpec := []ₒ)
       (StmtIn := Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) 0)
       (OStmtIn := BinaryBasefold.OracleStatement K βfun
@@ -1223,27 +1292,54 @@ def coreInteractionOracleReduction
       (WitOut := Unit)
       (pSpec := BinaryBasefold.pSpecCoreInteraction K βfun (ϑ := ϑ)
         (h_ℓ_add_R_rate := h_ℓ_add_R_rate)) :=
-  coreInteractionOracleReductionFunOfMultiplier (κ := κ) (L := L) (K := K)
-    (ℓ := ℓ) (ℓ' := ℓ') (𝓡 := 𝓡) (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate)
-    (h_l := h_l) (𝓑 := 𝓑) βfun mp prover
+  OracleReduction.append (oSpec := []ₒ)
+    (Stmt₁ := Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) 0)
+    (Stmt₂ := Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) (Fin.last ℓ'))
+    (Stmt₃ := BinaryBasefold.FinalSumcheckStatementOut (L := L) (ℓ := ℓ'))
+    (Wit₁ := RingSwitching.SumcheckWitness L ℓ' 0)
+    (Wit₂ := BinaryBasefold.Witness K βfun
+      (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (ℓ := ℓ') (Fin.last ℓ'))
+    (Wit₃ := Unit)
+    (OStmt₁ := BinaryBasefold.OracleStatement K βfun
+      (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ 0)
+    (OStmt₂ := BinaryBasefold.OracleStatement K βfun
+      (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ (Fin.last ℓ'))
+    (OStmt₃ := BinaryBasefold.OracleStatement K βfun
+      (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ (Fin.last ℓ'))
+    (pSpec₁ := BinaryBasefold.pSpecSumcheckFold K βfun (h_ℓ_add_R_rate := h_ℓ_add_R_rate))
+    (pSpec₂ := BinaryBasefold.pSpecFinalSumcheckStep (L := L))
+    (R₁ := sumcheckFoldOracleReductionExec (κ := κ) (L := L) (K := K) (ℓ := ℓ)
+      (ℓ' := ℓ') (𝓡 := 𝓡) (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (𝓑 := 𝓑)
+      (h_l := h_l) βfun mp)
+    (R₂ := finalSumcheckOracleReductionExec (κ := κ) (L := L) (K := K) (ℓ := ℓ)
+      (ℓ' := ℓ') (𝓡 := 𝓡) (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (h_l := h_l)
+      (𝓑 := 𝓑) βfun mp)
+
+/-- The final oracle verifier that composes sumcheckFold with finalSumcheckStep. -/
+@[reducible]
+noncomputable def coreInteractionOracleVerifier :=
+  OracleVerifier.append (oSpec := []ₒ)
+    (Stmt₁ := Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) 0)
+    (Stmt₂ := Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) (Fin.last ℓ'))
+    (Stmt₃ := BinaryBasefold.FinalSumcheckStatementOut (L := L) (ℓ := ℓ'))
+    (OStmt₁ := BinaryBasefold.OracleStatement K β (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ 0)
+    (OStmt₂ := BinaryBasefold.OracleStatement K β
+      (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ (Fin.last ℓ'))
+    (OStmt₃ := BinaryBasefold.OracleStatement K β
+      (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ (Fin.last ℓ'))
+    (pSpec₁ := BinaryBasefold.pSpecSumcheckFold K β (h_ℓ_add_R_rate := h_ℓ_add_R_rate))
+    (pSpec₂ := pSpecFinalSumcheckStep (L := L))
+    (V₁ := sumcheckFoldOracleVerifier (κ := κ) (L := L) (K := K) (β := β)
+      (ℓ := ℓ) (ℓ' := ℓ') (𝓡 := 𝓡) (ϑ := ϑ)
+      (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (h_l := h_l) (𝓑 := 𝓑))
+    (V₂ := finalSumcheckVerifier (κ := κ) (L := L) (K := K) (β := β)
+      (ℓ := ℓ) (ℓ' := ℓ') (𝓡 := 𝓡) (ϑ := ϑ)
+      (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (h_l := h_l) (𝓑 := 𝓑))
 
 variable {σ : Type} {init : ProbComp σ} {impl : QueryImpl []ₒ (StateT σ ProbComp)}
 
 /-- Perfect completeness for the core interaction oracle reduction -/
 theorem coreInteractionOracleReduction_perfectCompleteness
-    (prover :
-      OracleProver
-        (oSpec := []ₒ)
-        (StmtIn := Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) 0)
-        (OStmtIn := BinaryBasefold.OracleStatement K (fun i => β i)
-          (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ 0)
-        (WitIn := RingSwitching.SumcheckWitness L ℓ' 0)
-        (StmtOut := BinaryBasefold.FinalSumcheckStatementOut (L := L) (ℓ := ℓ'))
-        (OStmtOut := BinaryBasefold.OracleStatement K (fun i => β i)
-          (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ (Fin.last ℓ'))
-        (WitOut := Unit)
-        (pSpec := BinaryBasefold.pSpecCoreInteraction K (fun i => β i) (ϑ := ϑ)
-          (h_ℓ_add_R_rate := h_ℓ_add_R_rate)))
     (hInit : NeverFail init) :
     OracleReduction.perfectCompleteness
       (oSpec := []ₒ)
@@ -1251,8 +1347,9 @@ theorem coreInteractionOracleReduction_perfectCompleteness
       (OStmtIn := BinaryBasefold.OracleStatement K β (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ 0)
       (OStmtOut := BinaryBasefold.OracleStatement K β
       (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ (Fin.last ℓ'))
-      (relIn := RingSwitching.strictSumcheckRoundRelation κ (L := L) (K := K) (ℓ := ℓ)
-        (ℓ' := ℓ')
+      (relIn := RingSwitching.strictSumcheckRoundRelation κ (L := L) (K := K)
+        (β := booleanHypercubeBasis κ L K β)
+        (ℓ := ℓ) (ℓ' := ℓ') (h_l := h_l) (𝓑 := 𝓑)
         (BinaryBasefoldAbstractOStmtIn
           (κ := κ) (L := L) (K := K) (β := β)
           (ℓ' := ℓ') (𝓡 := 𝓡) (ϑ := ϑ)
@@ -1262,9 +1359,9 @@ theorem coreInteractionOracleReduction_perfectCompleteness
       (oracleReduction := coreInteractionOracleReduction (κ := κ) (L := L) (K := K)
         (ℓ := ℓ) (ℓ' := ℓ') (𝓡 := 𝓡) (ϑ := ϑ)
         (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (h_l := h_l) (𝓑 := 𝓑)
-        (fun i => β i)
-        (RingSwitching_SumcheckMultParam κ L K (β := booleanHypercubeBasis κ L K β) ℓ ℓ' h_l)
-        prover)
+        (βfun := fun i => β i)
+        (mp := RingSwitching_SumcheckMultParam κ L K
+          (β := booleanHypercubeBasis κ L K β) ℓ ℓ' h_l))
       (init := init)
       (impl := impl) := by
   sorry
@@ -1279,16 +1376,15 @@ noncomputable def coreInteractionOracleRbrKnowledgeError (j : (BinaryBasefold.pS
 
 /-- Round-by-round knowledge soundness for the core interaction oracle verifier -/
 theorem coreInteractionOracleVerifier_rbrKnowledgeSoundness :
-    (coreInteractionOracleVerifier (κ := κ) (L := L) (K := K) (ℓ := ℓ) (ℓ' := ℓ')
-      (𝓡 := 𝓡) (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate)
-      (h_l := h_l) (𝓑 := 𝓑) (fun i => β i)
-      (RingSwitching_SumcheckMultParam κ L K (β := booleanHypercubeBasis κ L K β) ℓ ℓ' h_l)
-      ).rbrKnowledgeSoundness init impl
+    (coreInteractionOracleVerifier κ (L := L) (K := K) (β := β) (ℓ := ℓ) (ℓ' := ℓ')
+      (h_l := h_l) (𝓡 := 𝓡) (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate)
+        (𝓑 := 𝓑)).rbrKnowledgeSoundness init impl
       (OStmtIn := BinaryBasefold.OracleStatement K β (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ 0)
       (OStmtOut := BinaryBasefold.OracleStatement K β
       (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ (Fin.last ℓ'))
       (pSpec := BinaryBasefold.pSpecCoreInteraction K β (h_ℓ_add_R_rate := h_ℓ_add_R_rate))
-      (relIn := RingSwitching.sumcheckRoundRelation κ L K ℓ ℓ'
+      (relIn := RingSwitching.sumcheckRoundRelation κ L K
+        (β := booleanHypercubeBasis κ L K β) ℓ ℓ' h_l (𝓑 := 𝓑)
         (BinaryBasefoldAbstractOStmtIn
           (κ := κ) (L := L) (K := K) (β := β)
           (ℓ' := ℓ') (𝓡 := 𝓡) (ϑ := ϑ)
