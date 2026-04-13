@@ -96,9 +96,13 @@ import ArkLib.Interaction.Boundary.Security
 import ArkLib.Interaction.FiatShamir.Basic
 import ArkLib.Interaction.FiatShamir.DuplexSponge
 import ArkLib.Interaction.FiatShamir.Transform
+import ArkLib.Interaction.Oracle.BCS
+import ArkLib.Interaction.Oracle.Bridge
+import ArkLib.Interaction.Oracle.Composition
 import ArkLib.Interaction.Oracle.Continuation
 import ArkLib.Interaction.Oracle.Core
 import ArkLib.Interaction.Oracle.Execution
+import ArkLib.Interaction.Oracle.Spec
 import ArkLib.Interaction.Oracle.StateChain
 import ArkLib.Interaction.OracleReification
 import ArkLib.Interaction.OracleSecurity

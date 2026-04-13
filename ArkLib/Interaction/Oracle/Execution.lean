@@ -1322,4 +1322,117 @@ theorem OracleReduction.HonestExecutionEquivalent.toPublic
 
 end OracleDecoration
 
+/-! ## Execution for Oracle.Spec-based reductions -/
+
+namespace Oracle
+
+/-- Run a prover strategy against a verifier counterpart on `Oracle.Spec`,
+threading accumulated oracle access. This is the `Oracle.Spec` analog of
+`OracleDecoration.runWithOracleCounterpart`. -/
+def Spec.runWithOracleCounterpart
+    {ι : Type} {oSpec : OracleSpec.{0, 0} ι}
+    {ιₛᵢ : Type} {OStmtIn : ιₛᵢ → Type} [∀ i, OracleInterface (OStmtIn i)]
+    (inputImpl : QueryImpl [OStmtIn]ₒ Id) :
+    (s : Spec) → (roles : Spec.RoleDeco s) → (od : Spec.OracleDeco s) →
+    {ιₐ : Type} → (accSpec : OracleSpec.{0, 0} ιₐ) → QueryImpl accSpec Id →
+    {OutputP OutputC : Interaction.Spec.Transcript s.toInteractionSpec → Type} →
+    Interaction.Spec.Strategy.withRoles (OracleComp oSpec)
+      s.toInteractionSpec (s.toSpecRoles roles) OutputP →
+    Interaction.Spec.Counterpart.withMonads s.toInteractionSpec (s.toSpecRoles roles)
+      (s.toMonadDecoration oSpec OStmtIn roles od accSpec) OutputC →
+    OracleComp oSpec ((tr : Interaction.Spec.Transcript s.toInteractionSpec) ×
+      OutputP tr × OutputC tr)
+  | .done, _, _, _, _, _, _, _, output, cOutput =>
+      pure ⟨⟨⟩, output, cOutput⟩
+  | .«public» _ rest, ⟨.sender, rRest⟩, odRest, _, accSpec, accImpl, _, _,
+      send, dualFn => do
+      let ⟨x, next⟩ ← send
+      let z ← runWithOracleCounterpart inputImpl
+        (rest x) (rRest x) (odRest x) accSpec accImpl next (dualFn x)
+      return ⟨⟨x, z.1⟩, z.2.1, z.2.2⟩
+  | .«public» X rest, ⟨.receiver, rRest⟩, odRest, _, accSpec, accImpl, OutputP, OutputC,
+      respond, dualSample => do
+      let routeImpl : QueryImpl ((oSpec + [OStmtIn]ₒ) + accSpec) (OracleComp oSpec) :=
+        fun
+        | .inl (.inl q) => liftM (query (spec := oSpec) q)
+        | .inl (.inr q) => liftM (inputImpl q)
+        | .inr q => liftM (accImpl q)
+      have dualSample' : OracleComp ((oSpec + [OStmtIn]ₒ) + accSpec) _ := by
+        simpa using dualSample
+      let z' : Sigma (fun x =>
+          Interaction.Spec.Counterpart.withMonads (rest x).toInteractionSpec
+            ((rest x).toSpecRoles (rRest x))
+            ((rest x).toMonadDecoration oSpec OStmtIn (rRest x) (odRest x) accSpec)
+            (fun p => OutputC ⟨x, p⟩)) ←
+        simulateQ routeImpl dualSample'
+      let x := z'.1
+      let dualRest := z'.2
+      let next ← respond x
+      let z ← runWithOracleCounterpart inputImpl
+        (rest x) (rRest x) (odRest x) accSpec accImpl next dualRest
+      return ⟨⟨x, z.1⟩, z.2.1, z.2.2⟩
+  | .oracle _ rest, roles, ⟨oi, odRest⟩, _, accSpec, accImpl, _, _,
+      send, dualFn => do
+      let ⟨x, next⟩ ← send
+      let implX : QueryImpl (@OracleInterface.spec _ oi) Id :=
+        fun q => (oi.toOC.impl q).run x
+      let z ← runWithOracleCounterpart inputImpl
+        rest roles odRest (accSpec + @OracleInterface.spec _ oi)
+        (QueryImpl.add accImpl implX) next (dualFn x)
+      return ⟨⟨x, z.1⟩, z.2.1, z.2.2⟩
+
+/-- Execute an `Oracle.Reduction` against concrete oracle input statements.
+Produces the realized transcript, prover output (statement + oracle statements +
+witness), and verifier output (statement + output oracle simulation). -/
+def Reduction.executeConcrete
+    {ι : Type} {oSpec : OracleSpec.{0, 0} ι}
+    {SharedIn : Type}
+    {Context : SharedIn → Spec}
+    {Roles : (shared : SharedIn) → Spec.RoleDeco (Context shared)}
+    {OracleDeco : (shared : SharedIn) → Spec.OracleDeco (Context shared)}
+    {StatementIn : SharedIn → Type}
+    {ιₛᵢ : SharedIn → Type}
+    {OStatementIn : (shared : SharedIn) → ιₛᵢ shared → Type}
+    [∀ shared i, OracleInterface (OStatementIn shared i)]
+    {WitnessIn : SharedIn → Type}
+    {StatementOut :
+      (shared : SharedIn) → Spec.PublicTranscript (Context shared) → Type}
+    {ιₛₒ : (shared : SharedIn) → Spec.PublicTranscript (Context shared) → Type}
+    {OStatementOut :
+      (shared : SharedIn) → (pt : Spec.PublicTranscript (Context shared)) →
+        ιₛₒ shared pt → Type}
+    [∀ shared pt i, OracleInterface (OStatementOut shared pt i)]
+    {WitnessOut :
+      (shared : SharedIn) → Spec.PublicTranscript (Context shared) → Type}
+    (reduction : Oracle.Reduction oSpec SharedIn Context Roles OracleDeco StatementIn
+      OStatementIn WitnessIn StatementOut OStatementOut WitnessOut)
+    (shared : SharedIn)
+    (s : StatementWithOracles StatementIn OStatementIn shared)
+    (w : WitnessIn shared) :
+    OracleComp oSpec
+      ((tr : Interaction.Spec.Transcript (Context shared).toInteractionSpec) ×
+       HonestProverOutput
+         (StatementWithOracles
+           (fun _ => StatementOut shared ((Context shared).projectPublic tr))
+           (fun _ => OStatementOut shared ((Context shared).projectPublic tr))
+           shared)
+         (WitnessOut shared ((Context shared).projectPublic tr)) ×
+       (StatementOut shared ((Context shared).projectPublic tr) ×
+        QueryImpl [OStatementOut shared ((Context shared).projectPublic tr)]ₒ
+          (OracleComp
+            ([OStatementIn shared]ₒ +
+              (Context shared).toOracleSpec (OracleDeco shared)
+                ((Context shared).projectPublic tr))))) := do
+  let strategy ← reduction.prover shared s w
+  let ⟨tr, proverOut, stmtOutV⟩ ←
+    Spec.runWithOracleCounterpart
+      (OracleInterface.simOracle0 (OStatementIn shared) s.oracleStmt)
+      (Context shared) (Roles shared) (OracleDeco shared) []ₒ (fun q => q.elim)
+      strategy (reduction.verifier.toFun shared []ₒ s.stmt)
+  pure ⟨tr, proverOut,
+    ⟨stmtOutV,
+     reduction.verifier.simulate shared ((Context shared).projectPublic tr)⟩⟩
+
+end Oracle
+
 end Interaction
