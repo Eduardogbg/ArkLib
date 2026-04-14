@@ -430,6 +430,37 @@ def bcsPhase2
 
 end Phase2
 
+/-! ## Opening decoration -/
+
+section Opening
+
+/-- Opening protocol data for each committed `.oracle` node. At committed
+nodes, stores a `Commitment.Interaction.Opening`-like proof that the prover
+can demonstrate consistency between the committed value and query responses.
+
+The `OpeningProof` type parameter abstracts over the specific opening proof
+mechanism. For Merkle trees, this would be authentication paths; for other
+commitment schemes, the appropriate opening argument.
+
+Each committed node stores: the opening interaction spec, its role decoration,
+and a `Proof` (prover + verifier pair) for the opening sub-protocol.
+
+At non-committed `.oracle` nodes and `.public` nodes, recurse structurally. -/
+def OpeningDeco {m : Type → Type}
+    (OpeningProof : {X : Type} → OracleInterface X →
+      {nc : NodeCommitment m X} → Type 1) :
+    (s : Oracle.Spec) → (od : OracleDeco s) →
+    CommitDeco m s → Type 1
+  | .done, _, _ => PUnit
+  | .«public» _ rest, odRest, cdRest =>
+      (x : _) → OpeningDeco OpeningProof (rest x) (odRest x) (cdRest x)
+  | .oracle _X rest, ⟨oi, odRest⟩, ⟨some nc, cdRest⟩ =>
+      @OpeningProof _ oi (nc := nc) × OpeningDeco OpeningProof rest odRest cdRest
+  | .oracle _ rest, ⟨_, odRest⟩, ⟨none, cdRest⟩ =>
+      OpeningDeco OpeningProof rest odRest cdRest
+
+end Opening
+
 end Spec
 
 end Interaction.Oracle

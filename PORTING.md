@@ -188,32 +188,63 @@ roles are a decoration on `Spec`.
   when accepted terminal statements admit a canonical transcript-indexed
   `WitnessOut`.
 
+## Oracle.Spec layer (new, cast-free)
+
+The `Oracle.Spec` inductive provides a structural alternative to
+`OracleDecoration` on `Interaction.Spec`. It distinguishes `.public` nodes
+(value visible to both parties) from `.oracle` nodes (value accessed only
+through queries), yielding cast-free `PublicTranscript` indexing.
+
+### Files
+
+| File | Status | Content |
+|------|--------|---------|
+| `Oracle/Spec.lean` | Complete | `Oracle.Spec`, `RoleDeco`, `OracleDeco`, `PublicTranscript`, `toOracleSpec`, `toMonadDecoration`, `append`, `split` |
+| `Oracle/Core.lean` | Complete | `Oracle.Prover`, `Oracle.Verifier` (with `toFun` starting at `[]ₒ`), `Oracle.Reduction`, plus legacy `OracleDecoration` API (coexists) |
+| `Oracle/Execution.lean` | Complete | `Spec.runWithOracleCounterpart`, `Reduction.executeConcrete`, `Verifier.run` for `Oracle.Spec` layer |
+| `Oracle/Composition.lean` | Complete, no sorry | `Reduction.comp`, `liftCounterpartAcc`, `retargetVerifierMonads` |
+| `Oracle/Security.lean` | 1 sorry | `OutputRealizes`, `completeness`/`soundness`/`knowledgeSoundness`, `knowledgeSoundness_implies_soundness` (sorry) |
+| `Oracle/BCS.lean` | Complete, no sorry | `CommitDeco`, `bcsSpec`, prover wrapping, `PublicQueryVerifier`, Phase 1/2 helpers, `answerCommittedQueries` |
+| `Oracle/Bridge.lean` | Spec-level only | `ofInteractionSpec`, `ofRoleDecoration`, `ofOracleDecoration`. Verifier/reduction conversion deferred. |
+
+### Key design decisions
+
+- `Oracle.Verifier.toFun` starts with `accSpec = []ₒ` (hardcoded). Composition
+  uses `liftCounterpartAcc` to bridge the empty accumulated spec to the
+  dynamically growing one.
+- Security definitions use `OutputRealizes` to bridge behavioral simulation and
+  concrete oracle data. Completeness checks `OutputRealizes` as a conjunct.
+  Knowledge soundness requires the adversarial prover to output concrete
+  `oStmtOut`; the extractor sees it.
+- `knowledgeSoundness_implies_soundness` requires `hLangOut` to include
+  `OutputRealizes` (acceptance implies realizable output oracle behavior).
+
 ## In progress
 
-- [ ] **Oracle execution-side composition** — simulator-side composition is in
-  good shape, but the oracle analog of `Reduction.execute_comp` is still not
-  proved. The clean next step is a direct `OracleReduction.execute_comp`
-  theorem, likely built from the new prover-side runner lemma
-  `runWithOracleCounterpart_mapOutputWithRoles_mapOutput`, rather than from a
-  more general append-runner theorem.
-- [ ] **Verifier-indexed round-by-round security** — after landing the
-  composition theorems and straightline-extractor cleanup, the main remaining
-  `Security.lean` task is still to rephrase the claim-tree layer in terms of
-  the actual `Verifier` object and its outputs instead of
-  `randomChallenger`-level transcript predicates (`Accepts`, `relOut`)
+- [ ] **Composition security for Oracle.Spec** — `Reduction.completeness_comp`
+  statement for the new `Oracle.Spec` layer. The old `Interaction/Security.lean`
+  has the analog; the new version needs `PublicTranscript` indexing and
+  `OutputRealizes` handling.
+- [ ] **BCS Oracle.Verifier construction** — combine `PublicQueryVerifier`
+  Phase 1 (challenger) and Phase 2 (query/decide) into a proper
+  `Oracle.Verifier` on `bcsSpec`. Architecture question: Phase 2 queries
+  committed oracles which are `.public` in `bcsSpec`, so they must be accessed
+  via output oracle simulation or an appended Phase 2 protocol.
+- [ ] **Phase 2 opening protocol** — define `openingSpec`, `openingRoles`,
+  Phase 2 prover/verifier for BCS. The old `BCS/Verifier.lean` has stubs
+  (all sorry). Depends on `CommitmentScheme.Basic.Opening`.
 
 ## Immediate deferred todos
 
-- [ ] Prove oracle execution composition directly:
-  `OracleReduction.execute_comp` or an equally clean theorem at the
-  `runWithOracleCounterpart` level.
-- [ ] Rebuild oracle security composition statements on top of that execution
-  theorem, rather than relying mainly on simulator-side composition.
-- [ ] Unify binary composition and `StateChain` execution under one execution
-  principle once the direct execution theorem exists.
-- [ ] Revisit a more generic verifier-monad programming interface later
-  (`MonadQuery`-style / query-capable monads lowering to `OracleComp`), but not
-  during the current porting cutover.
+- [ ] Prove `knowledgeSoundness_implies_soundness` in `Oracle/Security.lean`.
+  Requires `Spec.runWithOracleCounterpart_mapOutputWithRoles` lemma for the
+  `Oracle.Spec` execution layer, plus probability monotonicity.
+- [ ] State `Reduction.completeness_comp` for `Oracle.Spec` composition
+  (very verbose due to oracle statement handling).
+- [ ] Port `Sumcheck/Interaction/Oracle.lean` to native `Oracle.Spec`
+  (establishes the migration pattern for other protocols).
+- [ ] Revisit generic verifier monads for relations (`MonadQuery`-style),
+  deferred during current cutover.
 
 ## Planned
 - [ ] **Phase 5: Sumcheck migration** — interaction-native sumcheck started:
@@ -224,7 +255,8 @@ roles are a decoration on `Spec`.
   CommitmentScheme
 - [ ] **Fiat-Shamir** — abstract FS transform on Spec + RoleDecoration
 - [ ] **DuplexSponge FS** — concrete instantiation (deferred)
-- [ ] **BCS transformation** — IOR + commitment → IR (deferred)
+- [ ] **BCS transformation** — IOR + commitment → IR (in progress via
+  `Oracle/BCS.lean`)
 
 ## Open questions / issues
 
@@ -265,11 +297,11 @@ roles are a decoration on `Spec`.
   quantify directly over first-phase transcripts without encoding the second
   reduction awkwardly inside the theorem statement.
 
-- **Knowledge soundness implies soundness** (PARTIALLY RESOLVED): the bridge
-  theorem is now proved, but it needs an explicit transcript-indexed
-  `acceptWitness` selector. Without that extra datum, the current API does not
-  provide a way to reconstruct a `WitnessOut` merely from acceptance of a
-  terminal `StatementOut`.
+- **Knowledge soundness implies soundness** (PARTIALLY RESOLVED): the new
+  `Oracle.Spec` version in `Oracle/Security.lean` has `hLangOut` strengthened
+  to include `OutputRealizes`. The proof is sorry'd pending
+  `runWithOracleCounterpart_mapOutputWithRoles` for the `Oracle.Spec`
+  execution layer.
 
 - **Verifier-indexed RBR semantics**: `ClaimTree` / `rbrSoundness` currently
   talk about transcript predicates and `randomChallenger`, not the full
