@@ -451,6 +451,20 @@ def knowledgeSoundness
               (verifier.simulate shared pt) witOut)
         | verifier.run shared stmt inputImpl prover] ≤ ε
 
+/-- Knowledge soundness implies soundness under two compatibility conditions:
+
+1. `hLang`: outside the input language, no witness satisfies the input relation.
+2. `hLangOut`: acceptance implies the existence of concrete oracle data that
+   realizes the output oracle behavior and satisfies the output relation.
+
+The proof constructs a KS-compatible adversary from the soundness adversary by
+mapping its output to include the witness data from `hLangOut`. The key
+observation is that `mapOutputWithRoles` on the prover strategy does not
+change the interaction (same transcript distribution), so the verifier's
+accept/reject behavior is preserved.
+
+TODO: the proof requires a `Spec.runWithOracleCounterpart_mapOutputWithRoles`
+lemma for the new `Oracle.Spec` execution, plus probability monotonicity. -/
 theorem knowledgeSoundness_implies_soundness
     {ι : Type _} {oSpec : OracleSpec ι}
     [LawfulMonad (OracleComp oSpec)] [HasEvalSPMF (OracleComp oSpec)]
@@ -495,12 +509,20 @@ theorem knowledgeSoundness_implies_soundness
         (StatementOut := StatementOut)
         (OStatementIn := OStatementIn) (OStatementOut := OStatementOut))
     (hLangOut :
-      ∀ shared inputImpl pt stmtOut,
-        langOut shared inputImpl pt stmtOut (verifier.simulate shared pt) →
-          ∃ (oStmtOut : OracleStatement (OStatementOut shared pt))
-            (witOut : WitnessOut shared pt),
-            relOut shared inputImpl pt stmtOut
-              (verifier.simulate shared pt) witOut) :
+      ∀ shared inputImpl
+        (tr : Interaction.Spec.Transcript (Context shared).toInteractionSpec)
+        (stmtOut : StatementOut shared ((Context shared).projectPublic tr)),
+        langOut shared inputImpl ((Context shared).projectPublic tr) stmtOut
+          (verifier.simulate shared ((Context shared).projectPublic tr)) →
+          ∃ (oStmtOut : OracleStatement
+              (OStatementOut shared ((Context shared).projectPublic tr)))
+            (witOut : WitnessOut shared ((Context shared).projectPublic tr)),
+            OutputRealizes shared inputImpl tr
+              (verifier.simulate shared ((Context shared).projectPublic tr))
+              oStmtOut ∧
+            relOut shared inputImpl ((Context shared).projectPublic tr) stmtOut
+              (verifier.simulate shared ((Context shared).projectPublic tr))
+              witOut) :
     soundness verifier langIn langOut ε := by
   sorry
 

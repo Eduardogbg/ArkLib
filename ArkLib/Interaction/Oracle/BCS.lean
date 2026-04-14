@@ -381,6 +381,55 @@ def bcsPhase1Verifier
 
 end Phase1
 
+/-! ## Phase 2: answering committed oracle queries -/
+
+section Phase2
+
+/-- Answer committed oracle queries using the actual oracle messages from a
+full transcript. At committed `.oracle` nodes, the message `x : X` is used via
+`OracleInterface.answer` to compute query responses. At non-committed `.oracle`
+and `.public` nodes, recurse structurally.
+
+This is the core computation of BCS Phase 2: the honest prover opens committed
+data by providing responses computed from the oracle messages. -/
+def answerCommittedQueries :
+    (s : Oracle.Spec) → (od : OracleDeco s) → {m : Type → Type} →
+    (cd : CommitDeco m s) →
+    (tr : Interaction.Spec.Transcript s.toInteractionSpec) →
+    (qd : OracleQueryDeco s od cd (projectShared s cd tr)) →
+    OracleResponseDeco s od cd (projectShared s cd tr) qd
+  | .done, _, _, _, _, _ => ⟨⟩
+  | .«public» _ rest, odRest, _, cdRest, ⟨x, tr⟩, qd =>
+      answerCommittedQueries (rest x) (odRest x) (cdRest x) tr qd
+  | .oracle _ rest, ⟨_oi, odRest⟩, _, ⟨some _, cdRest⟩, ⟨x, tr⟩, ⟨qb, qdRest⟩ =>
+      (fun i => OracleInterface.answer x (qb.queries i),
+       answerCommittedQueries rest odRest cdRest tr qdRest)
+  | .oracle _ rest, ⟨_, odRest⟩, _, ⟨none, cdRest⟩, ⟨_x, tr⟩, qd =>
+      answerCommittedQueries rest odRest cdRest tr qd
+
+variable {ι : Type} {oSpec : OracleSpec.{0, 0} ι}
+variable {ιₛᵢ : Type} {OStmtIn : ιₛᵢ → Type} [∀ i, OracleInterface.{0, 0} (OStmtIn i)]
+
+/-- Phase 2 of BCS: produce the output statement from queries and responses.
+Given the pre-computed queries and responses for committed oracle nodes,
+evaluates the `PublicQueryVerifier.decide` function. -/
+def bcsPhase2
+    {s : Oracle.Spec} {roles : RoleDeco s} {od : OracleDeco s}
+    {cd : CommitDeco (OracleComp oSpec) s}
+    {StmtIn : Type} {StmtOut : SharedTranscript s cd → Type}
+    (pqv : PublicQueryVerifier oSpec OStmtIn s roles od cd StmtIn StmtOut)
+    (stmt : StmtIn)
+    (bcsTr : Interaction.Spec.Transcript (bcsSpec s cd).toInteractionSpec)
+    (qd : OracleQueryDeco s od cd (bcsProjectShared s cd bcsTr))
+    (rd : OracleResponseDeco s od cd (bcsProjectShared s cd bcsTr) qd) :
+    OracleComp (oSpec + [OStmtIn]ₒ +
+      (bcsSpec s cd).toOracleSpec (bcsOracleDeco s od cd)
+        ((bcsSpec s cd).projectPublic bcsTr))
+      (StmtOut (bcsProjectShared s cd bcsTr)) :=
+  pqv.decide stmt bcsTr qd rd
+
+end Phase2
+
 end Spec
 
 end Interaction.Oracle
