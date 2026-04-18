@@ -472,53 +472,196 @@ variable {σ : Type} {init : ProbComp σ} {impl : QueryImpl oSpec (StateT σ Pro
 theorem reduction_perfectCompleteness :
     (reduction R deg D oSpec).perfectCompleteness init impl
       (inputRelation R deg D) (outputRelation R deg) := by
-  rw [perfectCompleteness_eq_prob_one]
+  simp only [Reduction.perfectCompleteness, Reduction.completeness, ENNReal.coe_zero, tsub_zero]
   intro ⟨target, oStmt⟩ () hValid
-  -- hValid : ((target, oStmt), ()) ∈ inputRelation R deg D
-  -- Goal: Pr[event | OptionT.mk do (simulateQ pImpl (reduction.run ...)).run' (← init)] = 1
-  -- The honest prover sends poly = oStmt(). The verifier checks
-  -- ∑ poly.eval x = target (holds by hValid).
-  -- Output: (poly.eval chal, chal) satisfies outputRelation by definition.
-  simp only [inputRelation] at hValid
-  -- Blocked: simulateQ decomposition for 2-round protocol.
-  -- The honest prover sends poly = oStmt(). Guard passes (by hValid).
-  -- Output (poly.eval chal, chal) satisfies outputRelation by construction (rfl).
-  -- Requires: simulateQ_add_liftComp_right to fire on liftM (liftM ...) form,
-  -- or a run simplification lemma for IsSingleRound protocols.
-  sorry
-  -- -- Need `convert` because of some duplicate instances, should eventually track those down
-  -- convert (probEvent_eq_one_iff _ _).2 ⟨?_, ?_⟩
-  -- · simp only [Reduction.run, probFailure_bind_eq_zero_iff]
-  --   refine ⟨by simp [hInit], ?_⟩
-  --   -- constructor
-  --   -- · simp
-  --   --   unfold Prover.run Prover.runToRound Prover.processRound
-  --   --   simp [Fin.induction, Fin.induction.go, reduction, prover]
-  --   · intro s hs
-  --     intro ⟨⟨stmt, oStmtOut⟩, _, transcript⟩
-  --     simp -- Also some pathing issues, need to simp once before reducing `reduction`
-  --     simp [reduction, verifier, Verifier.run]
-  --     intro hSupport
-  --     simp [Prover.run, Prover.runToRound, Prover.processRound, reduction, prover] at hSupport
-  --     obtain ⟨h1, h2⟩ := hSupport
-  --     simp [← h2, Transcript.concat, Fin.snoc, h]
-  --     simp [inputRelation, h] at hValid
-  --     exact hValid
-  -- · intro ⟨⟨⟨prvStmtOut, prvOStmtOut⟩, _⟩, verStmtOut, transcript⟩ hSupport
-  --   simp only [run, support_bind, liftM_eq_liftComp, Set.mem_iUnion, support_pure,
-  --     Set.mem_singleton_iff, Prod.eq_iff_fst_eq_snd_eq] at hSupport
-  --   obtain ⟨x1, hx1, x2_1, hx2, ⟨⟨⟨h2_1, h2_2⟩, _⟩, ⟨⟨h3_1, h3_2⟩, h3_3⟩⟩⟩ := hSupport
-  --   simp only [reduction, prover, Prover.run, Prover.runToRound] at hx1
-  --   simp [Prover.processRound] at hx1
-  --   obtain ⟨a, b, hab, hx1'⟩ := hx1
-  --   simp only [Verifier.run, reduction, verifier] at hx2
-  --   simp [Transcript.concat, Fin.snoc] at hx2
-  --   obtain ⟨h1, h2, h3⟩ := hx2
-  --   split; rename_i stuff prvStmtOut' _ verStmtOut' trans hEq
-  --   simp at hEq
-  --   obtain ⟨hPrvStmtOut, hVerStmtOut, hTranscript⟩ := hEq
-  --   simp only [outputRelation, ← hVerStmtOut, StmtOut, OStmtOut, ← hPrvStmtOut, h2_2]
-  --   aesop
+  simp only [inputRelation, Set.mem_setOf_eq] at hValid
+  -- 1. Unfold reduction and expand pSpec to resolve directions
+  simp only [reduction, Reduction.run, Prover.run, Verifier.run, prover, verifier,
+    Prover.runToRound, Prover.processRound, Fin.induction_two, pSpec,
+    bind_pure_comp, Functor.map_map, Function.comp]
+  -- 2. Resolve round 0 direction (P_to_V)
+  split <;> rename_i hDir0
+  · exact absurd hDir0 (by decide)
+  simp only [pure_bind, map_pure, Functor.map_map, Function.comp, bind_pure_comp]
+  -- 3. Resolve round 1 direction (V_to_P)
+  split <;> rename_i hDir1
+  swap
+  · exact absurd hDir1 (by decide)
+  -- 4. Inline pure computations via liftComp_pure, evaluate transcript access, resolve guard
+  simp only [MonadLift.monadLift, liftM, monadLift, MonadLiftT.monadLift,
+    OracleComp.liftComp_pure, pure_bind, map_pure, Functor.map_map, Function.comp,
+    bind_pure_comp, Transcript.concat, Fin.snoc_last, Fin.snoc_castSucc,
+    guard, if_pos hValid]
+  -- 5. After full simplification, the computation should be OptionT-free
+  -- Prove Pr[event | comp] ≥ 1
+  rw [ge_iff_le, one_le_probEvent_iff, probEvent_eq_one_iff]
+  refine ⟨?_, ?_⟩
+  · -- No failure
+    rw [OptionT.probFailure_eq, OptionT.run_mk]
+    simp only [probFailure_eq_zero, zero_add]
+    apply probOutput_eq_zero_of_not_mem_support
+    simp only [support_bind, Set.mem_iUnion, not_exists]
+    intro s _ hmem
+    simp only [StateT.run'_eq, support_map, Set.mem_image] at hmem
+    obtain ⟨⟨_, s'⟩, hmem, rfl⟩ := hmem
+    -- The computation always returns some (guard passes by hValid, output by construction).
+    -- Needs: support decomposition through simulateQ's PFunctor.FreeM.mapM representation.
+    -- Peel outer OptionT bind via simulateQ_bind
+    erw [simulateQ_bind] at hmem
+    erw [StateT.run_bind] at hmem
+    rw [mem_support_bind_iff] at hmem
+    obtain ⟨⟨x, s''⟩, hx, hs⟩ := hmem
+    -- OptionT.lift wraps in some: peel via simulateQ_map
+    erw [simulateQ_map] at hx
+    rw [StateT.run_map] at hx
+    simp only [support_map, Set.mem_image] at hx
+    obtain ⟨⟨val, s₀⟩, hval, heq⟩ := hx
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj heq
+    -- x = some val; OptionT bind matches on some → takes some branch
+    -- Peel second OptionT bind (stmtOut)
+    erw [simulateQ_bind] at hs
+    erw [StateT.run_bind] at hs
+    rw [mem_support_bind_iff] at hs
+    obtain ⟨⟨y, s'''⟩, hy, hs⟩ := hs
+    -- OptionT.lift wraps in some; peel via simulateQ_map (inner + outer)
+    erw [simulateQ_map] at hy
+    erw [simulateQ_map] at hy
+    rw [StateT.run_map] at hy
+    simp only [support_map, Set.mem_image] at hy
+    obtain ⟨⟨val2, s₁⟩, hval2, heq2⟩ := hy
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj heq2
+    -- y = some val2; match on some → continues
+    -- val2 : Option output_type; if some, getM succeeds; if none, getM fails
+    dsimp only [] at hs
+    rcases val2 with _ | ⟨out⟩
+    · -- val2 = none: getM fails → produces none. But guard always passes.
+      exfalso
+      -- Decompose hval: peel the do block's first bind
+      erw [simulateQ_bind] at hval
+      erw [StateT.run_bind] at hval
+      rw [mem_support_bind_iff] at hval
+      obtain ⟨⟨chal_res, s₂⟩, hchal, hval⟩ := hval
+      -- Try combined simp to peel liftComp_map + simulateQ_map
+      -- Strip liftComp layers using addLift/add decomposition
+      simp only [QueryImpl.addLift_def,
+        QueryImpl.simulateQ_add_liftComp_right, QueryImpl.simulateQ_add_liftComp_left,
+        OracleComp.liftComp_map, OracleComp.liftComp_pure] at hchal hval
+      -- hchal is now: simulateQ impl_add (liftM (query ...))
+      -- Peel the query
+      erw [simulateQ_query] at hchal
+      rw [StateT.run_map] at hchal
+      simp only [support_map, Set.mem_image] at hchal
+      obtain ⟨⟨oracle_resp, s_o⟩, _, heq_c⟩ := hchal
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj heq_c
+      -- chal_res = (query ...).cont oracle_resp — should be concrete tuple
+      -- Now hval has chal_res with known structure; match should reduce
+      erw [simulateQ_pure] at hval
+      simp only [StateT.run_pure, support_pure, Set.mem_singleton_iff] at hval
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj hval
+      -- val is now concrete. Force Fin.snoc evaluation, then resolve guard.
+      -- dsimp evaluates Fin.snoc definitionally, making val.1 0 = oStmt ()
+      -- Then if_pos hValid resolves the guard
+      simp only [QueryImpl.addLift_def,
+        QueryImpl.simulateQ_add_liftComp_right, QueryImpl.simulateQ_add_liftComp_left,
+        OracleComp.liftComp_map, OracleComp.liftComp_pure,
+        simulateQ_pure, simulateQ_query, pure_bind, map_pure, bind_pure_comp,
+        StateT.run_pure, StateT.run_map,
+        support_pure, support_map, Set.mem_singleton_iff, Set.mem_image,
+        Prod.mk.injEq, Option.some.injEq] at hval2
+      -- The inner simulateQ is definitionally liftComp; erw bridges
+      erw [QueryImpl.simulateQ_add_liftComp_left] at hval2
+      -- Evaluate Fin.snoc using norm_num, then resolve guard
+      simp only [Fin.snoc] at hval2
+      norm_num at hval2
+      -- Guard is ∑ x, eval (D x) ... = target; rewrite hValid to match
+      rw [Finset.sum_map] at hValid
+      rw [if_pos hValid] at hval2
+      -- Guard resolved: pure () → liftComp_pure → simulateQ_pure → done
+      simp only [OptionT.run_pure, OracleComp.liftComp_pure,
+        simulateQ_pure, pure_bind, map_pure,
+        StateT.run_pure, support_pure, Set.mem_singleton_iff, Prod.mk.injEq] at hval2
+      simp at hval2
+    · -- val2 = some out: getM succeeds, final map wraps in some, contradicts none
+      simp only [Option.getM, pure_bind] at hs
+      erw [simulateQ_pure] at hs
+      simp only [StateT.run_pure, support_pure, Set.mem_singleton_iff] at hs
+      exact absurd (congr_arg Prod.fst hs) (by simp)
+  · -- All outputs satisfy the event
+    intro x hx
+    rw [OptionT.mem_support_iff] at hx
+    simp only [OptionT.run_mk, support_bind, Set.mem_iUnion] at hx
+    obtain ⟨s, _, hx⟩ := hx
+    simp only [StateT.run'_eq, support_map, Set.mem_image] at hx
+    obtain ⟨⟨_, s'⟩, hx, rfl⟩ := hx
+    -- Same decomposition as sorry 1: peel outer OptionT bind
+    erw [simulateQ_bind] at hx
+    erw [StateT.run_bind] at hx
+    rw [mem_support_bind_iff] at hx
+    obtain ⟨⟨x_opt, s''⟩, hx_first, hx_rest⟩ := hx
+    -- Peel some <$> from OptionT.lift
+    erw [simulateQ_map] at hx_first
+    rw [StateT.run_map] at hx_first
+    simp only [support_map, Set.mem_image] at hx_first
+    obtain ⟨⟨val, s₀⟩, hval, heq⟩ := hx_first
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj heq
+    -- x_opt = some val; peel second OptionT bind
+    erw [simulateQ_bind] at hx_rest
+    erw [StateT.run_bind] at hx_rest
+    rw [mem_support_bind_iff] at hx_rest
+    obtain ⟨⟨y, s'''⟩, hy, hx_rest⟩ := hx_rest
+    -- Peel some <$> from inner computation
+    erw [simulateQ_map] at hy
+    erw [simulateQ_map] at hy
+    rw [StateT.run_map] at hy
+    simp only [support_map, Set.mem_image] at hy
+    obtain ⟨⟨val2, s₁⟩, hval2, heq2⟩ := hy
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj heq2
+    -- y = some val2; case split on val2
+    dsimp only [] at hx_rest
+    rcases val2 with _ | ⟨out⟩
+    · -- val2 = none: getM fails, produces none, but x is some — contradiction
+      simp only [Option.getM, pure_bind] at hx_rest
+      erw [simulateQ_pure] at hx_rest
+      simp only [StateT.run_pure, support_pure, Set.mem_singleton_iff] at hx_rest
+      exact absurd (congr_arg Prod.fst hx_rest) (by simp)
+    · -- val2 = some out: getM succeeds, x is concrete
+      simp only [Option.getM, pure_bind] at hx_rest
+      erw [simulateQ_pure] at hx_rest
+      simp only [StateT.run_pure, support_pure, Set.mem_singleton_iff] at hx_rest
+      obtain ⟨rfl, rfl⟩ := hx_rest
+      -- Decompose hval to get val's concrete form (same as sorry 1's Layer 6)
+      simp only [QueryImpl.addLift_def,
+        QueryImpl.simulateQ_add_liftComp_right, QueryImpl.simulateQ_add_liftComp_left,
+        OracleComp.liftComp_map, OracleComp.liftComp_pure] at hval
+      erw [simulateQ_bind] at hval
+      erw [StateT.run_bind] at hval
+      rw [mem_support_bind_iff] at hval
+      obtain ⟨⟨chal_res, s₂⟩, hchal, hval⟩ := hval
+      simp only [QueryImpl.addLift_def,
+        QueryImpl.simulateQ_add_liftComp_right, QueryImpl.simulateQ_add_liftComp_left,
+        OracleComp.liftComp_map, OracleComp.liftComp_pure] at hchal hval
+      erw [simulateQ_query] at hchal
+      rw [StateT.run_map] at hchal
+      simp only [support_map, Set.mem_image] at hchal
+      obtain ⟨⟨oracle_resp, s_o⟩, _, heq_c⟩ := hchal
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj heq_c
+      erw [simulateQ_pure] at hval
+      simp only [StateT.run_pure, support_pure, Set.mem_singleton_iff] at hval
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj hval
+      -- Decompose hval2 (same as sorry 1's Layer 7): resolve guard, make out concrete
+      erw [QueryImpl.simulateQ_add_liftComp_left] at hval2
+      simp only [Fin.snoc] at hval2
+      norm_num at hval2
+      rw [Finset.sum_map] at hValid
+      rw [if_pos hValid] at hval2
+      simp only [OptionT.run_pure, OracleComp.liftComp_pure,
+        pure_bind, map_pure,
+        StateT.run_pure, support_pure, Set.mem_singleton_iff, Prod.mk.injEq] at hval2
+      -- hval2 is an existential giving out's concrete form
+      obtain ⟨_, ⟨_, rfl⟩, _, rfl⟩ := hval2
+      simp only [Set.mem_setOf_eq, outputRelation]
+      constructor <;> simp
+
 
 /-- Perfect completeness for the oracle reduction -/
 theorem oracleReduction_perfectCompleteness :

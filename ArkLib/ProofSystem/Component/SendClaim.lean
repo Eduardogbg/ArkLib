@@ -22,6 +22,26 @@ import ArkLib.OracleReduction.Security.RoundByRound
 
 open OracleSpec OracleComp OracleQuery OracleInterface ProtocolSpec
 
+/-- Peel `simulateQ` map layers from a support membership hypothesis,
+    reducing the computation to its core pure form. -/
+elab "peel_simulateQ" " at " h:ident : tactic => do
+  let n := h.getId.toString
+  let env ← Lean.getEnv
+  let tactics := #[
+    s!"simp only [bind_pure_comp] at {n}",
+    s!"erw [simulateQ_map] at {n}",
+    s!"erw [simulateQ_map] at {n}",
+    s!"erw [simulateQ_map] at {n}",
+    s!"erw [Option.elimM_map] at {n}",
+    s!"simp only [Option.elim_some] at {n}",
+    s!"dsimp only [OptionT.run] at {n}",
+    s!"simp at {n}"]
+  for t in tactics do
+    let stx := Lean.Parser.runParserCategory env `tactic t
+    match stx with
+    | .ok s => Lean.Elab.Tactic.evalTactic s
+    | .error e => throwError "peel_simulateQ: parse error: {e}"
+
 namespace SendClaim
 
 variable {ι : Type} (oSpec : OracleSpec ι) (Statement : Type)
@@ -107,9 +127,101 @@ it also holds in the ideal setting, etc.
 instance : ProverOnly (pSpec OStatement) where
   prover_first' := by simp
 
+set_option synthInstance.maxHeartbeats 800000 in
 theorem completeness [Nonempty σ] :
     (oracleReduction oSpec Statement OStatement relComp).perfectCompleteness
     init impl relIn (relOut OStatement) := by
-  sorry
+  simp only [OracleReduction.perfectCompleteness, oracleReduction, relOut]
+  simp only [Reduction.perfectCompleteness_eq_prob_one]
+  -- `relIn` membership is unused: SendClaim is a deterministic forwarding component
+  -- whose computation succeeds unconditionally, independent of the input relation.
+  intro ⟨stmt, oStmt⟩ wit _
+  -- 1. Unfold (run_of_prover_first absorbs Verifier.run for P_to_V)
+  simp only [OracleReduction.toReduction, Reduction.run_of_prover_first,
+    oracleProver, oracleVerifier, OracleVerifier.toVerifier]
+  -- 2. Bridge OptionT.pure → OracleComp.pure (some x) so simulateQ_pure fires
+  simp_rw [show (pure : _ → OptionT (OracleComp _) _) = fun x => (pure (some x) :
+    OracleComp _ _) from rfl]
+  -- 3. Peel prover binds (all pure — erw matches through definitional eq)
+  erw [simulateQ_bind]; erw [simulateQ_pure]; simp only [pure_bind]
+  erw [simulateQ_bind]; erw [simulateQ_pure]; simp only [pure_bind]
+  -- 4. Peel verifier bind
+  erw [simulateQ_bind]
+  -- 5. Probability decomposition via probEvent_eq_one_iff
+  rw [probEvent_eq_one_iff]
+  simp only [OptionT.probFailure_eq, OptionT.mem_support_iff, OptionT.run_mk]
+  simp only [support_bind, Set.mem_iUnion]
+  exact ⟨by {
+    simp only [HasEvalPMF.probFailure_eq_zero, zero_add, probOutput_eq_zero_iff]
+    intro h
+    rw [mem_support_bind_iff] at h
+    obtain ⟨s, -, hs⟩ := h
+    simp only [StateT.run'_eq, support_map, Set.mem_image] at hs
+    obtain ⟨⟨_, s'⟩, hs, rfl⟩ := hs
+    simp only [StateT.run_bind] at hs
+    rw [mem_support_bind_iff] at hs
+    obtain ⟨⟨x, s''⟩, hx, hs⟩ := hs
+    -- Unfold SubSpec liftM + OptionT in hx
+    simp only [MonadLift.monadLift, liftM, monadLift, MonadLiftT.monadLift,
+      OptionT.run_mk, OptionT.run_bind, OptionT.run_lift] at hx
+    -- simulateQ_map rewrites simulateQ impl (some <$> _) → some <$> simulateQ impl _
+    erw [simulateQ_map] at hx
+    -- Peel outer simulateQ layer (OptionT.mk is definitionally transparent)
+    erw [simulateQ_map] at hx
+    -- Bridge: StateT.run_map converts (some <$> m : StateT).run s to map at ProbComp level
+    rw [StateT.run_map] at hx
+    simp only [support_map, Set.mem_image] at hx
+    obtain ⟨⟨val, s₀⟩, hval, heq⟩ := hx
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj heq
+    -- x = some val, s'' = s₀; hs depends on val : Option (...)
+    dsimp only [] at hs
+    rcases val with _ | ⟨a⟩
+    · exfalso; peel_simulateQ at hval
+    · simp only [Option.getM, pure_bind] at hs
+      erw [simulateQ_pure] at hs
+      simp only [StateT.run_pure, support_pure, Set.mem_singleton_iff] at hs
+      exact absurd (congr_arg Prod.fst hs) (by simp)
+  }, by {
+    -- Part 2: ∀ x ∈ support computation, event x
+    intro x hx
+    obtain ⟨s, -, hx⟩ := hx
+    simp only [StateT.run'_eq, support_map, Set.mem_image] at hx
+    obtain ⟨⟨xval, s'⟩, hx, rfl⟩ := hx
+    simp only [StateT.run_bind] at hx
+    rw [mem_support_bind_iff] at hx
+    obtain ⟨⟨y, s''⟩, hy, hx⟩ := hx
+    -- Unfold SubSpec liftM + OptionT in hy
+    simp only [MonadLift.monadLift, liftM, monadLift, MonadLiftT.monadLift,
+      OptionT.run_mk, OptionT.run_bind, OptionT.run_lift] at hy
+    -- simulateQ_map: y is always some _
+    erw [simulateQ_map] at hy
+    -- Peel outer simulateQ layer
+    erw [simulateQ_map] at hy
+    -- Bridge: StateT.run_map converts to ProbComp level map
+    rw [StateT.run_map] at hy
+    simp only [support_map, Set.mem_image] at hy
+    obtain ⟨⟨val, s₀⟩, hval, heq⟩ := hy
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj heq
+    -- y = some val; hx depends on val : Option (...)
+    dsimp only [] at hx
+    rcases val with _ | ⟨a⟩
+    · exfalso; peel_simulateQ at hval
+    · simp only [Option.getM, pure_bind] at hx
+      erw [simulateQ_pure] at hx
+      simp only [StateT.run_pure, support_pure, Set.mem_singleton_iff, Prod.mk.injEq,
+        Option.some.injEq] at hx
+      obtain ⟨rfl, -⟩ := hx
+      peel_simulateQ at hval
+      obtain ⟨_, _, rfl⟩ := hval
+      -- a is now concrete, goal should be provable
+      simp only [Set.mem_setOf_eq]
+      refine ⟨trivial, Prod.ext (Subsingleton.elim _ _) ?_⟩
+      -- Goal: prover oracle fn = verifier oracle fn
+      funext i
+      rcases i with j | j <;> {
+        have hj : j = default := Unique.uniq _ j
+        subst hj; rfl
+      }
+  }⟩
 
 end SendClaim
