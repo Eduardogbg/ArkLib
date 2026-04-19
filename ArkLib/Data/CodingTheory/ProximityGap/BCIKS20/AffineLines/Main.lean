@@ -28,7 +28,7 @@ line passing through `u₀` and `u₁` is `δ`-close to Reed-Solomon code is at 
 Then, the words `u₀` and `u₁` have correlated agreement. -/
 theorem RS_correlatedAgreement_affineLines {deg : ℕ} {domain : ι ↪ F} {δ : ℝ≥0}
   (hδPos : 0 < δ)
-  (hδ : δ < 1 - (ReedSolomonCode.sqrtRate deg domain)) :
+  (hδ : δ < 1 - (ReedSolomon.sqrtRate deg domain)) :
   δ_ε_correlatedAgreementAffineLines (A := F) (F := F) (ι := ι)
     (C := ReedSolomon.code domain deg) (δ := δ) (ε := errorBound δ deg domain) :=
   -- Do casing analysis on `hδ`

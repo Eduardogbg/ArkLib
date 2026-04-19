@@ -29,7 +29,7 @@ theorem correlatedAgreement_affine_curves {k : ℕ}
     {u : Fin k → ι → F}
     {deg : ℕ} {domain : ι ↪ F} {δ : ℝ≥0}
     (hδPos : 0 < δ)
-    (hδ : δ < 1 - ReedSolomonCode.sqrtRate deg domain) :
+    (hδ : δ < 1 - ReedSolomon.sqrtRate deg domain) :
     δ_ε_correlatedAgreementCurves (k := k) (A := F) (F := F) (ι := ι)
       (C := ReedSolomon.code domain deg) (δ := δ) (ε := errorBound δ deg domain) := by
   sorry
