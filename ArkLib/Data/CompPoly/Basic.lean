@@ -18,6 +18,8 @@ with reusable `OracleInterface` instances.
 
 open CompPoly CPoly Std
 
+set_option allowUnsafeReducibility true in
+attribute [local reducible] instDecidableEqOfLawfulBEq
 attribute [local instance] instDecidableEqOfLawfulBEq
 
 namespace CPoly.CMvPolynomial
