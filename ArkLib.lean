@@ -208,6 +208,7 @@ import ArkLib.ProofSystem.Stir.Quotienting
 import ArkLib.ProofSystem.Sumcheck.Impl.Basic
 import ArkLib.ProofSystem.Sumcheck.Interaction.CompPoly
 import ArkLib.ProofSystem.Sumcheck.Interaction.Defs
+import ArkLib.ProofSystem.Sumcheck.Interaction.General
 import ArkLib.ProofSystem.Sumcheck.Interaction.Legacy.General
 import ArkLib.ProofSystem.Sumcheck.Interaction.Legacy.Oracle
 import ArkLib.ProofSystem.Sumcheck.Interaction.Legacy.SingleRound
