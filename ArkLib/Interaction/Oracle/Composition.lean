@@ -193,24 +193,24 @@ with the crucial advantage that `toInteractionSpec`, `toSpecRoles`, and
 
 The output type is indexed by `PublicTranscript` via `split ∘ projectPublic`. -/
 def compAux
-    {ι : Type} {oSpec : OracleSpec.{0, 0} ι} :
+    {m : Type → Type} [Monad m] :
     (s₁ : Oracle.Spec) → (s₂ : Spec.PublicTranscript s₁ → Oracle.Spec) →
     (r₁ : Spec.RoleDeco s₁) →
     (r₂ : (pt₁ : Spec.PublicTranscript s₁) → Spec.RoleDeco (s₂ pt₁)) →
     {Mid : Interaction.Spec.Transcript s₁.toInteractionSpec → Type} →
     {OutType : (pt₁ : Spec.PublicTranscript s₁) →
       Spec.PublicTranscript (s₂ pt₁) → Type} →
-    Interaction.Spec.Strategy.withRoles (OracleComp oSpec)
+    Interaction.Spec.Strategy.withRoles m
       s₁.toInteractionSpec (s₁.toSpecRoles r₁) Mid →
     ((tr₁ : Interaction.Spec.Transcript s₁.toInteractionSpec) → Mid tr₁ →
-      OracleComp oSpec
-        (Interaction.Spec.Strategy.withRoles (OracleComp oSpec)
+      m
+        (Interaction.Spec.Strategy.withRoles m
           ((s₂ (s₁.projectPublic tr₁)).toInteractionSpec)
           ((s₂ (s₁.projectPublic tr₁)).toSpecRoles (r₂ (s₁.projectPublic tr₁)))
           (fun tr₂ => OutType (s₁.projectPublic tr₁)
             ((s₂ (s₁.projectPublic tr₁)).projectPublic tr₂)))) →
-    OracleComp oSpec
-      (Interaction.Spec.Strategy.withRoles (OracleComp oSpec)
+    m
+      (Interaction.Spec.Strategy.withRoles m
         ((s₁.append s₂).toInteractionSpec)
         ((s₁.append s₂).toSpecRoles (Spec.RoleDeco.append s₁ s₂ r₁ r₂))
         (fun tr =>

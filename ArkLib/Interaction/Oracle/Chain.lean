@@ -11,7 +11,9 @@ import ArkLib.Interaction.Oracle.Composition
 A `Spec.Chain n` is a self-contained recipe for an `n`-round oracle protocol:
 at each level it carries the current round's `Oracle.Spec`, `RoleDeco`, and
 `OracleDeco`, with a `PublicTranscript`-indexed continuation to the next level.
-There is **no external state type**.
+The chain is still only protocol shape. Stateful parties are modeled by the
+composition combinators, which thread a caller-chosen state family indexed by
+the remaining chain.
 
 Converting to an `Oracle.Spec` via `Chain.toSpec` uses only `Oracle.Spec.append`.
 
@@ -38,16 +40,17 @@ This mirrors the non-oracle `Spec.Chain` (in VCVio) and `Reduction.ofChain`
 - Continuation depends on `PublicTranscript` (not full `Transcript`).
 - Uses `Prover.compAux` / `Verifier.compAux` / `Counterpart.liftAcc` from
   `Oracle/Composition.lean` as the binary step.
-- Per-round steps produce `PUnit`, no state flows between rounds.
-- Final output types are computed from the full `PublicTranscript`.
+- Per-round steps may produce the next state for the remaining chain.
+- Final output types are computed from the full `PublicTranscript` via
+  `Chain.outputFamily`.
 
 ## Three composition mechanisms
 
 | Mechanism | State? | Transcript-dependent? | Use when |
 |---|---|---|---|
 | `Oracle.Spec.append` + `Reduction.comp` | No | Yes | Binary composition |
-| `Oracle.Spec.Chain` + `Reduction.ofChain` | No (baked in) | Yes | N-ary, no external state |
-| (future) state chain | Yes | Yes | N-ary with explicit state type |
+| `Oracle.Spec.Chain.Prover.comp` | Yes | Yes | N-ary prover composition |
+| `Oracle.Spec.Chain.Verifier.comp` | Yes | Yes | N-ary verifier composition |
 -/
 
 open OracleComp OracleSpec
@@ -122,45 +125,54 @@ theorem splitPublicTranscript_appendPublicTranscript (n : Nat) (c : Chain (n + 1
 
 /-- Lift a family on remaining chains to a family on `PublicTranscript` of the
 flattened `Oracle.Spec`. At `Chain 0`, returns `Family ⟨⟩`. At `Chain (n + 1)`,
-uses `PublicTranscript.liftAppend` to split the transcript and recurse. -/
+splits the flattened public transcript into the current round and remainder,
+then recurses on the selected continuation. -/
 def outputFamily
     (Family : {n : Nat} → Chain n → Type) :
     (n : Nat) → (c : Chain n) → PublicTranscript (toSpec n c) → Type
   | 0, c, _ => Family c
   | n + 1, ⟨spec, _, _, cont⟩, pt =>
-      PublicTranscript.liftAppend spec (fun pt₁ => toSpec n (cont pt₁))
-        (fun pt₁ pt₂ => outputFamily Family n (cont pt₁) pt₂)
-        pt
+      let split := PublicTranscript.split spec (fun pt₁ => toSpec n (cont pt₁)) pt
+      outputFamily Family n (cont split.1) split.2
 
 /-! ## Prover composition -/
 
 namespace Prover
 
 /-- Compose per-round prover strategies into a full strategy over the flattened
-chain. Each round's step receives the remaining `Chain` and produces a strategy
-for that round's oracle spec. Output is `PUnit` per round. -/
+chain.
+
+`State rem` is the private state available before running `rem`. A round step
+consumes `State rem` and returns a strategy for the current round whose output
+is the state for the public-transcript-selected remaining chain. After all
+rounds, the strategy output is `outputFamily State`, i.e. the state associated
+with the terminal chain selected by the full public transcript.
+
+The monad is arbitrary; use `StateT σ m` when state should live in the party
+action monad rather than in the round output. -/
 def comp
-    {ι : Type} {oSpec : OracleSpec.{0, 0} ι}
-    (step : {k : Nat} → (rem : Chain (k + 1)) →
-      OracleComp oSpec
-        (Interaction.Spec.Strategy.withRoles (OracleComp oSpec)
+    {m : Type → Type} [Monad m]
+    (State : {k : Nat} → Chain k → Type)
+    (step : {k : Nat} → (rem : Chain (k + 1)) → State rem →
+      m
+        (Interaction.Spec.Strategy.withRoles m
           rem.1.toInteractionSpec (rem.1.toSpecRoles rem.2.1)
-          (fun _ => PUnit))) :
-    (n : Nat) → (c : Chain n) →
-    OracleComp oSpec
-      (Interaction.Spec.Strategy.withRoles (OracleComp oSpec)
+          (fun tr => State (rem.2.2.2 (rem.1.projectPublic tr))))) :
+    (n : Nat) → (c : Chain n) → State c →
+    m
+      (Interaction.Spec.Strategy.withRoles m
         (toSpec n c).toInteractionSpec
         ((toSpec n c).toSpecRoles (toRoles n c))
-        (fun _ => PUnit))
-  | 0, _ => pure ⟨⟩
-  | n + 1, ⟨spec, roles, od, cont⟩ => do
-      let strat ← step ⟨spec, roles, od, cont⟩
+        (fun tr => outputFamily State n c ((toSpec n c).projectPublic tr)))
+  | 0, _, state => pure state
+  | n + 1, ⟨spec, roles, od, cont⟩, state => do
+      let strat ← step ⟨spec, roles, od, cont⟩ state
       Prover.compAux spec (fun pt => toSpec n (cont pt))
         roles (fun pt => toRoles n (cont pt))
-        (Mid := fun _ => PUnit)
-        (OutType := fun _ _ => PUnit)
+        (Mid := fun tr₁ => State (cont (spec.projectPublic tr₁)))
+        (OutType := fun pt₁ pt₂ => outputFamily State n (cont pt₁) pt₂)
         strat
-        (fun tr₁ _ => comp step n (cont (spec.projectPublic tr₁)))
+        (fun tr₁ state' => comp State step n (cont (spec.projectPublic tr₁)) state')
 
 end Prover
 
@@ -169,41 +181,42 @@ end Prover
 namespace Verifier
 
 /-- Compose per-round verifier counterparts into a full counterpart over the
-flattened chain. Each round's step produces a counterpart for the current
-round's oracle spec with `accSpec = []ₒ`. During composition,
-`Counterpart.liftAcc` lifts subsequent rounds to the accumulated oracle spec.
+flattened chain. `State` has the same meaning as in `Prover.comp`: a round
+counterpart consumes the current state and returns the state for the remaining
+chain selected by that round's public transcript.
 
 The step function is universally quantified over `accSpec` because
 `Verifier.compAux` accumulates oracle access through `.oracle` nodes. -/
 def comp
     {ι : Type} {oSpec : OracleSpec.{0, 0} ι}
     {ιₛᵢ : Type} {OStmtIn : ιₛᵢ → Type} [∀ i, OracleInterface (OStmtIn i)]
-    (step : {k : Nat} → (rem : Chain (k + 1)) →
+    (State : {k : Nat} → Chain k → Type)
+    (step : {k : Nat} → (rem : Chain (k + 1)) → State rem →
       Interaction.Spec.Counterpart.withMonads
         rem.1.toInteractionSpec (rem.1.toSpecRoles rem.2.1)
         (rem.1.toMonadDecoration oSpec OStmtIn rem.2.1 rem.2.2.1 []ₒ)
-        (fun _ => PUnit)) :
-    (n : Nat) → (c : Chain n) →
+        (fun tr => State (rem.2.2.2 (rem.1.projectPublic tr)))) :
+    (n : Nat) → (c : Chain n) → State c →
     Interaction.Spec.Counterpart.withMonads
       (toSpec n c).toInteractionSpec
       ((toSpec n c).toSpecRoles (toRoles n c))
       ((toSpec n c).toMonadDecoration oSpec OStmtIn (toRoles n c) (toOracleDeco n c) []ₒ)
-      (fun _ => PUnit)
-  | 0, _ => ⟨⟩
-  | n + 1, ⟨spec, roles, od, cont⟩ =>
+      (fun tr => outputFamily State n c ((toSpec n c).projectPublic tr))
+  | 0, _, state => state
+  | n + 1, ⟨spec, roles, od, cont⟩, state =>
       Verifier.compAux (OStmtIn := OStmtIn)
         spec (fun pt => toSpec n (cont pt))
         roles (fun pt => toRoles n (cont pt))
         od (fun pt => toOracleDeco n (cont pt))
         []ₒ
-        (OutType := fun _ _ => PUnit)
-        (step ⟨spec, roles, od, cont⟩)
-        (fun accSpec' tr₁ _ =>
+        (OutType := fun pt₁ pt₂ => outputFamily State n (cont pt₁) pt₂)
+        (step ⟨spec, roles, od, cont⟩ state)
+        (fun accSpec' tr₁ state' =>
           let pt₁ := spec.projectPublic tr₁
           Counterpart.liftAcc
             (toSpec n (cont pt₁)) (toRoles n (cont pt₁)) (toOracleDeco n (cont pt₁))
             []ₒ accSpec' (fun q => q.elim)
-            (comp step n (cont pt₁)))
+            (comp State step n (cont pt₁) state'))
 
 end Verifier
 
@@ -272,7 +285,8 @@ def Reduction.ofChain
       (fun _ => PUnit) OStatementIn WitnessIn
       StatementOut OStatementOut WitnessOut where
   prover shared _sWithOracles w := do
-    let strat ← Spec.Chain.Prover.comp (proverRound shared w) n (c shared)
+    let strat ← Spec.Chain.Prover.comp (fun {_} _ => PUnit)
+      (fun rem _ => proverRound shared w rem) n (c shared) PUnit.unit
     pure <| Interaction.Spec.Strategy.mapOutputWithRoles
       (fun tr _ =>
         let pt := (Spec.Chain.toSpec n (c shared)).projectPublic tr
@@ -292,7 +306,8 @@ def Reduction.ofChain
           (Spec.Chain.toRoles n (c shared)) (Spec.Chain.toOracleDeco n (c shared)) []ₒ)
         (fun tr _ =>
           stmtResult shared ((Spec.Chain.toSpec n (c shared)).projectPublic tr))
-        (Spec.Chain.Verifier.comp (verifierRound shared) n (c shared))
+        (Spec.Chain.Verifier.comp (fun {_} _ => PUnit)
+          (fun rem _ => verifierRound shared rem) n (c shared) PUnit.unit)
     simulate := simulate
   }
 

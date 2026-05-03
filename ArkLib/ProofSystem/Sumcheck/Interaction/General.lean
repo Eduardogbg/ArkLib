@@ -10,20 +10,15 @@ import ArkLib.Interaction.Oracle.Chain
 # Interaction-Native Sum-Check: Native Multi-Round Surface
 
 This module is intentionally small: it uses `Interaction.Oracle.Spec.Chain` as
-the protocol-shape primitive, then gives one concrete one-round `StateT` prover
+the protocol-shape primitive, then gives a concrete one-round `StateT` prover
 example.
 
 The point of the state example is limited but useful. Ordinary, non-dependent
 participant state, such as a challenge log, is cleanly carried by the monad. The
 sum-check residual witness is more dependent: its type changes from
-`PolyStmt ... (n + 1)` to `PolyStmt ... n` each round, so it still wants either
-an output-indexed continuation, a sigma-packed state, or a more dependent state
-monad.
-
-The existing `Oracle.Spec.Chain.Prover.comp` also currently specializes to
-`OracleComp` and `PUnit`. General `StateT` composition over native oracle chains
-should therefore be added as a chain-level combinator rather than by expanding
-append recursion in protocol files.
+`PolyStmt ... (n + 1)` to `PolyStmt ... n` each round. That fits the generalized
+chain composition layer as a `State : {k : Nat} → Chain k → Type`; this file
+keeps the example to an ordinary challenge log.
 -/
 
 namespace Sumcheck
