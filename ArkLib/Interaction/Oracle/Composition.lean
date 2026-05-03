@@ -340,26 +340,25 @@ node:
   continuation.
 
 Both `Counterpart.liftAcc` (change `accSpec`) and `Verifier.retargetMonads`
-(change `OStmt`) are thin wrappers over this combinator, obtained by building
-`reroute` from their respective narrow data. -/
-def mapOracles
+(change `OStmt`) are thin wrappers over `Counterpart.mapOracles`, obtained by
+building `reroute` from their respective narrow data. -/
+def mapOraclesHom
     {ι : Type} {oSpec : OracleSpec.{0, 0} ι}
     {ιₛ₁ : Type} {OStmt₁ : ιₛ₁ → Type} [∀ i, OracleInterface (OStmt₁ i)]
-    {ιₛ₂ : Type} {OStmt₂ : ιₛ₂ → Type} [∀ i, OracleInterface (OStmt₂ i)] :
-    (s : Oracle.Spec) → (roles : Spec.RoleDeco s) → (od : Spec.OracleDeco s) →
-    {ιₐ₁ : Type} → (accSpec₁ : OracleSpec.{0, 0} ιₐ₁) →
-    {ιₐ₂ : Type} → (accSpec₂ : OracleSpec.{0, 0} ιₐ₂) →
+    {ιₛ₂ : Type} {OStmt₂ : ιₛ₂ → Type} [∀ i, OracleInterface (OStmt₂ i)]
+    (s : Oracle.Spec) (roles : Spec.RoleDeco s) (od : Spec.OracleDeco s)
+    {ιₐ₁ : Type} (accSpec₁ : OracleSpec.{0, 0} ιₐ₁)
+    {ιₐ₂ : Type} (accSpec₂ : OracleSpec.{0, 0} ιₐ₂)
     (reroute : QueryImpl (oSpec + [OStmt₁]ₒ + accSpec₁)
-      (OracleComp (oSpec + [OStmt₂]ₒ + accSpec₂))) →
-    {Output : Interaction.Spec.Transcript s.toInteractionSpec → Type} →
-    Interaction.Spec.Counterpart.withMonads s.toInteractionSpec
-      (s.toSpecRoles roles)
-      (s.toMonadDecoration oSpec OStmt₁ roles od accSpec₁) Output →
-    Interaction.Spec.Counterpart.withMonads s.toInteractionSpec
-      (s.toSpecRoles roles)
-      (s.toMonadDecoration oSpec OStmt₂ roles od accSpec₂) Output
-  | .done, _, _, _, _, _, _, _, _, cpt => cpt
-  | .oracle _ rest, _, ⟨oi, odRest⟩, _, accSpec₁, _, accSpec₂, reroute, _, cpt =>
+      (OracleComp (oSpec + [OStmt₂]ₒ + accSpec₂))) :
+    Interaction.Spec.MonadDecoration.Hom s.toInteractionSpec
+      (s.toMonadDecoration oSpec OStmt₁ roles od accSpec₁)
+      (s.toMonadDecoration oSpec OStmt₂ roles od accSpec₂) := by
+  cases s with
+  | done =>
+      exact PUnit.unit
+  | oracle _ rest =>
+      rcases od with ⟨oi, odRest⟩
       let oiSpec := @OracleInterface.spec _ oi
       let routeAcc : QueryImpl (accSpec₁ + oiSpec)
           (OracleComp (oSpec + [OStmt₂]ₒ + (accSpec₂ + oiSpec))) :=
@@ -371,18 +370,42 @@ def mapOracles
         QueryImpl.add
           (fun q => (reroute (.inl q)).liftComp _)
           routeAcc
-      fun x => mapOracles rest _ odRest
-        (accSpec₁ + oiSpec) (accSpec₂ + oiSpec) newReroute (cpt x)
-  | .«public» _ rest, ⟨.sender, rRest⟩, odRest, _, accSpec₁, _, accSpec₂, reroute,
-      _, cpt =>
-      fun x => mapOracles (rest x) (rRest x) (odRest x)
-        accSpec₁ accSpec₂ reroute (cpt x)
-  | .«public» _ rest, ⟨.receiver, rRest⟩, odRest, _, accSpec₁, _, accSpec₂, reroute,
-      _, cpt =>
-      simulateQ reroute <| do
-        let ⟨x, cptRest⟩ ← cpt
-        pure ⟨x, mapOracles (rest x) (rRest x) (odRest x)
-          accSpec₁ accSpec₂ reroute cptRest⟩
+      exact Prod.mk id (fun _ =>
+        mapOraclesHom rest roles odRest
+          (accSpec₁ + oiSpec) (accSpec₂ + oiSpec) newReroute)
+  | «public» _ rest =>
+      rcases roles with ⟨role, rRest⟩
+      cases role with
+      | sender =>
+          exact Prod.mk id (fun x =>
+            mapOraclesHom (rest x) (rRest x) (od x) accSpec₁ accSpec₂ reroute)
+      | receiver =>
+          exact Prod.mk (fun mx => simulateQ reroute mx) (fun x =>
+            mapOraclesHom (rest x) (rRest x) (od x) accSpec₁ accSpec₂ reroute)
+
+/-- Rewrite the receiver-node oracle effects of a counterpart by constructing
+an oracle-specific monad-decoration hom and using the generic
+`Counterpart.withMonads.mapDecoration` traversal. -/
+def mapOracles
+    {ι : Type} {oSpec : OracleSpec.{0, 0} ι}
+    {ιₛ₁ : Type} {OStmt₁ : ιₛ₁ → Type} [∀ i, OracleInterface (OStmt₁ i)]
+    {ιₛ₂ : Type} {OStmt₂ : ιₛ₂ → Type} [∀ i, OracleInterface (OStmt₂ i)]
+    (s : Oracle.Spec) (roles : Spec.RoleDeco s) (od : Spec.OracleDeco s)
+    {ιₐ₁ : Type} (accSpec₁ : OracleSpec.{0, 0} ιₐ₁)
+    {ιₐ₂ : Type} (accSpec₂ : OracleSpec.{0, 0} ιₐ₂)
+    (reroute : QueryImpl (oSpec + [OStmt₁]ₒ + accSpec₁)
+      (OracleComp (oSpec + [OStmt₂]ₒ + accSpec₂)))
+    {Output : Interaction.Spec.Transcript s.toInteractionSpec → Type}
+    (cpt : Interaction.Spec.Counterpart.withMonads s.toInteractionSpec
+      (s.toSpecRoles roles)
+      (s.toMonadDecoration oSpec OStmt₁ roles od accSpec₁) Output) :
+    Interaction.Spec.Counterpart.withMonads s.toInteractionSpec
+      (s.toSpecRoles roles)
+      (s.toMonadDecoration oSpec OStmt₂ roles od accSpec₂) Output :=
+  Interaction.Spec.Counterpart.withMonads.mapDecoration s.toInteractionSpec
+    (s.toSpecRoles roles)
+    (mapOraclesHom s roles od accSpec₁ accSpec₂ reroute)
+    cpt
 
 /-- Lift a counterpart's accumulated oracle spec from `accSpec₁` to `accSpec₂`
 by routing oracle queries. At receiver nodes, `oSpec` and `OStmtIn` queries

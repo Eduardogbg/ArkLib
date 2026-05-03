@@ -172,6 +172,11 @@ def answerQuery :
 
 /-! ## Verifier monad decoration -/
 
+/-- The pure node monad used at nodes where a party only observes a message and
+does not perform ambient effects. -/
+abbrev pureNodeMonad : BundledMonad :=
+  ⟨Id, inferInstance⟩
+
 /-- Default oracle-query spec available to an oracle verifier at receiver nodes:
 ambient oracles, input oracle statements, and oracle messages accumulated so far. -/
 abbrev verifierAccessSpec {ι : Type} (oSpec : OracleSpec.{0, 0} ι)
@@ -214,6 +219,19 @@ def toMonadDecorationWith
        fun _ => toMonadDecorationWith senderMonad receiverMonad oracleMonad
          rest roles odRest (accSpec + @OracleInterface.spec _ oi)⟩
 
+/-- Pure verifier-side monad decoration: every node uses `Id`.
+
+This is useful for protocols whose verifier has no ambient effects, while still
+sharing the same `Oracle.Spec` tree shape. -/
+def toPureMonadDecoration :
+    (s : Oracle.Spec) → (roles : RoleDeco s) → (od : OracleDeco s) →
+    {ιₐ : Type} → OracleSpec.{0, 0} ιₐ →
+    Interaction.Spec.MonadDecoration s.toInteractionSpec :=
+  toMonadDecorationWith
+    (fun _ => pureNodeMonad)
+    (fun _ => pureNodeMonad)
+    (fun _ => pureNodeMonad)
+
 /-- Compute the per-node `MonadDecoration` for the verifier on `toInteractionSpec`.
 
 - At `.oracle` nodes: monad is `Id` (verifier ignores the message value),
@@ -229,9 +247,9 @@ def toMonadDecoration {ι : Type} (oSpec : OracleSpec.{0, 0} ι)
     {ιₐ : Type} → OracleSpec.{0, 0} ιₐ →
     Interaction.Spec.MonadDecoration s.toInteractionSpec :=
   toMonadDecorationWith
-    (fun _ => ⟨Id, inferInstance⟩)
+    (fun _ => pureNodeMonad)
     (fun accSpec => verifierAccessMonad oSpec OStmtIn accSpec)
-    (fun _ => ⟨Id, inferInstance⟩)
+    (fun _ => pureNodeMonad)
 
 /-! ## Sequential composition -/
 

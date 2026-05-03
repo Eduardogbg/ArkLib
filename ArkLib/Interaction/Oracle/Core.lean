@@ -80,23 +80,25 @@ abbrev Prover {ι : Type} (oSpec : OracleSpec.{0, 0} ι)
         shared)
     (fun shared tr => WitnessOut shared ((Context shared).projectPublic tr))
 
-/-- Oracle verifier on `Oracle.Spec`: the interactive verifier (`toFun`) and
-output-oracle simulation (`simulate`), both on the same `Oracle.Spec`.
+/-- Oracle verifier on `Oracle.Spec` with an explicit verifier-side monad
+decoration.
 
-The verifier uses `Counterpart.withMonads` with `toMonadDecoration`, giving
-`Id` monad at sender/oracle nodes and `OracleComp` at receiver nodes. The
-accumulated oracle spec starts at `[]ₒ` and grows as `.oracle` nodes are
-traversed, so the verifier's oracle access is fully determined by the
-protocol structure.
+This is the lower-level ambient-effect surface: callers choose the monad
+decoration used by the verifier counterpart. The ordinary `Oracle.Verifier`
+below specializes this by using `Spec.toMonadDecoration`, whose receiver nodes
+can query ambient oracles, input oracle statements, and accumulated prover
+oracle messages.
 
-The `simulate` field provides query-level access to output oracle statements,
-indexed by `PublicTranscript` (so it is definitionally independent of oracle
-message values). -/
-structure Verifier {ι : Type} (oSpec : OracleSpec.{0, 0} ι)
+The `simulate` field remains oracle-specific: it provides query-level access to
+output oracle statements, indexed by `PublicTranscript` so it is definitionally
+independent of oracle message values. -/
+structure Verifier.WithMonads {ι : Type} (oSpec : OracleSpec.{0, 0} ι)
     (SharedIn : Type)
     (Context : SharedIn → Spec)
     (Roles : (shared : SharedIn) → Spec.RoleDeco (Context shared))
     (OracleDeco : (shared : SharedIn) → Spec.OracleDeco (Context shared))
+    (VerifierMd :
+      (shared : SharedIn) → Interaction.Spec.MonadDecoration (Context shared).toInteractionSpec)
     (StatementIn : SharedIn → Type)
     {ιₛᵢ : SharedIn → Type}
     (OStatementIn : (shared : SharedIn) → ιₛᵢ shared → Type)
@@ -113,14 +115,77 @@ structure Verifier {ι : Type} (oSpec : OracleSpec.{0, 0} ι)
       Interaction.Spec.Counterpart.withMonads
         (Context shared).toInteractionSpec
         ((Context shared).toSpecRoles (Roles shared))
-        ((Context shared).toMonadDecoration oSpec (OStatementIn shared)
-          (Roles shared) (OracleDeco shared) []ₒ)
+        (VerifierMd shared)
         (fun tr => StatementOut shared ((Context shared).projectPublic tr))
   simulate : (shared : SharedIn) →
     (pt : Spec.PublicTranscript (Context shared)) →
     QueryImpl [OStatementOut shared pt]ₒ
       (OracleComp
         ([OStatementIn shared]ₒ + (Context shared).toOracleSpec (OracleDeco shared) pt))
+
+/-- Oracle verifier on `Oracle.Spec`: the interactive verifier (`toFun`) and
+output-oracle simulation (`simulate`), both on the same `Oracle.Spec`.
+
+The verifier uses `Counterpart.withMonads` with `toMonadDecoration`, giving
+`Id` monad at sender/oracle nodes and `OracleComp` at receiver nodes. The
+accumulated oracle spec starts at `[]ₒ` and grows as `.oracle` nodes are
+traversed, so the verifier's oracle access is fully determined by the
+protocol structure.
+
+The `simulate` field provides query-level access to output oracle statements,
+indexed by `PublicTranscript` (so it is definitionally independent of oracle
+message values). -/
+abbrev Verifier {ι : Type} (oSpec : OracleSpec.{0, 0} ι)
+    (SharedIn : Type)
+    (Context : SharedIn → Spec)
+    (Roles : (shared : SharedIn) → Spec.RoleDeco (Context shared))
+    (OracleDeco : (shared : SharedIn) → Spec.OracleDeco (Context shared))
+    (StatementIn : SharedIn → Type)
+    {ιₛᵢ : SharedIn → Type}
+    (OStatementIn : (shared : SharedIn) → ιₛᵢ shared → Type)
+    [∀ shared i, OracleInterface (OStatementIn shared i)]
+    (StatementOut :
+      (shared : SharedIn) → Spec.PublicTranscript (Context shared) → Type)
+    {ιₛₒ : (shared : SharedIn) → Spec.PublicTranscript (Context shared) → Type}
+    (OStatementOut :
+      (shared : SharedIn) → (pt : Spec.PublicTranscript (Context shared)) →
+        ιₛₒ shared pt → Type)
+    [∀ shared pt i, OracleInterface (OStatementOut shared pt i)] :=
+  Verifier.WithMonads oSpec SharedIn Context Roles OracleDeco
+    (fun shared => (Context shared).toMonadDecoration oSpec (OStatementIn shared)
+      (Roles shared) (OracleDeco shared) []ₒ)
+    StatementIn OStatementIn StatementOut OStatementOut
+
+/-- Oracle reduction on `Oracle.Spec` with an explicit verifier-side monad
+decoration. This is the reduction-level lower layer corresponding to
+`Verifier.WithMonads`: the prover remains an `OracleComp oSpec` setup, while
+the verifier counterpart may use any supplied monad decoration compatible with
+the protocol tree. -/
+structure Reduction.WithMonads {ι : Type} (oSpec : OracleSpec.{0, 0} ι)
+    (SharedIn : Type)
+    (Context : SharedIn → Spec)
+    (Roles : (shared : SharedIn) → Spec.RoleDeco (Context shared))
+    (OracleDeco : (shared : SharedIn) → Spec.OracleDeco (Context shared))
+    (VerifierMd :
+      (shared : SharedIn) → Interaction.Spec.MonadDecoration (Context shared).toInteractionSpec)
+    (StatementIn : SharedIn → Type)
+    {ιₛᵢ : SharedIn → Type}
+    (OStatementIn : (shared : SharedIn) → ιₛᵢ shared → Type)
+    [∀ shared i, OracleInterface (OStatementIn shared i)]
+    (WitnessIn : SharedIn → Type)
+    (StatementOut :
+      (shared : SharedIn) → Spec.PublicTranscript (Context shared) → Type)
+    {ιₛₒ : (shared : SharedIn) → Spec.PublicTranscript (Context shared) → Type}
+    (OStatementOut :
+      (shared : SharedIn) → (pt : Spec.PublicTranscript (Context shared)) →
+        ιₛₒ shared pt → Type)
+    [∀ shared pt i, OracleInterface (OStatementOut shared pt i)]
+    (WitnessOut :
+      (shared : SharedIn) → Spec.PublicTranscript (Context shared) → Type) where
+  prover : Prover oSpec SharedIn Context Roles StatementIn WitnessIn OStatementIn
+    StatementOut OStatementOut WitnessOut
+  verifier : Verifier.WithMonads oSpec SharedIn Context Roles OracleDeco VerifierMd
+    StatementIn OStatementIn StatementOut OStatementOut
 
 /-- Oracle reduction on `Oracle.Spec`: bundles a prover and a verifier for the
 same protocol. The prover produces strategies on `(Context shared).toInteractionSpec`
@@ -129,7 +194,7 @@ access.
 
 All output types are indexed by `PublicTranscript`, ensuring they do not
 depend on oracle message values. -/
-structure Reduction {ι : Type} (oSpec : OracleSpec.{0, 0} ι)
+abbrev Reduction {ι : Type} (oSpec : OracleSpec.{0, 0} ι)
     (SharedIn : Type)
     (Context : SharedIn → Spec)
     (Roles : (shared : SharedIn) → Spec.RoleDeco (Context shared))
@@ -147,11 +212,11 @@ structure Reduction {ι : Type} (oSpec : OracleSpec.{0, 0} ι)
         ιₛₒ shared pt → Type)
     [∀ shared pt i, OracleInterface (OStatementOut shared pt i)]
     (WitnessOut :
-      (shared : SharedIn) → Spec.PublicTranscript (Context shared) → Type) where
-  prover : Prover oSpec SharedIn Context Roles StatementIn WitnessIn OStatementIn
-    StatementOut OStatementOut WitnessOut
-  verifier : Verifier oSpec SharedIn Context Roles OracleDeco StatementIn OStatementIn
-    StatementOut OStatementOut
+      (shared : SharedIn) → Spec.PublicTranscript (Context shared) → Type) :=
+  Reduction.WithMonads oSpec SharedIn Context Roles OracleDeco
+    (fun shared => (Context shared).toMonadDecoration oSpec (OStatementIn shared)
+      (Roles shared) (OracleDeco shared) []ₒ)
+    StatementIn OStatementIn WitnessIn StatementOut OStatementOut WitnessOut
 
 /-- Forget the prover and witness of an `Oracle.Reduction`, keeping the
 verifier. -/
