@@ -110,7 +110,11 @@ def Reduction.freezeSharedToPUnit
           (WitnessOut shared ((Context shared).projectPublic tr))
       | _, ⟨stmtOut, witOut⟩ => ⟨⟨stmtOut.stmt, stmtOut.oracleStmt⟩, witOut⟩
     let strat ← reduction.prover shared input' w
-    pure <| Interaction.Spec.Strategy.mapOutputWithRoles remapOutput strat
+    pure <| Interaction.Spec.Strategy.withRolesAndMonads.mapOutput
+      (Context shared).toInteractionSpec
+      ((Context shared).toSpecRoles (Roles shared))
+      ((Context shared).toProverMonadDecoration oSpec)
+      remapOutput strat
   verifier := {
     toFun := fun _ stmt =>
       reduction.verifier.toFun shared stmt
@@ -171,7 +175,11 @@ def Reduction.pullbackShared
           (WitnessOut (f shared) ((Context (f shared)).projectPublic tr))
       | _, ⟨stmtOut, witOut⟩ => ⟨⟨stmtOut.stmt, stmtOut.oracleStmt⟩, witOut⟩
     let strat ← reduction.prover (f shared) input' w
-    pure <| Interaction.Spec.Strategy.mapOutputWithRoles remapOutput strat
+    pure <| Interaction.Spec.Strategy.withRolesAndMonads.mapOutput
+      (Context (f shared)).toInteractionSpec
+      ((Context (f shared)).toSpecRoles (Roles (f shared)))
+      ((Context (f shared)).toProverMonadDecoration oSpec)
+      remapOutput strat
   verifier := {
     toFun := fun shared stmt =>
       reduction.verifier.toFun (f shared) stmt
@@ -571,34 +579,56 @@ def Reduction.comp
           (Spec.PublicTranscript.split (Context₁ shared) (Context₂ shared) pt).2) where
   prover shared sWithOracles w := do
     let strat₁ ← r₁.prover shared sWithOracles w
-    Prover.compAux (Context₁ shared) (Context₂ shared)
-      (Roles₁ shared) (Roles₂ shared)
-      (OutType := fun pt₁ pt₂ =>
-        HonestProverOutput
-          (StatementWithOracles
-            (fun _ => StatementOut shared pt₁ pt₂)
-            (fun _ => OStatementOut shared pt₁ pt₂) shared)
-          (WitnessOut shared pt₁ pt₂))
-      strat₁
-      fun tr₁ midOut => do
-        let pt₁ := (Context₁ shared).projectPublic tr₁
-        let midStmt : StatementWithOracles
-            (fun _ => StatementMid shared pt₁)
-            (fun _ => OStatementMid shared pt₁) PUnit.unit :=
-          ⟨midOut.stmt.stmt, midOut.stmt.oracleStmt⟩
-        let strat₂ ← (r₂ shared pt₁).prover PUnit.unit midStmt midOut.wit
-        pure <| Interaction.Spec.Strategy.mapOutputWithRoles
-          (fun tr₂ out =>
-            (⟨⟨out.stmt.stmt, out.stmt.oracleStmt⟩, out.wit⟩ :
-              HonestProverOutput
-                (StatementWithOracles
-                  (fun _ => StatementOut shared pt₁
-                    ((Context₂ shared pt₁).projectPublic tr₂))
-                  (fun _ => OStatementOut shared pt₁
-                    ((Context₂ shared pt₁).projectPublic tr₂))
-                  shared)
-                (WitnessOut shared pt₁
-                  ((Context₂ shared pt₁).projectPublic tr₂)))) strat₂
+    let strat₁' :=
+      Interaction.Spec.Strategy.withRolesAndMonads.toWithRolesConstant
+        (Context₁ shared).toInteractionSpec
+        ((Context₁ shared).toSpecRoles (Roles₁ shared))
+        strat₁
+    let strat ←
+      Prover.compAux (Context₁ shared) (Context₂ shared)
+        (Roles₁ shared) (Roles₂ shared)
+        (OutType := fun pt₁ pt₂ =>
+          HonestProverOutput
+            (StatementWithOracles
+              (fun _ => StatementOut shared pt₁ pt₂)
+              (fun _ => OStatementOut shared pt₁ pt₂) shared)
+            (WitnessOut shared pt₁ pt₂))
+        strat₁'
+        fun tr₁ midOut => do
+          let pt₁ := (Context₁ shared).projectPublic tr₁
+          let midStmt : StatementWithOracles
+              (fun _ => StatementMid shared pt₁)
+              (fun _ => OStatementMid shared pt₁) PUnit.unit :=
+            ⟨midOut.stmt.stmt, midOut.stmt.oracleStmt⟩
+          let strat₂ ← (r₂ shared pt₁).prover PUnit.unit midStmt midOut.wit
+          let strat₂' :=
+            Interaction.Spec.Strategy.withRolesAndMonads.mapOutput
+              (Context₂ shared pt₁).toInteractionSpec
+              ((Context₂ shared pt₁).toSpecRoles (Roles₂ shared pt₁))
+              ((Context₂ shared pt₁).toProverMonadDecoration oSpec)
+              (fun tr₂ out =>
+                (⟨⟨out.stmt.stmt, out.stmt.oracleStmt⟩, out.wit⟩ :
+                  HonestProverOutput
+                    (StatementWithOracles
+                      (fun _ => StatementOut shared pt₁
+                        ((Context₂ shared pt₁).projectPublic tr₂))
+                      (fun _ => OStatementOut shared pt₁
+                        ((Context₂ shared pt₁).projectPublic tr₂))
+                      shared)
+                    (WitnessOut shared pt₁
+                      ((Context₂ shared pt₁).projectPublic tr₂)))) strat₂
+          pure <|
+            Interaction.Spec.Strategy.withRolesAndMonads.toWithRolesConstant
+              (Context₂ shared pt₁).toInteractionSpec
+              ((Context₂ shared pt₁).toSpecRoles (Roles₂ shared pt₁))
+              strat₂'
+    pure <|
+      Interaction.Spec.Strategy.withRolesAndMonads.ofWithRolesConstant
+        ((Context₁ shared).append (Context₂ shared)).toInteractionSpec
+        (((Context₁ shared).append (Context₂ shared)).toSpecRoles
+          (Spec.RoleDeco.append (Context₁ shared) (Context₂ shared)
+            (Roles₁ shared) (Roles₂ shared)))
+        strat
   verifier := {
     toFun := fun shared stmtIn =>
       Verifier.compAux (OStmtIn := OStatementIn shared)

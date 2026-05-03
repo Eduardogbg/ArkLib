@@ -307,18 +307,24 @@ def Reduction.ofChain
   prover shared sWithOracles w := do
     let strat ← Spec.Chain.Prover.comp (ProverState shared)
       (proverRound shared) n (c shared) (proverInit shared sWithOracles w)
-    pure <| Interaction.Spec.Strategy.mapOutputWithRoles
-      (fun tr proverState =>
-        let pt := (Spec.Chain.toSpec n (c shared)).projectPublic tr
-        (⟨⟨proverStmtResult shared pt proverState,
-              oStmtResult shared pt proverState⟩,
-            witResult shared pt proverState⟩ :
-          HonestProverOutput
-            (StatementWithOracles
-              (fun _ => StatementOut shared pt)
-              (fun _ => OStatementOut shared pt) shared)
-            (WitnessOut shared pt)))
-      strat
+    let strat' :=
+      Interaction.Spec.Strategy.mapOutputWithRoles
+        (fun tr proverState =>
+          let pt := (Spec.Chain.toSpec n (c shared)).projectPublic tr
+          (⟨⟨proverStmtResult shared pt proverState,
+                oStmtResult shared pt proverState⟩,
+              witResult shared pt proverState⟩ :
+            HonestProverOutput
+              (StatementWithOracles
+                (fun _ => StatementOut shared pt)
+                (fun _ => OStatementOut shared pt) shared)
+              (WitnessOut shared pt)))
+        strat
+    pure <|
+      Interaction.Spec.Strategy.withRolesAndMonads.ofWithRolesConstant
+        (Spec.Chain.toSpec n (c shared)).toInteractionSpec
+        ((Spec.Chain.toSpec n (c shared)).toSpecRoles (Spec.Chain.toRoles n (c shared)))
+        strat'
   verifier := {
     toFun := fun shared stmtIn =>
       Interaction.Spec.Counterpart.withMonads.mapOutput

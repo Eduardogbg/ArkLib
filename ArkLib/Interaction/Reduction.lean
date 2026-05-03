@@ -79,6 +79,14 @@ namespace Interaction
 namespace Spec
 namespace MonadDecoration
 
+/-- Constant monad decoration: every node in the interaction tree uses the same
+bundled monad. This recovers the ordinary single-monad strategy layer as a
+special case of `Strategy.withRolesAndMonads`. -/
+def constant (bm : BundledMonad.{u, u}) :
+    (spec : Spec.{u}) → MonadDecoration.{u, u, u} spec
+  | .done => PUnit.unit
+  | .node _ rest => ⟨bm, fun x => constant bm (rest x)⟩
+
 /-- Nodewise monad homomorphism between two `MonadDecoration`s on the same
 specification. This is the generic lifting datum needed to retarget
 `Counterpart.withMonads` from one ambient effect layer to another. -/
@@ -91,6 +99,104 @@ def Hom :
         ((x : X) → Hom (rest x) (md₁ x) (md₂ x))
 
 end MonadDecoration
+
+namespace Strategy
+namespace withRolesAndMonads
+
+/-- Map the transcript-indexed output of a monadic strategy. -/
+def mapOutput
+    (spec : Spec.{u}) (roles : RoleDecoration spec) (md : Spec.MonadDecoration spec)
+    {Output₁ Output₂ : Spec.Transcript spec → Type u}
+    (f : ∀ tr, Output₁ tr → Output₂ tr) :
+    Strategy.withRolesAndMonads spec roles md Output₁ →
+    Strategy.withRolesAndMonads spec roles md Output₂ :=
+  match spec, roles, md with
+  | .done, _, _ => fun strat => f ⟨⟩ strat
+  | .node _ rest, ⟨.sender, rRest⟩, ⟨_, mdRest⟩ =>
+      fun strat =>
+        Functor.map
+          (fun msgAndRest =>
+            ⟨msgAndRest.1,
+              mapOutput (rest msgAndRest.1) (rRest msgAndRest.1) (mdRest msgAndRest.1)
+                (fun tr => f ⟨msgAndRest.1, tr⟩) msgAndRest.2⟩)
+          strat
+  | .node _ rest, ⟨.receiver, rRest⟩, ⟨_, mdRest⟩ =>
+      fun strat x =>
+        Functor.map
+          (mapOutput (rest x) (rRest x) (mdRest x) (fun tr => f ⟨x, tr⟩))
+          (strat x)
+
+/-- Retarget a monadic strategy along a nodewise monad homomorphism.
+
+This is the prover-side analog of `Counterpart.withMonads.mapDecoration`.
+It keeps the protocol tree and output family fixed while changing the ambient
+effect layer attached to each node. -/
+def mapDecoration
+    (spec : Spec.{u}) (roles : RoleDecoration spec)
+    {md₁ md₂ : Spec.MonadDecoration spec}
+    (hom : Spec.MonadDecoration.Hom spec md₁ md₂)
+    {Output : Spec.Transcript spec → Type u} :
+    Strategy.withRolesAndMonads spec roles md₁ Output →
+    Strategy.withRolesAndMonads spec roles md₂ Output :=
+  match spec, roles, md₁, md₂, hom with
+  | .done, _, _, _, _ => fun strat => strat
+  | .node _ rest, ⟨.sender, rRest⟩, ⟨_, _⟩, ⟨_, _⟩, ⟨lift, homRest⟩ =>
+      fun strat =>
+        lift <| Functor.map
+          (fun msgAndRest =>
+            ⟨msgAndRest.1,
+              mapDecoration (rest msgAndRest.1) (rRest msgAndRest.1)
+                (homRest msgAndRest.1) msgAndRest.2⟩)
+          strat
+  | .node _ rest, ⟨.receiver, rRest⟩, ⟨_, _⟩, ⟨_, _⟩, ⟨lift, homRest⟩ =>
+      fun strat x =>
+        lift <| Functor.map
+          (mapDecoration (rest x) (rRest x) (homRest x)) (strat x)
+
+/-- View a strategy over a constant monad decoration as an ordinary
+single-monad role strategy. -/
+def toWithRolesConstant {m : Type u → Type u} [Monad m]
+    (spec : Spec.{u}) (roles : RoleDecoration spec)
+    {Output : Spec.Transcript spec → Type u} :
+    Strategy.withRolesAndMonads spec roles
+      (Spec.MonadDecoration.constant ⟨m, inferInstance⟩ spec) Output →
+    Strategy.withRoles m spec roles Output :=
+  match spec, roles with
+  | .done, _ => fun strat => strat
+  | .node _ rest, ⟨.sender, rRest⟩ =>
+      fun strat =>
+        Functor.map
+          (fun msgAndRest =>
+            ⟨msgAndRest.1,
+              toWithRolesConstant (rest msgAndRest.1) (rRest msgAndRest.1) msgAndRest.2⟩)
+          strat
+  | .node _ rest, ⟨.receiver, rRest⟩ =>
+      fun strat x =>
+        Functor.map (toWithRolesConstant (rest x) (rRest x)) (strat x)
+
+/-- View an ordinary single-monad role strategy as a strategy over a constant
+monad decoration. -/
+def ofWithRolesConstant {m : Type u → Type u} [Monad m]
+    (spec : Spec.{u}) (roles : RoleDecoration spec)
+    {Output : Spec.Transcript spec → Type u} :
+    Strategy.withRoles m spec roles Output →
+    Strategy.withRolesAndMonads spec roles
+      (Spec.MonadDecoration.constant ⟨m, inferInstance⟩ spec) Output :=
+  match spec, roles with
+  | .done, _ => fun strat => strat
+  | .node _ rest, ⟨.sender, rRest⟩ =>
+      fun strat =>
+        Functor.map
+          (fun msgAndRest =>
+            ⟨msgAndRest.1,
+              ofWithRolesConstant (rest msgAndRest.1) (rRest msgAndRest.1) msgAndRest.2⟩)
+          strat
+  | .node _ rest, ⟨.receiver, rRest⟩ =>
+      fun strat x =>
+        Functor.map (ofWithRolesConstant (rest x) (rRest x)) (strat x)
+
+end withRolesAndMonads
+end Strategy
 
 namespace Counterpart
 namespace withMonads

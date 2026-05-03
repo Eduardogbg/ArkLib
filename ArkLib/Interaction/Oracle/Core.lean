@@ -47,6 +47,49 @@ decoration, and statement/witness families. -/
 
 namespace Oracle
 
+namespace Prover
+
+/-- Oracle prover on `Oracle.Spec` with explicit setup and prover-side node
+effects.
+
+This is the prover-side ambient-effect surface. The setup monad produces a
+`Strategy.withRolesAndMonads`, so the prover's node effects are no longer forced
+to be one global monad. The ordinary `Oracle.Prover` below specializes this by
+using `OracleComp oSpec` for setup and at every prover-owned node. -/
+abbrev WithMonads (Setup : Type → Type)
+    (SharedIn : Type)
+    (Context : SharedIn → Spec)
+    (Roles : (shared : SharedIn) → Spec.RoleDeco (Context shared))
+    (ProverMd :
+      (shared : SharedIn) → Interaction.Spec.MonadDecoration (Context shared).toInteractionSpec)
+    (StatementIn WitnessIn : SharedIn → Type)
+    {ιₛᵢ : SharedIn → Type}
+    (OStatementIn : (shared : SharedIn) → ιₛᵢ shared → Type)
+    (StatementOut :
+      (shared : SharedIn) → Spec.PublicTranscript (Context shared) → Type)
+    {ιₛₒ : (shared : SharedIn) → Spec.PublicTranscript (Context shared) → Type}
+    (OStatementOut :
+      (shared : SharedIn) → (pt : Spec.PublicTranscript (Context shared)) →
+        ιₛₒ shared pt → Type)
+    (WitnessOut :
+      (shared : SharedIn) → Spec.PublicTranscript (Context shared) → Type) :=
+  (shared : SharedIn) →
+    StatementWithOracles StatementIn OStatementIn shared →
+      WitnessIn shared →
+        Setup (Interaction.Spec.Strategy.withRolesAndMonads
+          (Context shared).toInteractionSpec
+          ((Context shared).toSpecRoles (Roles shared))
+          (ProverMd shared)
+          (fun tr =>
+            HonestProverOutput
+              (StatementWithOracles
+                (fun _ => StatementOut shared ((Context shared).projectPublic tr))
+                (fun _ => OStatementOut shared ((Context shared).projectPublic tr))
+                shared)
+              (WitnessOut shared ((Context shared).projectPublic tr))))
+
+end Prover
+
 /-- Oracle prover on `Oracle.Spec`: given ambient input `shared`, local
 statement/oracle data and witness, performs monadic setup in `OracleComp oSpec`
 and produces a role-dependent strategy on `(Context shared).toInteractionSpec`.
@@ -67,18 +110,9 @@ abbrev Prover {ι : Type} (oSpec : OracleSpec.{0, 0} ι)
         ιₛₒ shared pt → Type)
     (WitnessOut :
       (shared : SharedIn) → Spec.PublicTranscript (Context shared) → Type) :=
-  Interaction.Prover (OracleComp oSpec)
-    SharedIn
-    (fun shared => (Context shared).toInteractionSpec)
-    (fun shared => (Context shared).toSpecRoles (Roles shared))
-    (fun shared => StatementWithOracles StatementIn OStatementIn shared)
-    WitnessIn
-    (fun shared tr =>
-      StatementWithOracles
-        (fun _ => StatementOut shared ((Context shared).projectPublic tr))
-        (fun _ => OStatementOut shared ((Context shared).projectPublic tr))
-        shared)
-    (fun shared tr => WitnessOut shared ((Context shared).projectPublic tr))
+  Prover.WithMonads (OracleComp oSpec) SharedIn Context Roles
+    (fun shared => (Context shared).toProverMonadDecoration oSpec)
+    StatementIn WitnessIn OStatementIn StatementOut OStatementOut WitnessOut
 
 /-- Oracle verifier on `Oracle.Spec` with an explicit verifier-side monad
 decoration.
@@ -156,16 +190,21 @@ abbrev Verifier {ι : Type} (oSpec : OracleSpec.{0, 0} ι)
       (Roles shared) (OracleDeco shared) []ₒ)
     StatementIn OStatementIn StatementOut OStatementOut
 
-/-- Oracle reduction on `Oracle.Spec` with an explicit verifier-side monad
-decoration. This is the reduction-level lower layer corresponding to
-`Verifier.WithMonads`: the prover remains an `OracleComp oSpec` setup, while
-the verifier counterpart may use any supplied monad decoration compatible with
-the protocol tree. -/
+/-- Oracle reduction on `Oracle.Spec` with explicit prover and verifier ambient
+effect layers.
+
+This is the fully general reduction layer: the prover has a setup monad and a
+nodewise monad decoration, while the verifier has its own nodewise monad
+decoration. The oracle-specific part that remains is `simulate`, because output
+oracle statements must still be queryable by the verifier/security layer. -/
 structure Reduction.WithMonads {ι : Type} (oSpec : OracleSpec.{0, 0} ι)
+    (Setup : Type → Type)
     (SharedIn : Type)
     (Context : SharedIn → Spec)
     (Roles : (shared : SharedIn) → Spec.RoleDeco (Context shared))
     (OracleDeco : (shared : SharedIn) → Spec.OracleDeco (Context shared))
+    (ProverMd :
+      (shared : SharedIn) → Interaction.Spec.MonadDecoration (Context shared).toInteractionSpec)
     (VerifierMd :
       (shared : SharedIn) → Interaction.Spec.MonadDecoration (Context shared).toInteractionSpec)
     (StatementIn : SharedIn → Type)
@@ -182,8 +221,8 @@ structure Reduction.WithMonads {ι : Type} (oSpec : OracleSpec.{0, 0} ι)
     [∀ shared pt i, OracleInterface (OStatementOut shared pt i)]
     (WitnessOut :
       (shared : SharedIn) → Spec.PublicTranscript (Context shared) → Type) where
-  prover : Prover oSpec SharedIn Context Roles StatementIn WitnessIn OStatementIn
-    StatementOut OStatementOut WitnessOut
+  prover : Prover.WithMonads Setup SharedIn Context Roles ProverMd StatementIn WitnessIn
+    OStatementIn StatementOut OStatementOut WitnessOut
   verifier : Verifier.WithMonads oSpec SharedIn Context Roles OracleDeco VerifierMd
     StatementIn OStatementIn StatementOut OStatementOut
 
@@ -213,7 +252,8 @@ abbrev Reduction {ι : Type} (oSpec : OracleSpec.{0, 0} ι)
     [∀ shared pt i, OracleInterface (OStatementOut shared pt i)]
     (WitnessOut :
       (shared : SharedIn) → Spec.PublicTranscript (Context shared) → Type) :=
-  Reduction.WithMonads oSpec SharedIn Context Roles OracleDeco
+  Reduction.WithMonads oSpec (OracleComp oSpec) SharedIn Context Roles OracleDeco
+    (fun shared => (Context shared).toProverMonadDecoration oSpec)
     (fun shared => (Context shared).toMonadDecoration oSpec (OStatementIn shared)
       (Roles shared) (OracleDeco shared) []ₒ)
     StatementIn OStatementIn WitnessIn StatementOut OStatementOut WitnessOut

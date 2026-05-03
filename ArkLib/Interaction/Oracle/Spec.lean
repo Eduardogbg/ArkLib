@@ -6,6 +6,7 @@ Authors: Quang Dao
 import VCVio.Interaction.Basic.Spec
 import VCVio.Interaction.Basic.Append
 import VCVio.Interaction.TwoParty.Strategy
+import ArkLib.Interaction.Reduction
 import ArkLib.OracleReduction.OracleInterface
 
 /-!
@@ -170,12 +171,27 @@ def answerQuery :
     | .inl q => (oi.toOC.impl q).run x
     | .inr handle => answerQuery rest odRest tr handle
 
-/-! ## Verifier monad decoration -/
+/-! ## Node monads -/
 
 /-- The pure node monad used at nodes where a party only observes a message and
 does not perform ambient effects. -/
 abbrev pureNodeMonad : BundledMonad :=
   ⟨Id, inferInstance⟩
+
+/-! ## Prover monad decoration -/
+
+/-- The default prover node monad for native oracle reductions. -/
+abbrev proverNodeMonad {ι : Type} (oSpec : OracleSpec.{0, 0} ι) : BundledMonad :=
+  ⟨OracleComp oSpec, inferInstance⟩
+
+/-- Default prover-side monad decoration: every prover node runs in the same
+ambient `OracleComp oSpec` monad. -/
+def toProverMonadDecoration {ι : Type} (oSpec : OracleSpec.{0, 0} ι)
+    (s : Oracle.Spec) :
+    Interaction.Spec.MonadDecoration s.toInteractionSpec :=
+  Interaction.Spec.MonadDecoration.constant (proverNodeMonad oSpec) s.toInteractionSpec
+
+/-! ## Verifier monad decoration -/
 
 /-- Default oracle-query spec available to an oracle verifier at receiver nodes:
 ambient oracles, input oracle statements, and oracle messages accumulated so far. -/

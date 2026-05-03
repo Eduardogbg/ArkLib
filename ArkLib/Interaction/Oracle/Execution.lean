@@ -119,11 +119,16 @@ def Reduction.executeConcrete
               (Context shared).toOracleSpec (OracleDeco shared)
                 ((Context shared).projectPublic tr))))) := do
   let strategy ← reduction.prover shared s w
+  let strategy' :=
+    Interaction.Spec.Strategy.withRolesAndMonads.toWithRolesConstant
+      (Context shared).toInteractionSpec
+      ((Context shared).toSpecRoles (Roles shared))
+      strategy
   let ⟨tr, proverOut, stmtOutV⟩ ←
     Spec.runWithOracleCounterpart
       (OracleInterface.simOracle0 (OStatementIn shared) s.oracleStmt)
       (Context shared) (Roles shared) (OracleDeco shared) []ₒ (fun q => q.elim)
-      strategy (reduction.verifier.toFun shared s.stmt)
+      strategy' (reduction.verifier.toFun shared s.stmt)
   pure ⟨tr, proverOut,
     ⟨stmtOutV,
      reduction.verifier.simulate shared ((Context shared).projectPublic tr)⟩⟩
