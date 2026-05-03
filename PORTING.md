@@ -46,6 +46,7 @@ As of the current branch, the interaction-native oracle design has:
   - `lake build ArkLib.Interaction.Oracle.Core ArkLib.Interaction.Oracle.Execution`
   - `lake build ArkLib.Interaction.Oracle.Legacy.Reification`
   - `lake build ArkLib.Interaction.Oracle.Legacy.Security`
+  - `lake build ArkLib.ProofSystem.Sumcheck.Interaction.Oracle`
   - `lake build ArkLib.ProofSystem.Sumcheck.Interaction.Legacy.Oracle`
 
 ## Architecture
@@ -125,7 +126,8 @@ OracleReduction/         ← legacy ArkLib-specific flat core
 
 ProofSystem/             ← concrete protocols on top of the above
   Sumcheck/Interaction/    `Defs.lean` / `CompPoly.lean` are still usable
-                           shared interaction-native setup; the
+                           shared interaction-native setup; `Oracle.lean`
+                           contains the native one-round oracle surface; the
                            `OracleDecoration` protocol files are quarantined
                            under `Legacy/`
   Fri/Interaction/Legacy/  quarantined `OracleDecoration` FRI sketches
@@ -305,11 +307,13 @@ protocol migrations.
   `acceptOStmt`/`acceptWitness` parameters was circular (see docstring).
 - [ ] State `Reduction.completeness_comp` for `Oracle.Spec` composition
   (very verbose due to oracle statement handling).
-- [ ] Port `Sumcheck/Interaction/Legacy/Oracle.lean` to native `Oracle.Spec`
-  in a new non-legacy module (establishes the migration pattern for other
-  protocols). Start from non-legacy `Sumcheck/Interaction/Defs.lean` and
-  `Sumcheck/Interaction/CompPoly.lean`; use the legacy file only as a behavior
-  reference.
+- [x] Port the one-round `Sumcheck/Interaction/Legacy/Oracle.lean` surface to
+  native `Oracle.Spec` in `Sumcheck/Interaction/Oracle.lean`. This establishes
+  the first migration pattern: the round polynomial is a native `.oracle` node,
+  the verifier challenge is `.public`, and the public transcript contains only
+  verifier-visible data.
+- [ ] Port the Sumcheck single-round prover/reduction layer out of
+  `Sumcheck/Interaction/Legacy/SingleRound.lean` onto the native round surface.
 - [ ] Port the FRI interaction sketches out of
   `Fri/Interaction/Legacy/` once the Sumcheck native oracle migration pattern is
   settled.
@@ -321,10 +325,11 @@ protocol migrations.
 
 ## Planned
 - [ ] **Phase 5: Sumcheck migration** — interaction-native sumcheck has reusable
-  `Defs` and `CompPoly` setup. The current single-round / n-round /
-  oracle-decorated protocol files are quarantined under `Interaction/Legacy/`.
-  Remaining: rebuild the oracle layer on native `Oracle.Spec`, then reconnect to
-  old `Sumcheck.Spec` proofs.
+  `Defs` and `CompPoly` setup, plus a native one-round oracle surface in
+  `Interaction/Oracle.lean`. The current single-round / n-round /
+  oracle-decorated protocol files remain quarantined under `Interaction/Legacy/`.
+  Remaining: port single-round and n-round reductions to native `Oracle.Spec`,
+  then reconnect to old `Sumcheck.Spec` proofs.
 - [ ] **Phase 6: Protocol migration** — FRI, Binius, Whir, Stir, Components,
   CommitmentScheme. The current FRI interaction sketches are quarantined under
   `Interaction/Legacy/` until they are ported to native `Oracle.Spec`.
