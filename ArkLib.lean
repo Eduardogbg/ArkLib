@@ -208,6 +208,7 @@ import ArkLib.ProofSystem.Sumcheck.Interaction.Legacy.General
 import ArkLib.ProofSystem.Sumcheck.Interaction.Legacy.Oracle
 import ArkLib.ProofSystem.Sumcheck.Interaction.Legacy.SingleRound
 import ArkLib.ProofSystem.Sumcheck.Interaction.Oracle
+import ArkLib.ProofSystem.Sumcheck.Interaction.SingleRound
 import ArkLib.ProofSystem.Sumcheck.Spec.General
 import ArkLib.ProofSystem.Sumcheck.Spec.SingleRound
 import ArkLib.ProofSystem.Whir.BlockRelDistance
