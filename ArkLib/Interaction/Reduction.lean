@@ -488,18 +488,12 @@ def Reduction.stateChainComp {m : Type u → Type u} [Monad m]
   verifier i stmt :=
     Spec.Counterpart.stateChainComp verifierStep n 0 (initStage i) (verifierInit i stmt)
 
-/-! ## Chain-based (stateless) reduction composition
+/-! ## Chain-based reduction composition
 
 Reduction composition over an `n`-round protocol described by `Spec.Chain`,
-with **no prover state, no verifier state, and no round index family**.
-
-Each participant provides a per-round step that receives the remaining
-`Chain` and produces the strategy/counterpart for the current round.
-The remaining chain implicitly encodes prior transcript context
-(since it was obtained by applying prior transcripts to the original
-continuation). No state flows between rounds (per-round outputs are `PUnit`).
-The final `StatementOut` and `WitnessOut` are computed from the full
-transcript via caller-supplied result functions. -/
+where participant state is a family indexed by the remaining chain. The
+remaining chain still encodes transcript-dependent protocol shape; the state
+families carry participant data that is not part of the protocol shape. -/
 
 namespace Spec
 
@@ -526,79 +520,95 @@ abbrev roles
 end Chain
 
 /-- Compose per-round prover strategies into a full strategy over the
-chain. Each round's step receives the remaining `Chain` and
-produces the strategy for that round's spec. Output is `PUnit` — no
-state flows between rounds. -/
+chain. `State rem` is the state available before the remaining chain `rem`;
+each round step returns the state for the transcript-selected continuation. -/
 def Strategy.ofChain {m : Type u → Type u} [Monad m]
     {rolesAt : {k : Nat} → (rem : Chain.{u} (k + 1)) → RoleDecoration rem.1}
-    (step : {k : Nat} → (rem : Chain.{u} (k + 1)) →
-      m (Strategy.withRoles m rem.1 (rolesAt rem) (fun _ => PUnit.{u + 1}))) :
-    (n : Nat) → (c : Chain.{u} n) →
+    (State : {k : Nat} → Chain.{u} k → Type u)
+    (step : {k : Nat} → (rem : Chain.{u} (k + 1)) → State rem →
+      m (Strategy.withRoles m rem.1 (rolesAt rem)
+        (fun tr => State (rem.2 tr)))) :
+    (n : Nat) → (c : Chain.{u} n) → State c →
     m (Strategy.withRoles m (Chain.toSpec n c)
-      (Decoration.ofChain rolesAt n c) (fun _ => PUnit.{u + 1}))
-  | 0, _ => pure ⟨⟩
-  | n + 1, ⟨spec, cont⟩ => do
-    let strat ← step ⟨spec, cont⟩
-    @Strategy.compWithRolesFlat m _ spec (fun tr => Chain.toSpec n (cont tr))
+      (Decoration.ofChain rolesAt n c)
+      (fun tr => Chain.outputFamily State n c tr))
+  | 0, _, state => pure state
+  | n + 1, ⟨spec, cont⟩, state => do
+    let strat ← step ⟨spec, cont⟩ state
+    @Strategy.compWithRoles m _ spec (fun tr => Chain.toSpec n (cont tr))
       (rolesAt ⟨spec, cont⟩) (fun tr => Decoration.ofChain rolesAt n (cont tr))
-      (fun _ => PUnit.{u + 1}) (fun _ => PUnit.{u + 1})
-      strat (fun tr _ => Strategy.ofChain step n (cont tr))
+      (fun tr => State (cont tr))
+      (fun tr₁ tr₂ => Chain.outputFamily State n (cont tr₁) tr₂)
+      strat (fun tr state' => Strategy.ofChain (rolesAt := rolesAt) State step n (cont tr) state')
 
 /-- Compose per-round verifier counterparts into a full counterpart over
-the chain. Each round's step receives the remaining `Chain` and
-produces the counterpart for that round's spec. Output is `PUnit`. -/
+the chain, threading a caller-chosen state family indexed by the remaining
+chain. -/
 def Counterpart.ofChain {m : Type u → Type u} [Monad m]
     {rolesAt : {k : Nat} → (rem : Chain.{u} (k + 1)) → RoleDecoration rem.1}
-    (step : {k : Nat} → (rem : Chain.{u} (k + 1)) →
-      Counterpart m rem.1 (rolesAt rem) (fun _ => PUnit.{u + 1})) :
-    (n : Nat) → (c : Chain.{u} n) →
+    (State : {k : Nat} → Chain.{u} k → Type u)
+    (step : {k : Nat} → (rem : Chain.{u} (k + 1)) → State rem →
+      Counterpart m rem.1 (rolesAt rem) (fun tr => State (rem.2 tr))) :
+    (n : Nat) → (c : Chain.{u} n) → State c →
     Counterpart m (Chain.toSpec n c)
-      (Decoration.ofChain rolesAt n c) (fun _ => PUnit.{u + 1})
-  | 0, _ => ⟨⟩
-  | n + 1, ⟨spec, cont⟩ =>
-    @Counterpart.appendFlat m _ spec (fun tr => Chain.toSpec n (cont tr))
+      (Decoration.ofChain rolesAt n c) (fun tr => Chain.outputFamily State n c tr)
+  | 0, _, state => state
+  | n + 1, ⟨spec, cont⟩, state =>
+    @Counterpart.append m _ spec (fun tr => Chain.toSpec n (cont tr))
       (rolesAt ⟨spec, cont⟩) (fun tr => Decoration.ofChain rolesAt n (cont tr))
-      (fun _ => PUnit.{u + 1}) (fun _ => PUnit.{u + 1})
-      (step ⟨spec, cont⟩)
-      (fun tr _ => Counterpart.ofChain step n (cont tr))
+      (fun tr => State (cont tr))
+      (fun tr₁ tr₂ => Chain.outputFamily State n (cont tr₁) tr₂)
+      (step ⟨spec, cont⟩ state)
+      (fun tr state' => Counterpart.ofChain (rolesAt := rolesAt) State step n (cont tr) state')
 
 end Spec
 
 /-- Compose per-round prover and verifier steps into a full `Reduction`
-over an `n`-round `Chain`. No `ProverState`, `VerifierState`, or
-round index family. Per-round steps produce `PUnit` — no state flows
-between rounds. The final `StatementOut` and `WitnessOut` are computed
-from the full transcript via `stmtResult` and `witResult`. -/
+over an `n`-round `Chain`, threading separate prover and verifier state
+families indexed by the remaining chain. -/
 def Reduction.ofChain {m : Type u → Type u} [Monad m]
     {SharedIn : Type v}
+    {StatementIn : SharedIn → Type w}
     {WitnessIn : SharedIn → Type w}
     {n : Nat}
     {c : SharedIn → Spec.Chain.{u} n}
     {rolesAt : {k : Nat} → (rem : Spec.Chain.{u} (k + 1)) → RoleDecoration rem.1}
     {StatementOut WitnessOut : (i : SharedIn) →
       Spec.Transcript (Spec.Chain.toSpec n (c i)) → Type u}
-    (proverRound : (i : SharedIn) → WitnessIn i →
-      {k : Nat} → (rem : Spec.Chain.{u} (k + 1)) →
-        m (Spec.Strategy.withRoles m rem.1 (rolesAt rem) (fun _ => PUnit.{u + 1})))
+    (ProverState : (i : SharedIn) → {k : Nat} → Spec.Chain.{u} k → Type u)
+    (VerifierState : (i : SharedIn) → {k : Nat} → Spec.Chain.{u} k → Type u)
+    (proverInit : (i : SharedIn) → StatementIn i → WitnessIn i → ProverState i (c i))
+    (verifierInit : (i : SharedIn) → StatementIn i → VerifierState i (c i))
+    (proverRound : (i : SharedIn) →
+      {k : Nat} → (rem : Spec.Chain.{u} (k + 1)) → ProverState i rem →
+        m (Spec.Strategy.withRoles m rem.1 (rolesAt rem)
+          (fun tr => ProverState i (rem.2 tr))))
     (verifierRound : (i : SharedIn) →
-      {k : Nat} → (rem : Spec.Chain.{u} (k + 1)) →
-        Spec.Counterpart m rem.1 (rolesAt rem) (fun _ => PUnit.{u + 1}))
+      {k : Nat} → (rem : Spec.Chain.{u} (k + 1)) → VerifierState i rem →
+        Spec.Counterpart m rem.1 (rolesAt rem) (fun tr => VerifierState i (rem.2 tr)))
+    (proverStmtResult : (i : SharedIn) →
+      (tr : Spec.Transcript (Spec.Chain.toSpec n (c i))) →
+        Spec.Chain.outputFamily (ProverState i) n (c i) tr → StatementOut i tr)
+    (verifierStmtResult : (i : SharedIn) →
+      (tr : Spec.Transcript (Spec.Chain.toSpec n (c i))) →
+        Spec.Chain.outputFamily (VerifierState i) n (c i) tr → StatementOut i tr)
     (witResult : (i : SharedIn) →
-      (tr : Spec.Transcript (Spec.Chain.toSpec n (c i))) → WitnessOut i tr)
-    (stmtResult : (i : SharedIn) →
-      (tr : Spec.Transcript (Spec.Chain.toSpec n (c i))) → StatementOut i tr) :
+      (tr : Spec.Transcript (Spec.Chain.toSpec n (c i))) →
+        Spec.Chain.outputFamily (ProverState i) n (c i) tr → WitnessOut i tr) :
     Reduction m SharedIn
       (fun i => Spec.Chain.toSpec n (c i))
       (fun i => Spec.Decoration.ofChain rolesAt n (c i))
-      (fun _ => PUnit)
+      StatementIn
       WitnessIn
       StatementOut WitnessOut where
-  prover i _ w := do
-    let strat ← Spec.Strategy.ofChain (rolesAt := rolesAt) (proverRound i w) n (c i)
+  prover i stmt w := do
+    let strat ← Spec.Strategy.ofChain (rolesAt := rolesAt)
+      (ProverState i) (proverRound i) n (c i) (proverInit i stmt w)
     pure <| Spec.Strategy.mapOutputWithRoles
-      (fun tr _ => ⟨stmtResult i tr, witResult i tr⟩) strat
-  verifier i _ :=
-    Spec.Counterpart.mapOutput (fun tr _ => stmtResult i tr)
-      (Spec.Counterpart.ofChain (rolesAt := rolesAt) (verifierRound i) n (c i))
+      (fun tr state => ⟨proverStmtResult i tr state, witResult i tr state⟩) strat
+  verifier i stmt :=
+    Spec.Counterpart.mapOutput (fun tr state => verifierStmtResult i tr state)
+      (Spec.Counterpart.ofChain (rolesAt := rolesAt)
+        (VerifierState i) (verifierRound i) n (c i) (verifierInit i stmt))
 
 end Interaction

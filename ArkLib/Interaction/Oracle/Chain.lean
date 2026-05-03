@@ -227,12 +227,18 @@ end Spec
 /-! ## Reduction.ofChain -/
 
 /-- Compose per-round prover and verifier steps into a full `Oracle.Reduction`
-over an `n`-round `Chain`. No state flows between rounds: per-round steps
-produce `PUnit`. Final output types are computed from the full
-`PublicTranscript` via user-provided result functions. -/
+over an `n`-round `Chain`.
+
+The prover and verifier each receive their own state family indexed by the
+remaining chain. Round steps consume the current state and return the state for
+the public-transcript-selected continuation. At the end of the chain, caller
+provided result functions turn the terminal prover state into honest prover
+outputs, and the terminal verifier state into the verifier's local output
+statement. -/
 def Reduction.ofChain
     {ι : Type} {oSpec : OracleSpec.{0, 0} ι}
     {SharedIn : Type}
+    {StatementIn : SharedIn → Type}
     {WitnessIn : SharedIn → Type}
     {ιₛᵢ : SharedIn → Type}
     {OStatementIn : (shared : SharedIn) → ιₛᵢ shared → Type}
@@ -250,26 +256,40 @@ def Reduction.ofChain
     [∀ shared pt i, OracleInterface (OStatementOut shared pt i)]
     {WitnessOut :
       (shared : SharedIn) → Spec.PublicTranscript (Spec.Chain.toSpec n (c shared)) → Type}
-    (proverRound : (shared : SharedIn) → WitnessIn shared →
-      {k : Nat} → (rem : Spec.Chain (k + 1)) →
+    (ProverState : (shared : SharedIn) → {k : Nat} → Spec.Chain k → Type)
+    (VerifierState : (shared : SharedIn) → {k : Nat} → Spec.Chain k → Type)
+    (proverInit : (shared : SharedIn) →
+      StatementWithOracles StatementIn OStatementIn shared → WitnessIn shared →
+        ProverState shared (c shared))
+    (verifierInit : (shared : SharedIn) →
+      StatementIn shared → VerifierState shared (c shared))
+    (proverRound : (shared : SharedIn) →
+      {k : Nat} → (rem : Spec.Chain (k + 1)) → ProverState shared rem →
         OracleComp oSpec
           (Interaction.Spec.Strategy.withRoles (OracleComp oSpec)
             rem.1.toInteractionSpec (rem.1.toSpecRoles rem.2.1)
-            (fun _ => PUnit)))
+            (fun tr => ProverState shared (rem.2.2.2 (rem.1.projectPublic tr)))))
     (verifierRound : (shared : SharedIn) →
-      {k : Nat} → (rem : Spec.Chain (k + 1)) →
+      {k : Nat} → (rem : Spec.Chain (k + 1)) → VerifierState shared rem →
         Interaction.Spec.Counterpart.withMonads
           rem.1.toInteractionSpec (rem.1.toSpecRoles rem.2.1)
           (rem.1.toMonadDecoration oSpec (OStatementIn shared) rem.2.1 rem.2.2.1 []ₒ)
-          (fun _ => PUnit))
-    (stmtResult : (shared : SharedIn) →
+          (fun tr => VerifierState shared (rem.2.2.2 (rem.1.projectPublic tr))))
+    (proverStmtResult : (shared : SharedIn) →
       (pt : Spec.PublicTranscript (Spec.Chain.toSpec n (c shared))) →
+        Spec.Chain.outputFamily (ProverState shared) n (c shared) pt →
+        StatementOut shared pt)
+    (verifierStmtResult : (shared : SharedIn) →
+      (pt : Spec.PublicTranscript (Spec.Chain.toSpec n (c shared))) →
+        Spec.Chain.outputFamily (VerifierState shared) n (c shared) pt →
         StatementOut shared pt)
     (oStmtResult : (shared : SharedIn) →
       (pt : Spec.PublicTranscript (Spec.Chain.toSpec n (c shared))) →
+        Spec.Chain.outputFamily (ProverState shared) n (c shared) pt →
         ∀ i, OStatementOut shared pt i)
     (witResult : (shared : SharedIn) →
       (pt : Spec.PublicTranscript (Spec.Chain.toSpec n (c shared))) →
+        Spec.Chain.outputFamily (ProverState shared) n (c shared) pt →
         WitnessOut shared pt)
     (simulate : (shared : SharedIn) →
       (pt : Spec.PublicTranscript (Spec.Chain.toSpec n (c shared))) →
@@ -282,15 +302,17 @@ def Reduction.ofChain
       (fun shared => Spec.Chain.toSpec n (c shared))
       (fun shared => Spec.Chain.toRoles n (c shared))
       (fun shared => Spec.Chain.toOracleDeco n (c shared))
-      (fun _ => PUnit) OStatementIn WitnessIn
+      StatementIn OStatementIn WitnessIn
       StatementOut OStatementOut WitnessOut where
-  prover shared _sWithOracles w := do
-    let strat ← Spec.Chain.Prover.comp (fun {_} _ => PUnit)
-      (fun rem _ => proverRound shared w rem) n (c shared) PUnit.unit
+  prover shared sWithOracles w := do
+    let strat ← Spec.Chain.Prover.comp (ProverState shared)
+      (proverRound shared) n (c shared) (proverInit shared sWithOracles w)
     pure <| Interaction.Spec.Strategy.mapOutputWithRoles
-      (fun tr _ =>
+      (fun tr proverState =>
         let pt := (Spec.Chain.toSpec n (c shared)).projectPublic tr
-        (⟨⟨stmtResult shared pt, oStmtResult shared pt⟩, witResult shared pt⟩ :
+        (⟨⟨proverStmtResult shared pt proverState,
+              oStmtResult shared pt proverState⟩,
+            witResult shared pt proverState⟩ :
           HonestProverOutput
             (StatementWithOracles
               (fun _ => StatementOut shared pt)
@@ -298,16 +320,17 @@ def Reduction.ofChain
             (WitnessOut shared pt)))
       strat
   verifier := {
-    toFun := fun shared _stmtIn =>
+    toFun := fun shared stmtIn =>
       Interaction.Spec.Counterpart.withMonads.mapOutput
         (Spec.Chain.toSpec n (c shared)).toInteractionSpec
         ((Spec.Chain.toSpec n (c shared)).toSpecRoles (Spec.Chain.toRoles n (c shared)))
         ((Spec.Chain.toSpec n (c shared)).toMonadDecoration oSpec (OStatementIn shared)
           (Spec.Chain.toRoles n (c shared)) (Spec.Chain.toOracleDeco n (c shared)) []ₒ)
-        (fun tr _ =>
-          stmtResult shared ((Spec.Chain.toSpec n (c shared)).projectPublic tr))
-        (Spec.Chain.Verifier.comp (fun {_} _ => PUnit)
-          (fun rem _ => verifierRound shared rem) n (c shared) PUnit.unit)
+        (fun tr verifierState =>
+          let pt := (Spec.Chain.toSpec n (c shared)).projectPublic tr
+          verifierStmtResult shared pt verifierState)
+        (Spec.Chain.Verifier.comp (VerifierState shared)
+          (verifierRound shared) n (c shared) (verifierInit shared stmtIn))
     simulate := simulate
   }
 
