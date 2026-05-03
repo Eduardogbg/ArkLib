@@ -130,6 +130,9 @@ ProofSystem/             ← concrete protocols on top of the above
                            contains the native one-round oracle surface; the
                            `OracleDecoration` protocol files are quarantined
                            under `Legacy/`
+  Fri/Interaction/         `Core.lean` / `FoldRound.lean` contain the native
+                           `Oracle.Spec` non-final fold round surface and
+                           reduction
   Fri/Interaction/Legacy/  quarantined `OracleDecoration` FRI sketches
   (TODO) native Oracle.Spec ports for Sumcheck, FRI, Binius, ...
 ```
@@ -312,11 +315,13 @@ protocol migrations.
   the first migration pattern: the round polynomial is a native `.oracle` node,
   the verifier challenge is `.public`, and the public transcript contains only
   verifier-visible data.
-- [ ] Port the Sumcheck single-round prover/reduction layer out of
+- [x] Port the Sumcheck single-round prover/reduction layer out of
   `Sumcheck/Interaction/Legacy/SingleRound.lean` onto the native round surface.
-- [ ] Port the FRI interaction sketches out of
-  `Fri/Interaction/Legacy/` once the Sumcheck native oracle migration pattern is
-  settled.
+- [ ] Port the FRI interaction sketches out of `Fri/Interaction/Legacy/`.
+  Native `Fri/Interaction/Core.lean` and `Fri/Interaction/FoldRound.lean` now
+  cover the non-final fold-round spec, decorations, transcript projections, and
+  single-round reduction. Remaining FRI work: final fold, query round, fold
+  phase composition, and full protocol composition.
 - [ ] Validate the boundary layer on concrete examples once operational
   pullbacks compile: Sumcheck single-round reuse, FRIBinius witness
   reinterpretation, and BatchedFRI batching boundary.

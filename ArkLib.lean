@@ -181,6 +181,8 @@ import ArkLib.ProofSystem.ConstraintSystem.Lookup
 import ArkLib.ProofSystem.ConstraintSystem.MemoryChecking
 import ArkLib.ProofSystem.ConstraintSystem.Plonk
 import ArkLib.ProofSystem.ConstraintSystem.R1CS
+import ArkLib.ProofSystem.Fri.Interaction.Core
+import ArkLib.ProofSystem.Fri.Interaction.FoldRound
 import ArkLib.ProofSystem.Fri.Interaction.Legacy.Core
 import ArkLib.ProofSystem.Fri.Interaction.Legacy.FinalFold
 import ArkLib.ProofSystem.Fri.Interaction.Legacy.FoldPhase
