@@ -137,15 +137,15 @@ theorem splitPublicTranscript_appendPublicTranscript (n : Nat) (c : Chain (n + 1
 
 /-- Lift a family on remaining chains to a family on `PublicTranscript` of the
 flattened `Oracle.Spec`. At `Chain 0`, returns `Family ⟨⟩`. At `Chain (n + 1)`,
-splits the flattened public transcript into the current round and remainder,
-then recurses on the selected continuation. -/
+uses `PublicTranscript.liftAppend` to expose the native append structure of the
+flattened public transcript. -/
 def outputFamily
     (Family : {n : Nat} → Chain n → Type) :
     (n : Nat) → (c : Chain n) → PublicTranscript (toSpec n c) → Type
   | 0, c, _ => Family c
   | n + 1, ⟨spec, _, _, cont⟩, pt =>
-      let split := PublicTranscript.split spec (fun pt₁ => toSpec n (cont pt₁)) pt
-      outputFamily Family n (cont split.1) split.2
+      PublicTranscript.liftAppend spec (fun pt₁ => toSpec n (cont pt₁))
+        (fun pt₁ pt₂ => outputFamily Family n (cont pt₁) pt₂) pt
 
 /-! ## Prover composition -/
 

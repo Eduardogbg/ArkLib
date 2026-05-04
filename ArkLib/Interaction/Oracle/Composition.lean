@@ -231,11 +231,8 @@ def compAuxWithMonads
         ((s₁.append s₂).toSpecRoles (Spec.RoleDeco.append s₁ s₂ r₁ r₂))
         (Spec.MonadDecoration.appendPublic s₁ s₂ md₁ md₂)
         (fun tr =>
-          OutType
-            (Spec.PublicTranscript.split s₁ s₂
-              ((s₁.append s₂).projectPublic tr)).1
-            (Spec.PublicTranscript.split s₁ s₂
-              ((s₁.append s₂).projectPublic tr)).2))
+          Spec.PublicTranscript.liftAppend s₁ s₂ OutType
+            ((s₁.append s₂).projectPublic tr)))
   | .done, _, _, _, _, _, _, _, _, strat₁, cont => cont ⟨⟩ strat₁
   | .oracle _X rest, s₂, r₁, r₂, _, md₂, ⟨liftSetup, liftRest⟩, _, OutType, strat₁,
       cont =>
@@ -276,7 +273,8 @@ This is the `Oracle.Spec` analog of `Interaction.Spec.Strategy.compWithRolesFlat
 with the crucial advantage that `toInteractionSpec`, `toSpecRoles`, and
 `projectPublic` all reduce definitionally at each step, so no casts are needed.
 
-The output type is indexed by `PublicTranscript` via `split ∘ projectPublic`. -/
+The output type is indexed by `PublicTranscript.liftAppend`, preserving the
+native append structure of the composed oracle spec. -/
 def compAux
     {m : Type → Type} [Monad m] :
     (s₁ : Oracle.Spec) → (s₂ : Spec.PublicTranscript s₁ → Oracle.Spec) →
@@ -299,11 +297,8 @@ def compAux
         ((s₁.append s₂).toInteractionSpec)
         ((s₁.append s₂).toSpecRoles (Spec.RoleDeco.append s₁ s₂ r₁ r₂))
         (fun tr =>
-          OutType
-            (Spec.PublicTranscript.split s₁ s₂
-              ((s₁.append s₂).projectPublic tr)).1
-            (Spec.PublicTranscript.split s₁ s₂
-              ((s₁.append s₂).projectPublic tr)).2))
+          Spec.PublicTranscript.liftAppend s₁ s₂ OutType
+            ((s₁.append s₂).projectPublic tr)))
   | s₁, s₂, r₁, r₂, _, OutType, strat₁, cont => do
       let strat₁' :=
         Interaction.Spec.Strategy.withRolesAndMonads.ofWithRolesConstant
@@ -384,11 +379,8 @@ def compAux
         (Spec.RoleDeco.append s₁ s₂ r₁ r₂)
         (Spec.OracleDeco.append s₁ s₂ od₁ od₂) accSpec)
       (fun tr =>
-        OutType
-          (Spec.PublicTranscript.split s₁ s₂
-            ((s₁.append s₂).projectPublic tr)).1
-          (Spec.PublicTranscript.split s₁ s₂
-            ((s₁.append s₂).projectPublic tr)).2)
+        Spec.PublicTranscript.liftAppend s₁ s₂ OutType
+          ((s₁.append s₂).projectPublic tr))
   | .done, _, _, _, _, _, _, accSpec, _, _, cpt, cont => cont accSpec ⟨⟩ cpt
   | .oracle _X rest, s₂, r₁, r₂, ⟨oi, odRest⟩, od₂, _, accSpec, _, OutType,
       cpt, cont =>
@@ -709,32 +701,60 @@ def Reduction.comp
               (Context₂ shared pt₁).toInteractionSpec
               ((Context₂ shared pt₁).toSpecRoles (Roles₂ shared pt₁))
               strat₂'
+    let stratSplit :=
+      Interaction.Spec.Strategy.mapOutputWithRoles
+        (fun tr out =>
+          Spec.PublicTranscript.unliftAppend (Context₁ shared) (Context₂ shared)
+            (fun pt₁ pt₂ =>
+              HonestProverOutput
+                (StatementWithOracles
+                  (fun _ => StatementOut shared pt₁ pt₂)
+                  (fun _ => OStatementOut shared pt₁ pt₂) shared)
+                (WitnessOut shared pt₁ pt₂))
+            (((Context₁ shared).append (Context₂ shared)).projectPublic tr) out)
+        strat
     pure <|
       Interaction.Spec.Strategy.withRolesAndMonads.ofWithRolesConstant
         ((Context₁ shared).append (Context₂ shared)).toInteractionSpec
         (((Context₁ shared).append (Context₂ shared)).toSpecRoles
           (Spec.RoleDeco.append (Context₁ shared) (Context₂ shared)
             (Roles₁ shared) (Roles₂ shared)))
-        strat
+        stratSplit
   verifier := {
     toFun := fun shared stmtIn =>
-      Verifier.compAux (OStmtIn := OStatementIn shared)
-        (Context₁ shared) (Context₂ shared)
-        (Roles₁ shared) (Roles₂ shared) (OracleDeco₁ shared) (OracleDeco₂ shared)
-        []ₒ
-        (OutType := fun pt₁ pt₂ => StatementOut shared pt₁ pt₂)
-        (r₁.verifier.toFun shared stmtIn)
-        (fun accSpec' tr₁ midStmt =>
-          let pt₁ := (Context₁ shared).projectPublic tr₁
-          Counterpart.liftAcc
-            (Context₂ shared pt₁) (Roles₂ shared pt₁) (OracleDeco₂ shared pt₁)
-            []ₒ accSpec' (fun q => nomatch q)
-            (Verifier.retargetMonads
-              (r₁.verifier.simulate shared pt₁)
-              (Spec.answerQuery (Context₁ shared) (OracleDeco₁ shared) tr₁)
+      Interaction.Spec.Counterpart.withMonads.mapOutput
+        ((Context₁ shared).append (Context₂ shared)).toInteractionSpec
+        (((Context₁ shared).append (Context₂ shared)).toSpecRoles
+          (Spec.RoleDeco.append (Context₁ shared) (Context₂ shared)
+            (Roles₁ shared) (Roles₂ shared)))
+        (((Context₁ shared).append (Context₂ shared)).toMonadDecoration oSpec
+          (OStatementIn shared)
+          (Spec.RoleDeco.append (Context₁ shared) (Context₂ shared)
+            (Roles₁ shared) (Roles₂ shared))
+          (Spec.OracleDeco.append (Context₁ shared) (Context₂ shared)
+            (OracleDeco₁ shared) (OracleDeco₂ shared))
+          []ₒ)
+        (fun tr out =>
+          Spec.PublicTranscript.unliftAppend (Context₁ shared) (Context₂ shared)
+            (fun pt₁ pt₂ => StatementOut shared pt₁ pt₂)
+            (((Context₁ shared).append (Context₂ shared)).projectPublic tr) out)
+        (Verifier.compAux (OStmtIn := OStatementIn shared)
+          (Context₁ shared) (Context₂ shared)
+          (Roles₁ shared) (Roles₂ shared) (OracleDeco₁ shared) (OracleDeco₂ shared)
+          []ₒ
+          (OutType := fun pt₁ pt₂ => StatementOut shared pt₁ pt₂)
+          (r₁.verifier.toFun shared stmtIn)
+          (fun accSpec' tr₁ midStmt =>
+            let pt₁ := (Context₁ shared).projectPublic tr₁
+            Counterpart.liftAcc
               (Context₂ shared pt₁) (Roles₂ shared pt₁) (OracleDeco₂ shared pt₁)
-              []ₒ
-              ((r₂ shared pt₁).verifier.toFun PUnit.unit midStmt)))
+              []ₒ accSpec' (fun q => nomatch q)
+              (Verifier.retargetMonads
+                (r₁.verifier.simulate shared pt₁)
+                (Spec.answerQuery (Context₁ shared) (OracleDeco₁ shared) tr₁)
+                (Context₂ shared pt₁) (Roles₂ shared pt₁) (OracleDeco₂ shared pt₁)
+                []ₒ
+                ((r₂ shared pt₁).verifier.toFun PUnit.unit midStmt))))
     -- This `simulate` operates directly on `QueryImpl`s over combined
     -- oracle specs, not on `Counterpart.withMonads` values, so
     -- `Counterpart.mapOracles` (which rewrites per-node monads in a
