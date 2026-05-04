@@ -116,6 +116,7 @@ import ArkLib.Interaction.Oracle.Legacy.StateChain
 import ArkLib.Interaction.Oracle.Security
 import ArkLib.Interaction.Oracle.Spec
 import ArkLib.Interaction.Reduction
+import ArkLib.Interaction.RoleChain
 import ArkLib.Interaction.Security
 import ArkLib.OracleReduction.Basic
 import ArkLib.OracleReduction.Cast

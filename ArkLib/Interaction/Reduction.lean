@@ -6,6 +6,7 @@ Authors: Quang Dao
 import VCVio.Interaction.Basic.Spec
 import VCVio.Interaction.Basic.Chain
 import VCVio.Interaction.TwoParty.Compose
+import ArkLib.Interaction.RoleChain
 
 /-!
 # Provers, Verifiers, and Reductions
@@ -707,144 +708,7 @@ def Reduction.stateChainComp {m : Type u → Type u} [Monad m]
   verifier i stmt :=
     Spec.Counterpart.stateChainComp verifierStep n 0 (initStage i) (verifierInit i stmt)
 
-/-! ## Chain-based reduction composition
-
-Reduction composition over an `n`-round protocol described by `Spec.RoleChain`,
-where each node carries both the local `Spec` and its role decoration. Participant
-state is a family indexed by the remaining decorated chain: the chain encodes
-transcript-dependent protocol shape and roles, while the state families carry
-participant data that is not part of the protocol shape. -/
-
-namespace Spec
-
-/-- A self-contained two-party chain: every round carries the local `Spec`,
-the sender/receiver roles for that spec, and a transcript-indexed continuation. -/
-def RoleChain : Nat → Type (u + 1)
-  | 0 => PUnit
-  | n + 1 => (spec : Spec.{u}) × RoleDecoration spec × (Transcript spec → RoleChain n)
-
-namespace RoleChain
-
-/-- Flatten a decorated chain into a concrete `Spec`. -/
-def toSpec : (n : Nat) → RoleChain.{u} n → Spec.{u}
-  | 0, _ => .done
-  | n + 1, ⟨spec, _, cont⟩ => spec.append (fun tr => toSpec n (cont tr))
-
-/-- Flatten the role decorations along a decorated chain. -/
-def toRoles : (n : Nat) → (c : RoleChain.{u} n) → RoleDecoration (toSpec n c)
-  | 0, _ => ⟨⟩
-  | n + 1, ⟨_spec, roles, cont⟩ =>
-      Spec.Decoration.append roles (fun tr => toRoles n (cont tr))
-
-@[simp] theorem toSpec_zero (c : RoleChain.{u} 0) : toSpec 0 c = .done := rfl
-
-theorem toSpec_succ {n : Nat} (spec : Spec.{u})
-    (roles : RoleDecoration spec) (cont : Transcript spec → RoleChain.{u} n) :
-    toSpec (n + 1) ⟨spec, roles, cont⟩ =
-      spec.append (fun tr => toSpec n (cont tr)) := rfl
-
-/-- Split a transcript of a flattened `(n+1)`-round decorated chain into the
-first round transcript and the remainder. -/
-def splitTranscript (n : Nat) (c : RoleChain.{u} (n + 1)) :
-    Transcript (toSpec (n + 1) c) →
-    (tr₁ : Transcript c.1) × Transcript (toSpec n (c.2.2 tr₁)) :=
-  Transcript.split c.1 (fun tr => toSpec n (c.2.2 tr))
-
-/-- Combine a first-round transcript with a suffix transcript. -/
-def appendTranscript (n : Nat) (c : RoleChain.{u} (n + 1))
-    (tr₁ : Transcript c.1) (tr₂ : Transcript (toSpec n (c.2.2 tr₁))) :
-    Transcript (toSpec (n + 1) c) :=
-  Transcript.append c.1 (fun tr => toSpec n (c.2.2 tr)) tr₁ tr₂
-
-@[simp]
-theorem splitTranscript_appendTranscript (n : Nat) (c : RoleChain.{u} (n + 1))
-    (tr₁ : Transcript c.1) (tr₂ : Transcript (toSpec n (c.2.2 tr₁))) :
-    splitTranscript n c (appendTranscript n c tr₁ tr₂) = ⟨tr₁, tr₂⟩ :=
-  Transcript.split_append _ _ _ _
-
-/-- Lift a family on remaining decorated chains to a family on transcripts of
-the flattened `Spec`. -/
-def outputFamily
-    (Family : {n : Nat} → RoleChain.{u} n → Type u) :
-    (n : Nat) → (c : RoleChain.{u} n) → Transcript (toSpec n c) → Type u
-  | 0, c, _ => Family c
-  | n + 1, ⟨spec, _, cont⟩, tr =>
-      Transcript.liftAppend spec (fun tr₁ => toSpec n (cont tr₁))
-        (fun tr₁ tr₂ => outputFamily Family n (cont tr₁) tr₂)
-        tr
-
-end RoleChain
-
-namespace Strategy
-
-/-- Per-node prover handlers for one concrete `Chain`.
-
-The handlers follow the actual continuation tree of `c`: a current-round
-strategy plus, for every current transcript, handlers for the selected suffix. -/
-def RoundSteps {m : Type u → Type u} [Monad m]
-    (State : {k : Nat} → RoleChain.{u} k → Type u) :
-    (n : Nat) → (c : RoleChain.{u} n) → Type (u + 1)
-  | 0, _ => PUnit
-  | n + 1, c =>
-      ((state : State c) →
-        m (Strategy.withRoles m c.1 c.2.1 (fun tr => State (c.2.2 tr)))) ×
-      ((tr : Transcript c.1) →
-        RoundSteps (m := m) State n (c.2.2 tr))
-
-/-- Compose concrete-chain prover handlers into a full strategy. -/
-def ofChain {m : Type u → Type u} [Monad m]
-    (State : {k : Nat} → RoleChain.{u} k → Type u) :
-    (n : Nat) → (c : RoleChain.{u} n) → State c →
-      RoundSteps (m := m) State n c →
-    m (Strategy.withRoles m (RoleChain.toSpec n c)
-      (RoleChain.toRoles n c)
-      (fun tr => RoleChain.outputFamily State n c tr))
-  | 0, _, state, _ => pure state
-  | n + 1, ⟨spec, roles, cont⟩, state, steps => do
-    let strat ← steps.1 state
-    @Strategy.compWithRoles m _ spec (fun tr => RoleChain.toSpec n (cont tr))
-      roles (fun tr => RoleChain.toRoles n (cont tr))
-      (fun tr => State (cont tr))
-      (fun tr₁ tr₂ => RoleChain.outputFamily State n (cont tr₁) tr₂)
-      strat
-      (fun tr state' =>
-        ofChain State n (cont tr) state' (steps.2 tr))
-
-end Strategy
-
-namespace Counterpart
-
-/-- Per-node verifier counterparts for one concrete `Chain`. -/
-def RoundSteps {m : Type u → Type u} [Monad m]
-    (State : {k : Nat} → RoleChain.{u} k → Type u) :
-    (n : Nat) → (c : RoleChain.{u} n) → Type (u + 1)
-  | 0, _ => PUnit
-  | n + 1, c =>
-      ((state : State c) →
-        Counterpart m c.1 c.2.1 (fun tr => State (c.2.2 tr))) ×
-      ((tr : Transcript c.1) →
-        RoundSteps (m := m) State n (c.2.2 tr))
-
-/-- Compose concrete-chain verifier handlers into a full counterpart. -/
-def ofChain {m : Type u → Type u} [Monad m]
-    (State : {k : Nat} → RoleChain.{u} k → Type u) :
-    (n : Nat) → (c : RoleChain.{u} n) → State c →
-      RoundSteps (m := m) State n c →
-    Counterpart m (RoleChain.toSpec n c)
-      (RoleChain.toRoles n c) (fun tr => RoleChain.outputFamily State n c tr)
-  | 0, _, state, _ => state
-  | n + 1, ⟨spec, roles, cont⟩, state, steps =>
-    @Counterpart.append m _ spec (fun tr => RoleChain.toSpec n (cont tr))
-      roles (fun tr => RoleChain.toRoles n (cont tr))
-      (fun tr => State (cont tr))
-      (fun tr₁ tr₂ => RoleChain.outputFamily State n (cont tr₁) tr₂)
-      (steps.1 state)
-      (fun tr state' =>
-        ofChain State n (cont tr) state' (steps.2 tr))
-
-end Counterpart
-
-end Spec
+/-! ## Chain-based reduction composition -/
 
 /-- Compose concrete-chain prover and verifier handlers into a full `Reduction`
 over an `n`-round `RoleChain`, threading separate prover and verifier state
