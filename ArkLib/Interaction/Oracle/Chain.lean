@@ -32,18 +32,18 @@ Converting to an `Oracle.Spec` via `Chain.toSpec` uses only `Oracle.Spec.append`
   arbitrary chains.
 * `Chain.Prover.comp` / `Chain.Verifier.comp` — compose concrete-chain prover
   strategies / verifier counterparts along the chain.
-* `Oracle.Reduction.ofChain` — compose per-round steps into a full
+* `Oracle.Reduction.ofChain` — compose concrete-chain steps into a full
   `Oracle.Reduction`.
 
 ## Design notes
 
-This mirrors the non-oracle `Spec.Chain` (in VCVio) and `Reduction.ofChain`
+This mirrors the non-oracle `Spec.RoleChain` and `Reduction.ofChain`
 (in `Interaction/Reduction.lean`), but uses `Oracle.Spec` throughout:
 
 - Continuation depends on `PublicTranscript` (not full `Transcript`).
 - Uses `Prover.compAux` / `Verifier.compAux` / `Counterpart.liftAcc` from
   `Oracle/Composition.lean` as the binary step.
-- Per-round steps may produce the next state for the remaining chain.
+- Per-node steps may produce the next state for the remaining chain.
 - Final output types are computed from the full `PublicTranscript` via
   `Chain.outputFamily`.
 
