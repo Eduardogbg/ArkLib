@@ -119,6 +119,65 @@ theorem toSpec_replicate_succ (spec : Oracle.Spec) (next : St → St) (n : Nat)
     (replicate (St := St) spec next (n + 1) s).toSpec =
       spec.append (fun _ => (replicate spec next n (next s)).toSpec) := rfl
 
+/-! ## Decoration lifts
+
+A telescope on its own carries no information about who controls each round
+or what oracle interfaces are exposed. Decorations are layered on top by
+specifying, for each state `s : St`, the role and oracle assignments for
+that state's round spec. The lift functions then flatten state-indexed
+decoration families along the telescope, threading them through
+`Spec.RoleDeco.append` / `Spec.OracleDeco.append` at every `extend` step.
+
+This per-state design is general enough for protocols whose decorations
+depend only on the round shape (which is what the state already determines).
+Path-dependent decorations are recovered by enriching the state space to
+record the relevant prefix data. -/
+
+/-- Lift a state-indexed `RoleDeco` family to a `RoleDeco` on the flattened
+telescope. At each `.extend` step, the round's role decoration is appended
+with the recursive role decorations of every continuation branch. -/
+def toRoleDeco (rd : (s : St) → RoleDeco (round s)) :
+    {s : St} → (t : Telescope round step s) → RoleDeco t.toSpec
+  | _, .done _ => ⟨⟩
+  | _, .extend s cont =>
+      RoleDeco.append (round s) (fun pt => (cont pt).toSpec)
+        (rd s) (fun pt => toRoleDeco rd (cont pt))
+
+@[simp]
+theorem toRoleDeco_done (rd : (s : St) → RoleDeco (round s)) (s : St) :
+    toRoleDeco (step := step) rd (.done s) = ⟨⟩ := rfl
+
+@[simp]
+theorem toRoleDeco_extend (rd : (s : St) → RoleDeco (round s)) (s : St)
+    (cont :
+      (pt : PublicTranscript (round s)) → Telescope round step (step s pt)) :
+    toRoleDeco rd (.extend s cont) =
+      RoleDeco.append (round s) (fun pt => (cont pt).toSpec)
+        (rd s) (fun pt => toRoleDeco rd (cont pt)) := rfl
+
+/-- Lift a state-indexed `OracleDeco` family to an `OracleDeco` on the
+flattened telescope. At each `.extend` step, the round's oracle decoration
+is appended with the recursive oracle decorations of every continuation
+branch. -/
+def toOracleDeco (od : (s : St) → OracleDeco (round s)) :
+    {s : St} → (t : Telescope round step s) → OracleDeco t.toSpec
+  | _, .done _ => ⟨⟩
+  | _, .extend s cont =>
+      OracleDeco.append (round s) (fun pt => (cont pt).toSpec)
+        (od s) (fun pt => toOracleDeco od (cont pt))
+
+@[simp]
+theorem toOracleDeco_done (od : (s : St) → OracleDeco (round s)) (s : St) :
+    toOracleDeco (step := step) od (.done s) = ⟨⟩ := rfl
+
+@[simp]
+theorem toOracleDeco_extend (od : (s : St) → OracleDeco (round s)) (s : St)
+    (cont :
+      (pt : PublicTranscript (round s)) → Telescope round step (step s pt)) :
+    toOracleDeco od (.extend s cont) =
+      OracleDeco.append (round s) (fun pt => (cont pt).toSpec)
+        (od s) (fun pt => toOracleDeco od (cont pt)) := rfl
+
 end Telescope
 end Spec
 end Interaction.Oracle
