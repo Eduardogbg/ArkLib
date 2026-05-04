@@ -30,10 +30,9 @@ variable (R : Type) [BEq R] [CommSemiring R] [LawfulBEq R] [Nontrivial R] (deg :
 Each level is the existing one-round native oracle spec. The continuation is
 constant because the next round shape does not depend on the public challenge;
 participant state is handled by the parties, not by the protocol shape. -/
-def fullChain : (n : Nat) → Interaction.Oracle.Spec.Chain n
-  | 0 => ⟨⟩
-  | n + 1 =>
-      ⟨roundSpec R deg, roundRoles R deg, roundOracleDeco R deg, fun _ => fullChain n⟩
+def fullChain : (n : Nat) → Interaction.Oracle.Spec.Chain n :=
+  Interaction.Oracle.Spec.Chain.replicate
+    (roundSpec R deg) (roundRoles R deg) (roundOracleDeco R deg)
 
 /-- Native `n`-round sum-check oracle spec, flattened from `fullChain`. -/
 abbrev fullSpec (n : Nat) : Interaction.Oracle.Spec :=
@@ -115,8 +114,8 @@ private def proverOutputState
   | 0, _, state => state
   | n + 1, pt, state =>
       let split :=
-        Interaction.Oracle.Spec.PublicTranscript.split
-          (roundSpec R deg) (fun _ => fullSpec R deg n) pt
+        Interaction.Oracle.Spec.Chain.splitPublicTranscript
+          n (fullChain R deg (n + 1)) pt
       proverOutputState n split.2 state
 
 /-- Extract the terminal verifier state selected by the public transcript. -/
@@ -130,8 +129,8 @@ private def verifierOutputState :
   | 0, _, state => state
   | n + 1, pt, state =>
       let split :=
-        Interaction.Oracle.Spec.PublicTranscript.split
-          (roundSpec R deg) (fun _ => fullSpec R deg n) pt
+        Interaction.Oracle.Spec.Chain.splitPublicTranscript
+          n (fullChain R deg (n + 1)) pt
       verifierOutputState n split.2 state
 
 /-- Native stateful `n`-round sum-check reduction, built by composing native

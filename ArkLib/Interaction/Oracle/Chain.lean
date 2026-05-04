@@ -103,6 +103,15 @@ theorem toSpec_succ {n : Nat} (spec : Oracle.Spec)
     toSpec (n + 1) ⟨spec, roles, od, cont⟩ =
       spec.append (fun pt => toSpec n (cont pt)) := rfl
 
+/-! ## Constant chains -/
+
+/-- Constant oracle rounds: the same oracle spec, roles, and oracle decoration
+at every level, with continuation independent of the public transcript. -/
+def replicate (spec : Oracle.Spec) (roles : RoleDeco spec) (od : OracleDeco spec) :
+    (n : Nat) → Chain n
+  | 0 => ⟨⟩
+  | n + 1 => ⟨spec, roles, od, fun _ => replicate spec roles od n⟩
+
 /-! ## PublicTranscript operations -/
 
 /-- Split a `PublicTranscript` of a flattened `(n+1)`-round chain into the first
