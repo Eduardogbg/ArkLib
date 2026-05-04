@@ -1,7 +1,7 @@
 /-
 Copyright (c) 2024-2025 ArkLib Contributors. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Quang Dao, Chung Thai Nguyen
+Authors: Quang Dao, Chung Thai Nguyen, Katerina Hristova
 -/
 
 import Mathlib.Probability.ProbabilityMassFunction.Monad
@@ -550,5 +550,14 @@ theorem PMF.map_uniformOfFintype_of_fiber_const
       exact h ▸ Finset.mem_image_of_mem f (Finset.mem_univ a)
     rw [h_empty, Finset.card_empty]
     simp
+
+/-- Monotonicity of probability: if `P x → Q x` for all `x`, then
+`Pr_{x ←$ᵖ S}[P x] ≤ Pr_{x ←$ᵖ S}[Q x]`. -/
+lemma prob_mono {S : Type} [Nonempty S] [Fintype S] (P Q : S → Prop) (h : ∀ x, P x → Q x) :
+    Pr_{let x ←$ᵖ S}[P x] ≤ Pr_{let x ←$ᵖ S}[Q x] := by
+  simp only [bind_pure_comp, Functor.map, PMF.bind_apply, PMF.uniformOfFintype_apply,
+    Function.comp_apply, PMF.pure_apply, eq_iff_iff, true_iff, mul_ite, mul_one, mul_zero,
+    tsum_fintype] at *
+  gcongr; aesop
 
 end ProbabilityTools
