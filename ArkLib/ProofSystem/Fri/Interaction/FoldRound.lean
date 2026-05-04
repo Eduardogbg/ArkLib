@@ -62,8 +62,8 @@ def foldRoundReduction {SharedIn : Type} {ι : Type} {oSpec : OracleSpec.{0, 0} 
       let nextCodeword : Codeword (F := F) s n i.1.succ :=
         honestCodeword (F := F) (D := D) (x := x) (s := s) (d := d) i.1.succ nextPoly
       let nextCodewordLast :
-          FoldCodewordPrefix (F := F) (n := n) D x s i.1.succ (Fin.last i.1.succ) := by
-        simpa [FoldCodewordPrefix] using nextCodeword
+          FoldCodewordPrefix (F := F) (n := n) D x s i.1.succ (Fin.last i.1.succ) :=
+        nextCodeword
       let nextChallenges : FoldChallengePrefix (F := F) i.1.succ :=
         Fin.snoc sWithOracles.stmt α
       let nextCodewords :
