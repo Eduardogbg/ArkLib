@@ -3,6 +3,7 @@ Copyright (c) 2026 ArkLib Contributors. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
+import ArkLib.Data.Fin.Basic
 import ArkLib.ProofSystem.Fri.Interaction.FinalFold
 import ArkLib.ProofSystem.Fri.RoundConsistency
 
@@ -36,18 +37,6 @@ abbrev QueryBatch : Type :=
 /-- The query phase returns an explicit acceptance bit. -/
 abbrev QueryResult : Type :=
   Bool
-
-/-- Traverse a dependent finite function in a monad. -/
-private def finTraverseM {m : Type → Type} [Monad m] {n : ℕ} {β : Fin n → Type}
-    (f : (i : Fin n) → m (β i)) : m ((i : Fin n) → β i) :=
-  let rec aux (r : ℕ) (h : r ≤ n) : m ((i : Fin r) → β (Fin.castLE h i)) :=
-    match r with
-    | 0 => pure fun i => i.elim0
-    | r' + 1 => do
-        let tail ← aux r' (Nat.le_of_succ_le h)
-        let head ← f (Fin.castLE h (Fin.last r'))
-        pure (Fin.snoc tail head)
-  aux n (le_refl n)
 
 /-- Public-coin query shell: the verifier samples the full batch of base-domain
 query indices in one shot. -/
@@ -126,7 +115,7 @@ private def roundEvaluationPairsWithQ
     OracleComp [FoldCodewordTraceOracleFamily (F := F) (n := n) D x s]ₒ
       (Fin (roundArity s i) → F × F) := do
   let nextIdx := nextRoundSampleIdx (n := n) (s := s) baseIdx i
-  finTraverseM fun u => do
+  Fin.traverseM fun u => do
     let idx := roundFiberIdx (n := n) (s := s) h_domain i nextIdx u
     let value ← currentQuery idx
     pure (evalPointVal (D := D) (x := x) (s := s) i.1 idx, value)

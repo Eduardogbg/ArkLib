@@ -212,7 +212,7 @@ def zeroCheckVirtualPolynomial (𝕩 : Statement.AfterFirstMessage R pp)
       MvPolynomial (Fin pp.ℓ_m) R :=
   letI 𝕫 := R1CS.𝕫 𝕩 (oStmt (.inr 0))
   ∑ x : Fin (2 ^ pp.ℓ_m),
-    (eqPolynomial (finFunctionFinEquiv.symm x : Fin pp.ℓ_m → R)) *
+    (eqPolynomial (MvPolynomial.booleanPoint (R := R) pp.ℓ_m x)) *
       C ((oStmt (.inl .A) *ᵥ 𝕫) x * (oStmt (.inl .B) *ᵥ 𝕫) x - (oStmt (.inl .C) *ᵥ 𝕫) x)
 
 /-- Unfolds to `τ : Fin ℓ_m → R` -/
@@ -253,7 +253,7 @@ def oracleReduction.firstChallenge :
 --     (oStmt : ∀ i, FirstMessageOracleStatement R pp i) : MvPolynomial (Fin pp.ℓ_n) R :=
 --   letI 𝕫 := R1CS.𝕫 𝕩 (oStmt (.inr 0))
 --   ∑ x : Fin (2 ^ pp.ℓ_n),
---     (eqPolynomial (finFunctionFinEquiv.symm x : Fin pp.ℓ_n → R)) *
+--     (eqPolynomial (MvPolynomial.booleanPoint (R := R) pp.ℓ_n x)) *
 --       C ((oStmt (.inl .A) *ᵥ 𝕫) x * (oStmt (.inl .B) *ᵥ 𝕫) x - (oStmt (.inl .C) *ᵥ 𝕫) x)
 
 /-- Unfolds to `r_x : Fin ℓ_m → R` -/
