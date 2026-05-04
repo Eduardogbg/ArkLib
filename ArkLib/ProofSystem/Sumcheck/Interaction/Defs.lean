@@ -3,10 +3,10 @@ Copyright (c) 2024-2025 ArkLib Contributors. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.Interaction.Basic.Chain
 import VCVio.Interaction.Basic.Replicate
 import VCVio.Interaction.TwoParty.Compose
 import ArkLib.Interaction.Reduction
+import ArkLib.Interaction.RoleChain
 import ArkLib.ProofSystem.Sumcheck.Interaction.CompPoly
 
 /-!
@@ -35,10 +35,11 @@ After round `i`, the target is updated to `p_i(r_i)`. The public *stage state*
 
 ## Main Definitions
 
-- `RoundClaim R`: the public per-round claim (target value), the state chain stage state.
+- `RoundClaim R`: the public per-round claim (target value).
 - `roundSpec R deg`: the `Interaction.Spec` for one round (two messages).
 - `roundRoles R deg`: the `RoleDecoration` (sender then receiver).
-- `advance`: updates the stage state after a round (`target ↦ poly.eval(challenge)`).
+- `fullRoleChain`: the `n`-round native `RoleChain` surface.
+- `advance`: updates the claim after a round (`target ↦ poly.eval(challenge)`).
 - `roundCheck`: the per-round sum check (computable `Bool`).
 - `RoundCheckProp`: propositional version of `roundCheck`.
 - `fullSum`: the full sum `∑_{x ∈ D^n} poly(x)` that sum-check verifies.
@@ -66,8 +67,7 @@ section
 
 variable (R : Type) [BEq R] [CommSemiring R] [LawfulBEq R] (deg : ℕ)
 
-/-- The public claim at each round of sum-check: just the target sum value.
-This is the state chain `Stage` type (uniform across rounds). -/
+/-- The public claim at each round of sum-check: just the target sum value. -/
 abbrev RoundClaim := R
 
 /-! ## Single-round interaction shape -/
@@ -84,13 +84,18 @@ sends second. -/
 def roundRoles : RoleDecoration (roundSpec R deg) :=
   ⟨.sender, fun _ => ⟨.receiver, fun _ => ⟨⟩⟩⟩
 
-/-- The `n`-round replicated interaction surface for sum-check. -/
+/-- The `n`-round role chain for sum-check. The protocol shape is constant;
+stateful information belongs to the parties, not the chain. -/
+def fullRoleChain (n : Nat) : Spec.RoleChain n :=
+  Spec.RoleChain.replicate (roundSpec R deg) (roundRoles R deg) n
+
+/-- The `n`-round interaction surface for sum-check. -/
 abbrev fullSpec (n : Nat) : Spec :=
-  (roundSpec R deg).replicate n
+  Spec.RoleChain.toSpec n (fullRoleChain R deg n)
 
 /-- The role decoration for the `n`-round replicated interaction surface. -/
 abbrev fullRoles (n : Nat) : RoleDecoration (fullSpec R deg n) :=
-  (roundRoles R deg).replicate n
+  Spec.RoleChain.toRoles n (fullRoleChain R deg n)
 
 /-- Extract the polynomial from a single-round transcript. -/
 abbrev roundPoly (tr : Spec.Transcript (roundSpec R deg)) :
@@ -102,11 +107,17 @@ abbrev roundChallenge (tr : Spec.Transcript (roundSpec R deg)) :
     R :=
   tr.2.1
 
-/-- Extract the `i`-th round transcript from an `n`-round replicated transcript. -/
-abbrev roundTranscript (n : Nat)
+/-- Extract the `i`-th round transcript from an `n`-round transcript. -/
+def roundTranscript (n : Nat)
     (tr : Spec.Transcript (fullSpec R deg n)) (i : Fin n) :
     Spec.Transcript (roundSpec R deg) :=
-  Spec.Transcript.replicateSplit (roundSpec R deg) n tr i
+  match n with
+  | 0 => i.elim0
+  | n + 1 =>
+      let split := Spec.RoleChain.splitTranscript n (fullRoleChain R deg (n + 1)) tr
+      Fin.cases split.1
+        (fun i => roundTranscript n split.2 i)
+        i
 
 /-- Extract the prefix of verifier challenges from an `n`-round replicated
 transcript. -/
@@ -147,7 +158,7 @@ def statementResult {m_dom : Nat} (D : Fin m_dom → R) :
     (n : Nat) → RoundClaim R → Spec.Transcript (fullSpec R deg n) → Option (RoundClaim R)
 | 0, target, _ => some target
 | n + 1, target, tr =>
-    let ⟨tr₁, trRest⟩ := Spec.Transcript.replicateUncons (roundSpec R deg) n tr
+    let ⟨tr₁, trRest⟩ := Spec.RoleChain.splitTranscript n (fullRoleChain R deg (n + 1)) tr
     if roundCheck R deg D target (roundPoly R deg tr₁) then
       statementResult D n (advance R deg 0 target tr₁) trRest
     else

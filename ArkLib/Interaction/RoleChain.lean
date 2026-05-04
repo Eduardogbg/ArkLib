@@ -3,7 +3,7 @@ Copyright (c) 2026 ArkLib Contributors. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import VCVio.Interaction.Basic.Chain
+import VCVio.Interaction.Basic.Replicate
 import VCVio.Interaction.TwoParty.Compose
 
 /-!
@@ -55,6 +55,25 @@ theorem toSpec_succ {n : Nat} (spec : Spec.{u})
     (roles : RoleDecoration spec) (cont : Transcript spec → RoleChain.{u} n) :
     toSpec (n + 1) ⟨spec, roles, cont⟩ =
       spec.append (fun tr => toSpec n (cont tr)) := rfl
+
+/-! ## Constant chains -/
+
+/-- Constant decorated rounds: the same spec and roles at every level, with
+continuation independent of the transcript. -/
+def replicate (spec : Spec.{u}) (roles : RoleDecoration spec) : (n : Nat) → RoleChain.{u} n
+  | 0 => ⟨⟩
+  | n + 1 => ⟨spec, roles, fun _ => replicate spec roles n⟩
+
+/-- Flattening a constant decorated chain recovers `Spec.replicate`. -/
+@[simp]
+theorem toSpec_replicate (spec : Spec.{u}) (roles : RoleDecoration spec) :
+    (n : Nat) → toSpec n (replicate spec roles n) = spec.replicate n
+  | 0 => rfl
+  | n + 1 => by
+      simp only [replicate, toSpec, Spec.replicate]
+      congr 1
+      funext _
+      exact toSpec_replicate spec roles n
 
 /-! ## Transcript operations -/
 

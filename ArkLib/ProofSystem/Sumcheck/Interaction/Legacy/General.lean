@@ -38,18 +38,23 @@ variable {R} {deg}
 
 /-- The replicated sender-message oracle decoration for the full `n`-round
 sum-check surface. -/
-abbrev fullOD (n : Nat) :
-    OracleDecoration (Sumcheck.fullSpec R deg n) (Sumcheck.fullRoles R deg n) :=
-  (roundOracleDecoration R deg).replicate n
+def fullOD : (n : Nat) →
+    OracleDecoration (Sumcheck.fullSpec R deg n) (Sumcheck.fullRoles R deg n)
+  | 0 => ⟨⟩
+  | n + 1 =>
+      Role.Refine.append
+        (roundOracleDecoration R deg)
+        (fun _ => fullOD n)
 
 /-- Append one more round transcript to the right end of an existing replicated
 prefix transcript. -/
 private def snocRoundTranscript (prefixLen : Nat)
     (prefixTr : Spec.Transcript (Sumcheck.fullSpec R deg prefixLen))
     (tr : Spec.Transcript (roundSpec R deg)) :
-    Spec.Transcript (Sumcheck.fullSpec R deg (prefixLen + 1)) :=
-  Spec.Transcript.replicateJoin (roundSpec R deg) (prefixLen + 1) fun j =>
-    Fin.lastCases tr (fun i => Sumcheck.roundTranscript R deg prefixLen prefixTr i) j
+    Spec.Transcript (Sumcheck.fullSpec R deg (prefixLen + 1)) := by
+  simpa [Sumcheck.fullSpec, Sumcheck.fullRoleChain] using
+    Spec.Transcript.replicateJoin (roundSpec R deg) (prefixLen + 1) fun j =>
+      Fin.lastCases tr (fun i => Sumcheck.roundTranscript R deg prefixLen prefixTr i) j
 
 /-- Consume a replicated tail transcript against a current residual polynomial,
 threading the residual forward round by round until only the final `0`-variate
@@ -63,29 +68,39 @@ private def consumeResidual :
   | 0, residual, _ => by
       simpa [Sumcheck.fullSpec] using residual
   | remaining + 1, residual, tr => by
-      let split := Spec.Transcript.replicateUncons (roundSpec R deg) remaining tr
+      let split :=
+        Spec.RoleChain.splitTranscript remaining (Sumcheck.fullRoleChain R deg (remaining + 1)) tr
       exact
         consumeResidual remaining
           (stepResidual (R := R) (deg := deg)
             (Sumcheck.roundChallenge R deg split.1) residual)
           split.2
-termination_by remaining residual tr => remaining
+termination_by remaining _ _ => remaining
 decreasing_by simp_wf
 
+omit [Nontrivial R] in
 @[simp]
-private theorem consumeResidual_replicateCons
+private theorem consumeResidual_appendTranscript
     (remaining : Nat)
     (residual : Sumcheck.PolyStmt R deg (remaining + 1))
     (tr₁ : Spec.Transcript (roundSpec R deg))
     (tr₂ : Spec.Transcript (Sumcheck.fullSpec R deg remaining)) :
     consumeResidual (R := R) (deg := deg) (remaining + 1) residual
-      (Spec.Transcript.replicateCons (roundSpec R deg) remaining tr₁ tr₂) =
+      (Spec.RoleChain.appendTranscript remaining
+        (Sumcheck.fullRoleChain R deg (remaining + 1)) tr₁ tr₂) =
       consumeResidual (R := R) (deg := deg) remaining
         (stepResidual (R := R) (deg := deg)
           (Sumcheck.roundChallenge R deg tr₁) residual)
         tr₂ := by
-  simp [consumeResidual, Spec.Transcript.replicateCons, Spec.Transcript.replicateUncons,
-    Spec.Transcript.split_append]
+  simpa [consumeResidual] using
+    congrArg
+      (fun split =>
+        consumeResidual (R := R) (deg := deg) remaining
+          (stepResidual (R := R) (deg := deg)
+            (Sumcheck.roundChallenge R deg tr₁) residual)
+          split.2)
+      (Spec.RoleChain.splitTranscript_appendTranscript remaining
+        (Sumcheck.fullRoleChain R deg (remaining + 1)) tr₁ tr₂)
 
 /-- The active residual polynomial after fixing the `prefixLen` verifier
 challenges already present in `prefixTr`. The equality `prefixLen + remaining = n`
