@@ -187,6 +187,15 @@ import ArkLib.ProofSystem.Plonk.Basic
 import ArkLib.ProofSystem.Schnorr
 import ArkLib.ProofSystem.Spartan.Basic
 import ArkLib.ProofSystem.Spartan.Interaction.Basic
+import ArkLib.ProofSystem.Spartan.Interaction.Composed
+import ArkLib.ProofSystem.Spartan.Interaction.EvalClaims
+import ArkLib.ProofSystem.Spartan.Interaction.FirstSumcheck
+import ArkLib.ProofSystem.Spartan.Interaction.OracleInterfaces
+import ArkLib.ProofSystem.Spartan.Interaction.SecondSumcheck
+import ArkLib.ProofSystem.Spartan.Interaction.Setup
+import ArkLib.ProofSystem.Spartan.Interaction.Terminal
+import ArkLib.ProofSystem.Spartan.Interaction.TerminalComposed
+import ArkLib.ProofSystem.Spartan.Interaction.Types
 import ArkLib.ProofSystem.Stir.Combine
 import ArkLib.ProofSystem.Stir.Folding
 import ArkLib.ProofSystem.Stir.MainThm
