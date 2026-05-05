@@ -282,6 +282,26 @@ def projectPublic :
   | .«public» _ rest, ⟨x, tr⟩ => ⟨x, projectPublic (rest x) tr⟩
   | .«oracle» _ cont, ⟨_, tr⟩ => projectPublic (cont ⟨⟩) tr
 
+@[simp]
+theorem projectPublic_done
+    (tr : Interaction.Spec.Transcript Spec.done.toInteractionSpec) :
+    Spec.done.projectPublic tr = ⟨⟩ :=
+  rfl
+
+@[simp]
+theorem projectPublic_public (X : Type) (rest : X → Spec)
+    (tr : Interaction.Spec.Transcript (Spec.«public» X rest).toInteractionSpec) :
+    (Spec.«public» X rest).projectPublic tr =
+      ⟨tr.1, (rest tr.1).projectPublic tr.2⟩ :=
+  rfl
+
+@[simp]
+theorem projectPublic_oracle (X : Type) (cont : PUnit.{1} → Spec)
+    (tr : Interaction.Spec.Transcript (Spec.«oracle» X cont).toInteractionSpec) :
+    (Spec.«oracle» X cont).projectPublic tr =
+      (cont ⟨⟩).projectPublic tr.2 :=
+  rfl
+
 /-! ## Oracle query infrastructure -/
 
 /-- Index type for oracle queries, parameterized by `PublicTranscript`.
@@ -340,6 +360,33 @@ def accumulatedSpec :
       accumulatedSpec (cont ⟨⟩) odRest tr
         (accSpec + @OracleInterface.spec _ oi)
 
+@[simp]
+theorem accumulatedSpec_done
+    (od : OracleDeco Spec.done)
+    (tr : Interaction.Spec.Transcript Spec.done.toInteractionSpec)
+    {ιₐ : Type} (accSpec : OracleSpec.{0, 0} ιₐ) :
+    Spec.accumulatedSpec Spec.done od tr accSpec = ⟨_, accSpec⟩ :=
+  rfl
+
+@[simp]
+theorem accumulatedSpec_public (X : Type) (rest : X → Spec)
+    (od : OracleDeco (Spec.«public» X rest))
+    (tr : Interaction.Spec.Transcript (Spec.«public» X rest).toInteractionSpec)
+    {ιₐ : Type} (accSpec : OracleSpec.{0, 0} ιₐ) :
+    Spec.accumulatedSpec (Spec.«public» X rest) od tr accSpec =
+      Spec.accumulatedSpec (rest tr.1) (od tr.1) tr.2 accSpec :=
+  rfl
+
+@[simp]
+theorem accumulatedSpec_oracle (X : Type) (cont : PUnit.{1} → Spec)
+    (od : OracleDeco (Spec.«oracle» X cont))
+    (tr : Interaction.Spec.Transcript (Spec.«oracle» X cont).toInteractionSpec)
+    {ιₐ : Type} (accSpec : OracleSpec.{0, 0} ιₐ) :
+    Spec.accumulatedSpec (Spec.«oracle» X cont) od tr accSpec =
+      Spec.accumulatedSpec (cont ⟨⟩) od.2 tr.2
+        (accSpec + @OracleInterface.spec _ od.1) :=
+  rfl
+
 /-- Answer queries for `accumulatedSpec`, extending an existing
 accumulator implementation with the oracle messages in a full transcript. -/
 def accumulatedImpl :
@@ -356,6 +403,34 @@ def accumulatedImpl :
       accumulatedImpl (cont ⟨⟩) odRest tr
         (accSpec + @OracleInterface.spec _ oi)
         (QueryImpl.add accImpl implX)
+
+@[simp]
+theorem accumulatedImpl_done
+    (od : OracleDeco Spec.done)
+    (tr : Interaction.Spec.Transcript Spec.done.toInteractionSpec)
+    {ιₐ : Type} (accSpec : OracleSpec.{0, 0} ιₐ) (accImpl : QueryImpl accSpec Id) :
+    Spec.accumulatedImpl Spec.done od tr accSpec accImpl = accImpl :=
+  rfl
+
+@[simp]
+theorem accumulatedImpl_public (X : Type) (rest : X → Spec)
+    (od : OracleDeco (Spec.«public» X rest))
+    (tr : Interaction.Spec.Transcript (Spec.«public» X rest).toInteractionSpec)
+    {ιₐ : Type} (accSpec : OracleSpec.{0, 0} ιₐ) (accImpl : QueryImpl accSpec Id) :
+    Spec.accumulatedImpl (Spec.«public» X rest) od tr accSpec accImpl =
+      Spec.accumulatedImpl (rest tr.1) (od tr.1) tr.2 accSpec accImpl :=
+  rfl
+
+@[simp]
+theorem accumulatedImpl_oracle (X : Type) (cont : PUnit.{1} → Spec)
+    (od : OracleDeco (Spec.«oracle» X cont))
+    (tr : Interaction.Spec.Transcript (Spec.«oracle» X cont).toInteractionSpec)
+    {ιₐ : Type} (accSpec : OracleSpec.{0, 0} ιₐ) (accImpl : QueryImpl accSpec Id) :
+    Spec.accumulatedImpl (Spec.«oracle» X cont) od tr accSpec accImpl =
+      Spec.accumulatedImpl (cont ⟨⟩) od.2 tr.2
+        (accSpec + @OracleInterface.spec _ od.1)
+        (QueryImpl.add accImpl (fun q => (od.1.toOC.impl q).run tr.1)) :=
+  rfl
 
 /-! ## Node monads -/
 
@@ -467,6 +542,25 @@ def append (s₁ : Spec) : (PublicTranscript s₁ → Spec) → Spec :=
     (fun X _cont ih s₂ =>
       Spec.«oracle» X (fun _ => ih s₂))
 
+@[simp]
+theorem append_done (s₂ : PublicTranscript Spec.done → Spec) :
+    Spec.append Spec.done s₂ = s₂ ⟨⟩ :=
+  rfl
+
+@[simp]
+theorem append_public (X : Type) (rest : X → Spec)
+    (s₂ : PublicTranscript (Spec.«public» X rest) → Spec) :
+    Spec.append (Spec.«public» X rest) s₂ =
+      Spec.«public» X (fun x => Spec.append (rest x) (fun pt => s₂ ⟨x, pt⟩)) :=
+  rfl
+
+@[simp]
+theorem append_oracle (X : Type) (cont : PUnit.{1} → Spec)
+    (s₂ : PublicTranscript (Spec.«oracle» X cont) → Spec) :
+    Spec.append (Spec.«oracle» X cont) s₂ =
+      Spec.«oracle» X (fun _ => Spec.append (cont ⟨⟩) s₂) :=
+  rfl
+
 /-- Role decoration for an appended `Oracle.Spec`. -/
 def RoleDeco.append :
     (s₁ : Spec) → (s₂ : PublicTranscript s₁ → Spec) →
@@ -479,6 +573,33 @@ def RoleDeco.append :
   | .«oracle» _ cont, s₂, r₁, r₂ =>
       RoleDeco.append (cont ⟨⟩) s₂ r₁ r₂
 
+@[simp]
+theorem RoleDeco.append_done
+    (s₂ : PublicTranscript Spec.done → Spec)
+    (r₁ : RoleDeco Spec.done)
+    (r₂ : (pt : PublicTranscript Spec.done) → RoleDeco (s₂ pt)) :
+    RoleDeco.append Spec.done s₂ r₁ r₂ = r₂ ⟨⟩ :=
+  rfl
+
+@[simp]
+theorem RoleDeco.append_public (X : Type) (rest : X → Spec)
+    (s₂ : PublicTranscript (Spec.«public» X rest) → Spec)
+    (r₁ : RoleDeco (Spec.«public» X rest))
+    (r₂ : (pt : PublicTranscript (Spec.«public» X rest)) → RoleDeco (s₂ pt)) :
+    RoleDeco.append (Spec.«public» X rest) s₂ r₁ r₂ =
+      ⟨r₁.1, fun x => RoleDeco.append (rest x) (fun pt => s₂ ⟨x, pt⟩)
+        (r₁.2 x) (fun pt => r₂ ⟨x, pt⟩)⟩ :=
+  rfl
+
+@[simp]
+theorem RoleDeco.append_oracle (X : Type) (cont : PUnit.{1} → Spec)
+    (s₂ : PublicTranscript (Spec.«oracle» X cont) → Spec)
+    (r₁ : RoleDeco (Spec.«oracle» X cont))
+    (r₂ : (pt : PublicTranscript (Spec.«oracle» X cont)) → RoleDeco (s₂ pt)) :
+    RoleDeco.append (Spec.«oracle» X cont) s₂ r₁ r₂ =
+      RoleDeco.append (cont ⟨⟩) s₂ r₁ r₂ :=
+  rfl
+
 /-- Oracle decoration for an appended `Oracle.Spec`. -/
 def OracleDeco.append :
     (s₁ : Spec) → (s₂ : PublicTranscript s₁ → Spec) →
@@ -490,6 +611,33 @@ def OracleDeco.append :
         (od₁ x) (fun pt => od₂ ⟨x, pt⟩)
   | .«oracle» _ cont, s₂, ⟨oi, odRest⟩, od₂ =>
       ⟨oi, OracleDeco.append (cont ⟨⟩) s₂ odRest od₂⟩
+
+@[simp]
+theorem OracleDeco.append_done
+    (s₂ : PublicTranscript Spec.done → Spec)
+    (od₁ : OracleDeco Spec.done)
+    (od₂ : (pt : PublicTranscript Spec.done) → OracleDeco (s₂ pt)) :
+    OracleDeco.append Spec.done s₂ od₁ od₂ = od₂ ⟨⟩ :=
+  rfl
+
+@[simp]
+theorem OracleDeco.append_public (X : Type) (rest : X → Spec)
+    (s₂ : PublicTranscript (Spec.«public» X rest) → Spec)
+    (od₁ : OracleDeco (Spec.«public» X rest))
+    (od₂ : (pt : PublicTranscript (Spec.«public» X rest)) → OracleDeco (s₂ pt)) :
+    OracleDeco.append (Spec.«public» X rest) s₂ od₁ od₂ =
+      fun x => OracleDeco.append (rest x) (fun pt => s₂ ⟨x, pt⟩)
+        (od₁ x) (fun pt => od₂ ⟨x, pt⟩) :=
+  rfl
+
+@[simp]
+theorem OracleDeco.append_oracle (X : Type) (cont : PUnit.{1} → Spec)
+    (s₂ : PublicTranscript (Spec.«oracle» X cont) → Spec)
+    (od₁ : OracleDeco (Spec.«oracle» X cont))
+    (od₂ : (pt : PublicTranscript (Spec.«oracle» X cont)) → OracleDeco (s₂ pt)) :
+    OracleDeco.append (Spec.«oracle» X cont) s₂ od₁ od₂ =
+      ⟨od₁.1, OracleDeco.append (cont ⟨⟩) s₂ od₁.2 od₂⟩ :=
+  rfl
 
 namespace MonadDecoration
 
