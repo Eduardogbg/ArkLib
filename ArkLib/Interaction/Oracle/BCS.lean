@@ -401,8 +401,8 @@ def answerCommittedQueries :
   | .done, _, _, _, _, _ => ⟨⟩
   | .«public» _ rest, odRest, _, cdRest, ⟨x, tr⟩, qd =>
       answerCommittedQueries (rest x) (odRest x) (cdRest x) tr qd
-  | .«oracle» _ cont, ⟨_oi, odRest⟩, _, ⟨some _, cdRest⟩, ⟨x, tr⟩, ⟨qb, qdRest⟩ =>
-      (fun i => OracleInterface.answer x (qb.queries i),
+  | .«oracle» _ cont, ⟨oi, odRest⟩, _, ⟨some _, cdRest⟩, ⟨x, tr⟩, ⟨qb, qdRest⟩ =>
+      (fun i => (oi.toOC.impl (qb.queries i)).run x,
        answerCommittedQueries (cont ⟨⟩) odRest cdRest tr qdRest)
   | .«oracle» _ cont, ⟨_, odRest⟩, _, ⟨none, cdRest⟩, ⟨_x, tr⟩, qd =>
       answerCommittedQueries (cont ⟨⟩) odRest cdRest tr qd
