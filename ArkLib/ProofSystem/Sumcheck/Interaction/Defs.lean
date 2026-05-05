@@ -70,6 +70,14 @@ variable (R : Type) [BEq R] [CommSemiring R] [LawfulBEq R] (deg : ℕ)
 /-- The public claim at each round of sum-check: just the target sum value. -/
 abbrev RoundClaim := R
 
+/-- Terminal public output of an `n`-round sum-check: the verifier challenge
+point together with the claimed value of the original polynomial at that point.
+
+Rejection is represented by wrapping this in `Option`. -/
+structure FinalClaim (numVars : Nat) where
+  point : Fin numVars → R
+  value : R
+
 /-! ## Single-round interaction shape -/
 
 /-- The plain `Interaction.Spec` projection for a single round: prover sends a

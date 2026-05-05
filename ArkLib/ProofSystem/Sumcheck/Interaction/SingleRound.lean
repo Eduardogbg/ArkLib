@@ -38,8 +38,8 @@ def honestRoundPoly {m_dom : ℕ} (D : Fin m_dom → R)
     CMvPolynomial.roundPoly_natDegree_le D poly.1 (fun mono hmono =>
       poly.2 ⟨0, by omega⟩ mono hmono)⟩
 
-/-- The honest prover step for one oracle round, specialized to a private
-residual polynomial witness that is threaded across rounds. -/
+/-- The honest prover step for one oracle round, specialized to the current
+residual polynomial extracted from the degree-bounded input oracle statement. -/
 def roundProverStep (m : Type → Type) [Monad m]
     {NextState : Type}
     {m_dom : ℕ} (D : Fin m_dom → R)
@@ -53,10 +53,11 @@ def roundProverStep (m : Type → Type) [Monad m]
   let sentPoly := honestRoundPoly (R := R) (deg := deg) D poly
   pure ⟨sentPoly, fun chal => pure (computeNext chal)⟩
 
-/-- One-round sum-check oracle reduction with a private residual polynomial
-witness. The public oracle statement stays fixed as the original polynomial,
-while the witness shrinks from `numVars + 1` variables to `numVars` after the
-sampled challenge. -/
+/-- One-round sum-check oracle reduction.
+
+The input oracle statement is the degree-bounded polynomial being checked. The
+prover has no separate polynomial witness; its current residual is read from the
+oracle statement and updated internally across the round. -/
 noncomputable def roundReduction
     {ι : Type} {oSpec : OracleSpec.{0, 0} ι}
     {m_dom : ℕ} (D : Fin m_dom → R)
@@ -69,22 +70,23 @@ noncomputable def roundReduction
       (fun _ => roundOracleDeco R deg)
       (fun _ => PUnit)
       (fun _ => Sumcheck.PolyFamily R deg (numVars + 1))
-      (fun _ => Sumcheck.PolyStmt R deg (numVars + 1))
+      (fun _ => PUnit)
       (fun _ _ => Option (RoundClaim R))
       (fun _ _ => Sumcheck.PolyFamily R deg (numVars + 1))
-      (fun _ _ => Sumcheck.PolyStmt R deg numVars) where
-  prover target sWithOracles witness := do
-    let sentPoly := honestRoundPoly (R := R) (deg := deg) D witness
+      (fun _ _ => PUnit) where
+  prover target sWithOracles _ := do
+    let poly := sWithOracles.oracleStmt ()
+    let sentPoly := honestRoundPoly (R := R) (deg := deg) D poly
     pure <|
-      roundProverStep (m := OracleComp oSpec) (R := R) (deg := deg) D witness
+      roundProverStep (m := OracleComp oSpec) (R := R) (deg := deg) D poly
         (fun chal =>
           let nextClaim : Option (RoundClaim R) := some (CPolynomial.eval chal sentPoly.1)
           (⟨⟨nextClaim, sWithOracles.oracleStmt⟩,
-              stepResidual (R := R) (deg := deg) chal witness⟩ :
+              PUnit.unit⟩ :
             HonestProverOutput
               (StatementWithOracles (fun _ => Option (RoundClaim R))
                 (fun _ => Sumcheck.PolyFamily R deg (numVars + 1)) target)
-              (Sumcheck.PolyStmt R deg numVars)))
+              PUnit))
   verifier := {
     toFun := fun target _ =>
       verifierStep (R := R) (deg := deg)
