@@ -82,6 +82,146 @@ def knowledgeSoundness
               (verifier.simulate shared pt) witOut)
         | verifier.run shared stmt inputImpl prover] ≤ ε
 
+/-- Knowledge soundness is monotone in the error bound. -/
+theorem knowledgeSoundness_error_mono
+    {ι : Type _} {oSpec : OracleSpec ι} [HasEvalSPMF (OracleComp oSpec)]
+    {SharedIn : Type _}
+    {Context : SharedIn → Spec}
+    {Roles : (shared : SharedIn) → Spec.RoleDeco (Context shared)}
+    {OracleDeco : (shared : SharedIn) → Spec.OracleDeco (Context shared)}
+    {StatementIn : SharedIn → Type _}
+    {ιₛᵢ : SharedIn → Type _}
+    {OStatementIn : (shared : SharedIn) → ιₛᵢ shared → Type _}
+    [∀ shared i, OracleInterface (OStatementIn shared i)]
+    {WitnessIn : SharedIn → Type _}
+    {StatementOut :
+      (shared : SharedIn) → Spec.PublicTranscript (Context shared) → Type _}
+    {ιₛₒ : (shared : SharedIn) → Spec.PublicTranscript (Context shared) → Type _}
+    {OStatementOut :
+      (shared : SharedIn) → (pt : Spec.PublicTranscript (Context shared)) →
+        ιₛₒ shared pt → Type _}
+    [∀ shared pt i, OracleInterface (OStatementOut shared pt i)]
+    {WitnessOut :
+      (shared : SharedIn) → Spec.PublicTranscript (Context shared) → Type _}
+    {verifier : Oracle.Verifier oSpec SharedIn Context Roles OracleDeco StatementIn
+      OStatementIn StatementOut OStatementOut}
+    {relIn :
+      Reduction.InputRelation (StatementIn := StatementIn)
+        (OStatementIn := OStatementIn) WitnessIn}
+    {relOut :
+      Reduction.OutputRelation (Context := Context) (OracleDeco := OracleDeco)
+        (StatementOut := StatementOut)
+        (OStatementIn := OStatementIn) (OStatementOut := OStatementOut)
+        WitnessOut}
+    {ε₁ ε₂ : ℝ≥0∞}
+    (hε : ε₁ ≤ ε₂) :
+    knowledgeSoundness verifier relIn relOut ε₁ →
+      knowledgeSoundness verifier relIn relOut ε₂ := by
+  rintro ⟨extractor, hKS⟩
+  refine ⟨extractor, ?_⟩
+  intro shared stmt inputImpl prover
+  exact le_trans (hKS shared stmt inputImpl prover) hε
+
+/-- Knowledge soundness is monotone under enlarging the input relation:
+the bad event `¬ relIn` becomes smaller. -/
+theorem knowledgeSoundness_relIn_mono
+    {ι : Type _} {oSpec : OracleSpec ι} [HasEvalSPMF (OracleComp oSpec)]
+    {SharedIn : Type _}
+    {Context : SharedIn → Spec}
+    {Roles : (shared : SharedIn) → Spec.RoleDeco (Context shared)}
+    {OracleDeco : (shared : SharedIn) → Spec.OracleDeco (Context shared)}
+    {StatementIn : SharedIn → Type _}
+    {ιₛᵢ : SharedIn → Type _}
+    {OStatementIn : (shared : SharedIn) → ιₛᵢ shared → Type _}
+    [∀ shared i, OracleInterface (OStatementIn shared i)]
+    {WitnessIn : SharedIn → Type _}
+    {StatementOut :
+      (shared : SharedIn) → Spec.PublicTranscript (Context shared) → Type _}
+    {ιₛₒ : (shared : SharedIn) → Spec.PublicTranscript (Context shared) → Type _}
+    {OStatementOut :
+      (shared : SharedIn) → (pt : Spec.PublicTranscript (Context shared)) →
+        ιₛₒ shared pt → Type _}
+    [∀ shared pt i, OracleInterface (OStatementOut shared pt i)]
+    {WitnessOut :
+      (shared : SharedIn) → Spec.PublicTranscript (Context shared) → Type _}
+    {verifier : Oracle.Verifier oSpec SharedIn Context Roles OracleDeco StatementIn
+      OStatementIn StatementOut OStatementOut}
+    {relIn₁ relIn₂ :
+      Reduction.InputRelation (StatementIn := StatementIn)
+        (OStatementIn := OStatementIn) WitnessIn}
+    {relOut :
+      Reduction.OutputRelation (Context := Context) (OracleDeco := OracleDeco)
+        (StatementOut := StatementOut)
+        (OStatementIn := OStatementIn) (OStatementOut := OStatementOut)
+        WitnessOut}
+    {ε : ℝ≥0∞}
+    (hRelIn : ∀ shared stmt inputImpl wit,
+      relIn₁ shared stmt inputImpl wit →
+        relIn₂ shared stmt inputImpl wit) :
+    knowledgeSoundness verifier relIn₁ relOut ε →
+      knowledgeSoundness verifier relIn₂ relOut ε := by
+  rintro ⟨extractor, hKS⟩
+  refine ⟨extractor, ?_⟩
+  intro shared stmt inputImpl prover
+  refine le_trans ?_ (hKS shared stmt inputImpl prover)
+  apply probEvent_mono
+  intro z _ hz
+  refine ⟨hz.1, ?_⟩
+  exact fun hIn =>
+    hz.2 (hRelIn shared stmt inputImpl
+      (extractor shared stmt inputImpl z.1 z.2.2.1
+        (verifier.simulate shared ((Context shared).projectPublic z.1)) z.2.1)
+      hIn)
+
+/-- Knowledge soundness is monotone under strengthening the output relation
+event. -/
+theorem knowledgeSoundness_relOut_mono
+    {ι : Type _} {oSpec : OracleSpec ι} [HasEvalSPMF (OracleComp oSpec)]
+    {SharedIn : Type _}
+    {Context : SharedIn → Spec}
+    {Roles : (shared : SharedIn) → Spec.RoleDeco (Context shared)}
+    {OracleDeco : (shared : SharedIn) → Spec.OracleDeco (Context shared)}
+    {StatementIn : SharedIn → Type _}
+    {ιₛᵢ : SharedIn → Type _}
+    {OStatementIn : (shared : SharedIn) → ιₛᵢ shared → Type _}
+    [∀ shared i, OracleInterface (OStatementIn shared i)]
+    {WitnessIn : SharedIn → Type _}
+    {StatementOut :
+      (shared : SharedIn) → Spec.PublicTranscript (Context shared) → Type _}
+    {ιₛₒ : (shared : SharedIn) → Spec.PublicTranscript (Context shared) → Type _}
+    {OStatementOut :
+      (shared : SharedIn) → (pt : Spec.PublicTranscript (Context shared)) →
+        ιₛₒ shared pt → Type _}
+    [∀ shared pt i, OracleInterface (OStatementOut shared pt i)]
+    {WitnessOut :
+      (shared : SharedIn) → Spec.PublicTranscript (Context shared) → Type _}
+    {verifier : Oracle.Verifier oSpec SharedIn Context Roles OracleDeco StatementIn
+      OStatementIn StatementOut OStatementOut}
+    {relIn :
+      Reduction.InputRelation (StatementIn := StatementIn)
+        (OStatementIn := OStatementIn) WitnessIn}
+    {relOut₁ relOut₂ :
+      Reduction.OutputRelation (Context := Context) (OracleDeco := OracleDeco)
+        (StatementOut := StatementOut)
+        (OStatementIn := OStatementIn) (OStatementOut := OStatementOut)
+        WitnessOut}
+    {ε : ℝ≥0∞}
+    (hRelOut : ∀ shared inputImpl pt stmtOut outputImpl witOut,
+      relOut₂ shared inputImpl pt stmtOut outputImpl witOut →
+        relOut₁ shared inputImpl pt stmtOut outputImpl witOut) :
+    knowledgeSoundness verifier relIn relOut₁ ε →
+      knowledgeSoundness verifier relIn relOut₂ ε := by
+  rintro ⟨extractor, hKS⟩
+  refine ⟨extractor, ?_⟩
+  intro shared stmt inputImpl prover
+  refine le_trans ?_ (hKS shared stmt inputImpl prover)
+  apply probEvent_mono
+  intro z _ hz
+  refine ⟨?_, hz.2⟩
+  exact hRelOut shared inputImpl ((Context shared).projectPublic z.1)
+    z.2.2.1 (verifier.simulate shared ((Context shared).projectPublic z.1))
+    z.2.1 hz.1
+
 /-- Knowledge soundness implies soundness, under a transcript-indexed choice
 of accepting witness.
 
