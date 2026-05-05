@@ -3,13 +3,14 @@ Copyright (c) 2026 ArkLib Contributors. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
-import ArkLib.Interaction.Oracle.Security
+import ArkLib.Interaction.Oracle.Security.Completeness
+import ArkLib.Interaction.Oracle.Security.KnowledgeSoundness
 
 /-!
 # Concrete Reification for Oracle.Spec Protocols
 
 This module adds optional concrete-oracle packaging on top of the behavior-first
-`Interaction.Oracle.Security` layer.
+`Interaction.Oracle.Security.Basic` behavior layer.
 
 The relative layer treats input and output oracles as query implementations.
 Reification packages concrete oracle statements when a protocol consumer wants

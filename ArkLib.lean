@@ -103,7 +103,10 @@ import ArkLib.Interaction.Oracle.Composition
 import ArkLib.Interaction.Oracle.Core
 import ArkLib.Interaction.Oracle.Execution
 import ArkLib.Interaction.Oracle.Reification
-import ArkLib.Interaction.Oracle.Security
+import ArkLib.Interaction.Oracle.Security.Basic
+import ArkLib.Interaction.Oracle.Security.Completeness
+import ArkLib.Interaction.Oracle.Security.KnowledgeSoundness
+import ArkLib.Interaction.Oracle.Security.Soundness
 import ArkLib.Interaction.Oracle.Spec
 import ArkLib.Interaction.Oracle.Telescope
 import ArkLib.Interaction.Reduction
