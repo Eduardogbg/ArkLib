@@ -6,6 +6,7 @@ Authors: Quang Dao
 import ArkLib.ProofSystem.Fri.Interaction.FoldPhase
 import ArkLib.ProofSystem.Fri.Interaction.QueryRound
 import ArkLib.Interaction.Oracle.Composition
+import ArkLib.Interaction.Oracle.Protocol
 
 /-!
 # FRI Interaction: Full Reduction
@@ -29,31 +30,39 @@ variable (x : Fˣ)
 variable {k : ℕ} (s : Fin (k + 1) → ℕ+) (d : ℕ)
 variable (l : ℕ)
 
+/-- Decorated protocol for the non-final fold phase. -/
+abbrev foldPhaseProtocol : Interaction.Oracle.Spec.Protocol where
+  spec := foldPhasePathContext (D := D) (n := n) (x := x) (s := s) (k := k)
+  roles := foldPhasePathRoles (D := D) (n := n) (x := x) (s := s) (k := k)
+  oracleDeco := foldPhasePathOD (D := D) (n := n) (x := x) (s := s) (k := k)
+
+/-- Decorated protocol for the terminal fold. -/
+abbrev finalFoldProtocol : Interaction.Oracle.Spec.Protocol where
+  spec := finalFoldSpec (F := F) (d := d)
+  roles := finalFoldRoles (F := F) (d := d)
+  oracleDeco := finalFoldOD (F := F) (d := d)
+
+/-- Decorated protocol for the fold phase followed by the terminal fold. -/
+abbrev foldFinalProtocol : Interaction.Oracle.Spec.Protocol :=
+  (foldPhaseProtocol (F := F) (D := D) (n := n) (x := x) (s := s)).append
+    (fun _ => finalFoldProtocol (F := F) (d := d))
+
 /-- Public interaction context for the fold phase followed by the
 terminal fold. -/
 abbrev foldFinalContext : Interaction.Oracle.Spec :=
-  (foldPhasePathContext (D := D) (n := n) (x := x) (s := s) (k := k)).append
-    (fun _ => finalFoldSpec (F := F) (d := d))
+  (foldFinalProtocol (F := F) (D := D) (n := n) (x := x) (s := s) (d := d)).spec
 
 /-- Role decoration for `foldFinalContext`. -/
 abbrev foldFinalRoles :
     Interaction.Oracle.Spec.RoleDeco
       (foldFinalContext (F := F) (D := D) (n := n) (x := x) (s := s) (d := d)) :=
-  Interaction.Oracle.Spec.RoleDeco.append
-    (foldPhasePathContext (D := D) (n := n) (x := x) (s := s) (k := k))
-    (fun _ => finalFoldSpec (F := F) (d := d))
-    (foldPhasePathRoles (D := D) (n := n) (x := x) (s := s) (k := k))
-    (fun _ => finalFoldRoles (F := F) (d := d))
+  (foldFinalProtocol (F := F) (D := D) (n := n) (x := x) (s := s) (d := d)).roles
 
 /-- Oracle-message decoration for `foldFinalContext`. -/
 abbrev foldFinalOD :
     Interaction.Oracle.Spec.OracleDeco
       (foldFinalContext (F := F) (D := D) (n := n) (x := x) (s := s) (d := d)) :=
-  Interaction.Oracle.Spec.OracleDeco.append
-    (foldPhasePathContext (D := D) (n := n) (x := x) (s := s) (k := k))
-    (fun _ => finalFoldSpec (F := F) (d := d))
-    (foldPhasePathOD (D := D) (n := n) (x := x) (s := s) (k := k))
-    (fun _ => finalFoldOD (F := F) (d := d))
+  (foldFinalProtocol (F := F) (D := D) (n := n) (x := x) (s := s) (d := d)).oracleDeco
 
 /-- Composition of the non-final FRI fold phase with the terminal fold.
 
@@ -85,30 +94,32 @@ def foldFinalReduction {ι : Type} {oSpec : OracleSpec.{0, 0} ι}
         (fun _ challenges => challenges)
         (fun _ => sampleFinalChallenge))
 
+/-- Decorated protocol for the query phase. -/
+abbrev queryProtocol : Interaction.Oracle.Spec.Protocol where
+  spec := queryRoundSpec (n := n) (s := s) (l := l)
+  roles := queryRoundRoles (n := n) (s := s) (l := l)
+  oracleDeco := queryRoundOD (n := n) (s := s) (l := l)
+
+/-- Decorated protocol for the full FRI interaction. -/
+abbrev protocol : Interaction.Oracle.Spec.Protocol :=
+  (foldFinalProtocol (F := F) (D := D) (n := n) (x := x) (s := s) (d := d)).append
+    (fun _ => queryProtocol (n := n) (s := s) l)
+
 /-- Public interaction context for the full FRI protocol. -/
 abbrev context : Interaction.Oracle.Spec :=
-  (foldFinalContext (F := F) (D := D) (n := n) (x := x) (s := s) (d := d)).append
-    (fun _ => queryRoundSpec (n := n) (s := s) (l := l))
+  (protocol (F := F) (D := D) (n := n) (x := x) (s := s) (d := d) l).spec
 
 /-- Role decoration for the full FRI protocol. -/
 abbrev roles :
     Interaction.Oracle.Spec.RoleDeco
       (context (F := F) (D := D) (n := n) (x := x) (s := s) (d := d) l) :=
-  Interaction.Oracle.Spec.RoleDeco.append
-    (foldFinalContext (F := F) (D := D) (n := n) (x := x) (s := s) (d := d))
-    (fun _ => queryRoundSpec (n := n) (s := s) (l := l))
-    (foldFinalRoles (F := F) (D := D) (n := n) (x := x) (s := s) (d := d))
-    (fun _ => queryRoundRoles (n := n) (s := s) (l := l))
+  (protocol (F := F) (D := D) (n := n) (x := x) (s := s) (d := d) l).roles
 
 /-- Oracle-message decoration for the full FRI protocol. -/
 abbrev oracleDeco :
     Interaction.Oracle.Spec.OracleDeco
       (context (F := F) (D := D) (n := n) (x := x) (s := s) (d := d) l) :=
-  Interaction.Oracle.Spec.OracleDeco.append
-    (foldFinalContext (F := F) (D := D) (n := n) (x := x) (s := s) (d := d))
-    (fun _ => queryRoundSpec (n := n) (s := s) (l := l))
-    (foldFinalOD (F := F) (D := D) (n := n) (x := x) (s := s) (d := d))
-    (fun _ => queryRoundOD (n := n) (s := s) (l := l))
+  (protocol (F := F) (D := D) (n := n) (x := x) (s := s) (d := d) l).oracleDeco
 
 /-- Full FRI interaction reduction.
 

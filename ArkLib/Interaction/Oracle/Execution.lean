@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 import ArkLib.Interaction.Oracle.Core
+import ArkLib.Interaction.Oracle.Composition
 import VCVio.OracleComp.SimSemantics.SimulateQ
 
 /-!
@@ -604,6 +605,172 @@ def Verifier.run
   pure ⟨tr, outP,
     ⟨stmtOutV,
      verifier.simulate shared ((Context shared).projectPublic tr)⟩⟩
+
+/-- Running a reduction against an arbitrary prover strategy is just running
+that strategy against the reduction verifier, with the input oracle statement
+implemented by `simOracle0`. -/
+theorem Reduction.runConcrete_eq_verifier_run
+    {ι : Type} {oSpec : OracleSpec.{0, 0} ι}
+    {SharedIn : Type}
+    {Context : SharedIn → Spec}
+    {Roles : (shared : SharedIn) → Spec.RoleDeco (Context shared)}
+    {OracleDeco : (shared : SharedIn) → Spec.OracleDeco (Context shared)}
+    {StatementIn : SharedIn → Type}
+    {ιₛᵢ : SharedIn → Type}
+    {OStatementIn : (shared : SharedIn) → ιₛᵢ shared → Type}
+    [∀ shared i, OracleInterface (OStatementIn shared i)]
+    {WitnessIn : SharedIn → Type}
+    {StatementOut :
+      (shared : SharedIn) → Spec.PublicTranscript (Context shared) → Type}
+    {ιₛₒ : (shared : SharedIn) → Spec.PublicTranscript (Context shared) → Type}
+    {OStatementOut :
+      (shared : SharedIn) → (pt : Spec.PublicTranscript (Context shared)) →
+        ιₛₒ shared pt → Type}
+    [∀ shared pt i, OracleInterface (OStatementOut shared pt i)]
+    {WitnessOut :
+      (shared : SharedIn) → Spec.PublicTranscript (Context shared) → Type}
+    (reduction : Oracle.Reduction oSpec SharedIn Context Roles OracleDeco StatementIn
+      OStatementIn WitnessIn StatementOut OStatementOut WitnessOut)
+    (shared : SharedIn)
+    (s : StatementWithOracles StatementIn OStatementIn shared)
+    {OutputP : Interaction.Spec.Transcript (Context shared).toInteractionSpec → Type}
+    (prover : Interaction.Spec.Strategy.withRoles (OracleComp oSpec)
+      (Context shared).toInteractionSpec
+      ((Context shared).toSpecRoles (Roles shared)) OutputP) :
+    reduction.runConcrete shared s prover =
+      Verifier.run reduction.verifier shared s.stmt
+        (OracleInterface.simOracle0 (OStatementIn shared) s.oracleStmt)
+        prover :=
+  rfl
+
+/-- Honest concrete execution is honest prover setup followed by running the
+resulting strategy against the verifier. -/
+theorem Reduction.executeConcrete_eq_verifier_run
+    {ι : Type} {oSpec : OracleSpec.{0, 0} ι}
+    {SharedIn : Type}
+    {Context : SharedIn → Spec}
+    {Roles : (shared : SharedIn) → Spec.RoleDeco (Context shared)}
+    {OracleDeco : (shared : SharedIn) → Spec.OracleDeco (Context shared)}
+    {StatementIn : SharedIn → Type}
+    {ιₛᵢ : SharedIn → Type}
+    {OStatementIn : (shared : SharedIn) → ιₛᵢ shared → Type}
+    [∀ shared i, OracleInterface (OStatementIn shared i)]
+    {WitnessIn : SharedIn → Type}
+    {StatementOut :
+      (shared : SharedIn) → Spec.PublicTranscript (Context shared) → Type}
+    {ιₛₒ : (shared : SharedIn) → Spec.PublicTranscript (Context shared) → Type}
+    {OStatementOut :
+      (shared : SharedIn) → (pt : Spec.PublicTranscript (Context shared)) →
+        ιₛₒ shared pt → Type}
+    [∀ shared pt i, OracleInterface (OStatementOut shared pt i)]
+    {WitnessOut :
+      (shared : SharedIn) → Spec.PublicTranscript (Context shared) → Type}
+    (reduction : Oracle.Reduction oSpec SharedIn Context Roles OracleDeco StatementIn
+      OStatementIn WitnessIn StatementOut OStatementOut WitnessOut)
+    (shared : SharedIn)
+    (s : StatementWithOracles StatementIn OStatementIn shared)
+    (w : WitnessIn shared) :
+    reduction.executeConcrete shared s w =
+      (do
+        let strategy ← reduction.prover shared s w
+        let strategy' :=
+          Interaction.Spec.Strategy.withRolesAndMonads.toWithRolesConstant
+            (Context shared).toInteractionSpec
+            ((Context shared).toSpecRoles (Roles shared))
+            strategy
+        Verifier.run reduction.verifier shared s.stmt
+          (OracleInterface.simOracle0 (OStatementIn shared) s.oracleStmt)
+          strategy') :=
+  rfl
+
+/-- Concrete execution of a composed reduction is a single interaction over the
+appended oracle context, using the composed prover strategy and composed
+verifier counterpart.
+
+This theorem is intentionally structural: the suffix verifier's queries to the
+middle oracle are routed by `Reduction.comp`'s verifier simulation, rather than
+being identified with the prefix prover's concrete output oracle by type-level
+transport. -/
+theorem Reduction.executeConcrete_comp_eq_runWithOracleCounterpart
+    {ι : Type} {oSpec : OracleSpec.{0, 0} ι}
+    {SharedIn : Type}
+    {Context₁ : SharedIn → Spec}
+    {Roles₁ : (shared : SharedIn) → Spec.RoleDeco (Context₁ shared)}
+    {OracleDeco₁ : (shared : SharedIn) → Spec.OracleDeco (Context₁ shared)}
+    {StatementIn : SharedIn → Type}
+    {ιₛᵢ : SharedIn → Type}
+    {OStatementIn : (shared : SharedIn) → ιₛᵢ shared → Type}
+    [∀ shared i, OracleInterface (OStatementIn shared i)]
+    {WitnessIn : SharedIn → Type}
+    {StatementMid :
+      (shared : SharedIn) → Spec.PublicTranscript (Context₁ shared) → Type}
+    {ιₛₘ : (shared : SharedIn) → Spec.PublicTranscript (Context₁ shared) → Type}
+    {OStatementMid :
+      (shared : SharedIn) → (pt₁ : Spec.PublicTranscript (Context₁ shared)) →
+        ιₛₘ shared pt₁ → Type}
+    [∀ shared pt₁ i, OracleInterface (OStatementMid shared pt₁ i)]
+    {WitnessMid :
+      (shared : SharedIn) → Spec.PublicTranscript (Context₁ shared) → Type}
+    {Context₂ : (shared : SharedIn) → Spec.PublicTranscript (Context₁ shared) → Spec}
+    {Roles₂ : (shared : SharedIn) → (pt₁ : Spec.PublicTranscript (Context₁ shared)) →
+      Spec.RoleDeco (Context₂ shared pt₁)}
+    {OracleDeco₂ : (shared : SharedIn) →
+      (pt₁ : Spec.PublicTranscript (Context₁ shared)) →
+      Spec.OracleDeco (Context₂ shared pt₁)}
+    {StatementOut :
+      (shared : SharedIn) → (pt₁ : Spec.PublicTranscript (Context₁ shared)) →
+      Spec.PublicTranscript (Context₂ shared pt₁) → Type}
+    {ιₛₒ : (shared : SharedIn) → (pt₁ : Spec.PublicTranscript (Context₁ shared)) →
+      Spec.PublicTranscript (Context₂ shared pt₁) → Type}
+    {OStatementOut :
+      (shared : SharedIn) → (pt₁ : Spec.PublicTranscript (Context₁ shared)) →
+      (pt₂ : Spec.PublicTranscript (Context₂ shared pt₁)) → ιₛₒ shared pt₁ pt₂ → Type}
+    [∀ shared pt₁ pt₂ i, OracleInterface (OStatementOut shared pt₁ pt₂ i)]
+    {WitnessOut :
+      (shared : SharedIn) → (pt₁ : Spec.PublicTranscript (Context₁ shared)) →
+      Spec.PublicTranscript (Context₂ shared pt₁) → Type}
+    (r₁ : Reduction oSpec SharedIn Context₁ Roles₁ OracleDeco₁
+      StatementIn OStatementIn WitnessIn StatementMid OStatementMid WitnessMid)
+    (r₂ : (shared : SharedIn) → (pt₁ : Spec.PublicTranscript (Context₁ shared)) →
+      Reduction oSpec PUnit
+        (fun _ => Context₂ shared pt₁)
+        (fun _ => Roles₂ shared pt₁)
+        (fun _ => OracleDeco₂ shared pt₁)
+        (fun _ => StatementMid shared pt₁)
+        (fun _ => OStatementMid shared pt₁)
+        (fun _ => WitnessMid shared pt₁)
+        (fun _ pt₂ => StatementOut shared pt₁ pt₂)
+        (OStatementOut := fun _ pt₂ => OStatementOut shared pt₁ pt₂)
+        (fun _ pt₂ => WitnessOut shared pt₁ pt₂))
+    (shared : SharedIn)
+    (s : StatementWithOracles StatementIn OStatementIn shared)
+    (w : WitnessIn shared) :
+    (Reduction.comp r₁ r₂).executeConcrete shared s w =
+      (do
+        let strategy ← (Reduction.comp r₁ r₂).prover shared s w
+        let strategy' :=
+          Interaction.Spec.Strategy.withRolesAndMonads.toWithRolesConstant
+            ((Context₁ shared).append (Context₂ shared)).toInteractionSpec
+            (((Context₁ shared).append (Context₂ shared)).toSpecRoles
+              (Spec.RoleDeco.append (Context₁ shared) (Context₂ shared)
+                (Roles₁ shared) (Roles₂ shared)))
+            strategy
+        let ⟨tr, proverOut, stmtOutV⟩ ←
+          Spec.runWithOracleCounterpart
+            (OracleInterface.simOracle0 (OStatementIn shared) s.oracleStmt)
+            ((Context₁ shared).append (Context₂ shared))
+            (Spec.RoleDeco.append (Context₁ shared) (Context₂ shared)
+              (Roles₁ shared) (Roles₂ shared))
+            (Spec.OracleDeco.append (Context₁ shared) (Context₂ shared)
+              (OracleDeco₁ shared) (OracleDeco₂ shared))
+            []ₒ (fun q => q.elim)
+            strategy'
+            ((Reduction.comp r₁ r₂).verifier.toFun shared s.stmt)
+        pure ⟨tr, proverOut,
+          ⟨stmtOutV,
+            (Reduction.comp r₁ r₂).verifier.simulate shared
+              (((Context₁ shared).append (Context₂ shared)).projectPublic tr)⟩⟩) :=
+  rfl
 
 /-- Mapping the prover-side output of a strategy before execution is equivalent
 to executing first and then mapping the prover component of the result. -/

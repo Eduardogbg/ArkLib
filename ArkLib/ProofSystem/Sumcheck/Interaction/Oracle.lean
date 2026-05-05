@@ -5,6 +5,7 @@ Authors: Quang Dao
 -/
 import ArkLib.ProofSystem.Sumcheck.Interaction.Defs
 import ArkLib.Interaction.Oracle.Core
+import ArkLib.Interaction.Oracle.Protocol
 
 /-!
 # Sum-Check Oracle Round Primitives
@@ -26,22 +27,27 @@ section
 variable (R : Type) [BEq R] [CommSemiring R] [LawfulBEq R]
 variable (deg : ℕ)
 
-/-- Oracle-spec shape for one round: the prover provides the round
+/-- Decorated oracle protocol for one round: the prover provides the round
 polynomial as an oracle message, then the verifier samples a public challenge. -/
-def roundSpec : Interaction.Oracle.Spec :=
-  .oracle (CDegreeLE R deg) fun _ =>
-    .public R fun _ =>
-      .done
+def roundProtocol : Interaction.Oracle.Spec.Protocol :=
+  Interaction.Oracle.Spec.Protocol.oracleWith (CDegreeLE R deg)
+    instOracleInterfaceCDegreeLE <|
+    Interaction.Oracle.Spec.Protocol.public .receiver R fun _ =>
+      Interaction.Oracle.Spec.Protocol.done
+
+/-- Oracle-spec shape for one sum-check oracle round. -/
+abbrev roundSpec : Interaction.Oracle.Spec :=
+  (roundProtocol R deg).spec
 
 /-- Role decoration for one sum-check round. The oracle polynomial node is
 implicitly prover-owned; the only public node is the verifier challenge. -/
-def roundRoles : Interaction.Oracle.Spec.RoleDeco (roundSpec R deg) :=
-  ⟨.receiver, fun _ => ⟨⟩⟩
+abbrev roundRoles : Interaction.Oracle.Spec.RoleDeco (roundSpec R deg) :=
+  (roundProtocol R deg).roles
 
 /-- Oracle decoration for one round: the prover's univariate round polynomial is
 queryable via its evaluation oracle interface. -/
-def roundOracleDeco : Interaction.Oracle.Spec.OracleDeco (roundSpec R deg) :=
-  ⟨instOracleInterfaceCDegreeLE, fun _ => ⟨⟩⟩
+abbrev roundOracleDeco : Interaction.Oracle.Spec.OracleDeco (roundSpec R deg) :=
+  (roundProtocol R deg).oracleDeco
 
 /-- Forgetting oracle handles recovers the plain interaction projection. -/
 @[simp]

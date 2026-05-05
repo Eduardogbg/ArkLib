@@ -89,10 +89,10 @@ noncomputable def roundReduction
               PUnit))
   verifier := {
     toFun := fun target _ =>
-      verifierStep (R := R) (deg := deg)
+      verifierStep R deg
         (Sumcheck.PolyFamily R deg (numVars + 1)) []ₒ D target sampleChallenge
     simulate := fun _ _ q =>
-      liftM <| ([Sumcheck.PolyFamily R deg (numVars + 1)]ₒ).query q
+      ([Sumcheck.PolyFamily R deg (numVars + 1)]ₒ).query q
   }
 
 end

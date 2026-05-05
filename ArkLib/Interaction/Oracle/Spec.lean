@@ -322,6 +322,40 @@ def answerQuery :
     | .inl q => (oi.toOC.impl q).run x
     | .inr handle => answerQuery (cont ⟨⟩) odRest tr handle
 
+/-- Extend an accumulated oracle spec by the oracle messages encountered along
+a concrete public-transcript path.
+
+This follows the same accumulator order as verifier execution: at an `.oracle`
+node the current oracle is appended to the accumulator before recurring. That
+shape is more useful for execution theorems than reassociating through
+`accSpec + s.toOracleSpec od pt`. -/
+def accumulatedSpec :
+    (s : Spec) → (od : OracleDeco s) → PublicTranscript s →
+    {ιₐ : Type} → OracleSpec.{0, 0} ιₐ → Σ ιₐ', OracleSpec.{0, 0} ιₐ'
+  | .done, _, _, _, accSpec => ⟨_, accSpec⟩
+  | .«public» _ rest, odRest, ⟨x, pt⟩, _, accSpec =>
+      accumulatedSpec (rest x) (odRest x) pt accSpec
+  | .«oracle» _ cont, ⟨oi, odRest⟩, pt, _, accSpec =>
+      accumulatedSpec (cont ⟨⟩) odRest pt
+        (accSpec + @OracleInterface.spec _ oi)
+
+/-- Answer queries for `accumulatedSpec`, extending an existing
+accumulator implementation with the oracle messages in a full transcript. -/
+def accumulatedImpl :
+    (s : Spec) → (od : OracleDeco s) →
+    (tr : Interaction.Spec.Transcript s.toInteractionSpec) →
+    {ιₐ : Type} → (accSpec : OracleSpec.{0, 0} ιₐ) → QueryImpl accSpec Id →
+    QueryImpl (accumulatedSpec s od (s.projectPublic tr) accSpec).2 Id
+  | .done, _, _, _, _, accImpl => accImpl
+  | .«public» _ rest, odRest, ⟨x, tr⟩, _, accSpec, accImpl =>
+      accumulatedImpl (rest x) (odRest x) tr accSpec accImpl
+  | .«oracle» _ cont, ⟨oi, odRest⟩, ⟨x, tr⟩, _, accSpec, accImpl =>
+      let implX : QueryImpl (@OracleInterface.spec _ oi) Id :=
+        fun q => (oi.toOC.impl q).run x
+      accumulatedImpl (cont ⟨⟩) odRest tr
+        (accSpec + @OracleInterface.spec _ oi)
+        (QueryImpl.add accImpl implX)
+
 /-! ## Node monads -/
 
 /-- The pure node monad used at nodes where a party only observes a message and
@@ -672,6 +706,27 @@ def transcriptAppend :
       ⟨x, transcriptAppend (rest x) (fun pt => s₂ ⟨x, pt⟩) tr₁ tr₂⟩
   | .«oracle» _ cont, s₂, ⟨x, tr₁⟩, tr₂ =>
       ⟨x, transcriptAppend (cont ⟨⟩) s₂ tr₁ tr₂⟩
+
+/-- Pack a value indexed by the two phase public transcripts into the public
+transcript of `transcriptAppend`.
+
+Unlike `PublicTranscript.packAppend`, this targets the public transcript
+computed from the concrete combined transcript, so callers do not need to
+rewrite by `projectPublic_transcriptAppend`. -/
+def PublicTranscript.packTranscriptAppend :
+    (s₁ : Spec) → (s₂ : PublicTranscript s₁ → Spec) →
+    (F : (pt₁ : PublicTranscript s₁) → PublicTranscript (s₂ pt₁) → Type u) →
+    (tr₁ : Interaction.Spec.Transcript s₁.toInteractionSpec) →
+    (tr₂ : Interaction.Spec.Transcript
+      ((s₂ (s₁.projectPublic tr₁)).toInteractionSpec)) →
+    F (s₁.projectPublic tr₁) ((s₂ (s₁.projectPublic tr₁)).projectPublic tr₂) →
+    liftAppend s₁ s₂ F ((s₁.append s₂).projectPublic (transcriptAppend s₁ s₂ tr₁ tr₂))
+  | .done, _, _, _, _, x => x
+  | .«public» _ rest, s₂, F, ⟨xm, tr₁⟩, tr₂, x =>
+      packTranscriptAppend (rest xm) (fun pt => s₂ ⟨xm, pt⟩)
+        (fun pt₁ pt₂ => F ⟨xm, pt₁⟩ pt₂) tr₁ tr₂ x
+  | .«oracle» _ cont, s₂, F, ⟨_, tr₁⟩, tr₂, x =>
+      packTranscriptAppend (cont ⟨⟩) s₂ F tr₁ tr₂ x
 
 /-- `projectPublic` commutes with `transcriptAppend`. -/
 theorem projectPublic_transcriptAppend :

@@ -102,6 +102,7 @@ import ArkLib.Interaction.Oracle.Chain
 import ArkLib.Interaction.Oracle.Composition
 import ArkLib.Interaction.Oracle.Core
 import ArkLib.Interaction.Oracle.Execution
+import ArkLib.Interaction.Oracle.Protocol
 import ArkLib.Interaction.Oracle.Reification
 import ArkLib.Interaction.Oracle.Security.Basic
 import ArkLib.Interaction.Oracle.Security.Completeness

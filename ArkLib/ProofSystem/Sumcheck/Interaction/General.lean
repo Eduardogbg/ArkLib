@@ -5,6 +5,7 @@ Authors: Quang Dao
 -/
 import ArkLib.ProofSystem.Sumcheck.Interaction.SingleRound
 import ArkLib.Interaction.Oracle.Chain
+import ArkLib.Interaction.Oracle.Protocol
 
 /-!
 # Sum-Check Multi-Round Oracle Surface
@@ -33,18 +34,25 @@ def fullChain : (n : Nat) → Interaction.Oracle.Spec.Chain n :=
   Interaction.Oracle.Spec.Chain.replicate
     (roundSpec R deg) (roundRoles R deg) (roundOracleDeco R deg)
 
+/-- Decorated `n`-round sum-check oracle protocol, flattened from
+`fullChain`. -/
+abbrev protocol (n : Nat) : Interaction.Oracle.Spec.Protocol where
+  spec := Interaction.Oracle.Spec.Chain.toSpec n (fullChain R deg n)
+  roles := Interaction.Oracle.Spec.Chain.toRoles n (fullChain R deg n)
+  oracleDeco := Interaction.Oracle.Spec.Chain.toOracleDeco n (fullChain R deg n)
+
 /-- The `n`-round sum-check oracle spec, flattened from `fullChain`. -/
 abbrev context (n : Nat) : Interaction.Oracle.Spec :=
-  Interaction.Oracle.Spec.Chain.toSpec n (fullChain R deg n)
+  (protocol R deg n).spec
 
 /-- Role decoration for `context`. -/
 abbrev roles (n : Nat) : Interaction.Oracle.Spec.RoleDeco (context R deg n) :=
-  Interaction.Oracle.Spec.Chain.toRoles n (fullChain R deg n)
+  (protocol R deg n).roles
 
 /-- Oracle decoration for `context`. -/
 abbrev oracleDeco (n : Nat) :
     Interaction.Oracle.Spec.OracleDeco (context R deg n) :=
-  Interaction.Oracle.Spec.Chain.toOracleDeco n (fullChain R deg n)
+  (protocol R deg n).oracleDeco
 
 /-- Extract the public transcript of the `i`-th oracle sum-check round. Since
 round polynomials are oracle messages, this transcript contains only the
