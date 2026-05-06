@@ -720,18 +720,20 @@ def Reduction.comp
         stratSplit
   verifier := {
     toFun := fun shared stmtIn =>
-      Interaction.Spec.Counterpart.withMonads.mapOutput
-        ((Context₁ shared).append (Context₂ shared)).toInteractionSpec
-        (((Context₁ shared).append (Context₂ shared)).toSpecRoles
-          (Spec.RoleDeco.append (Context₁ shared) (Context₂ shared)
-            (Roles₁ shared) (Roles₂ shared)))
-        (((Context₁ shared).append (Context₂ shared)).toMonadDecoration oSpec
-          (OStatementIn shared)
-          (Spec.RoleDeco.append (Context₁ shared) (Context₂ shared)
-            (Roles₁ shared) (Roles₂ shared))
-          (Spec.OracleDeco.append (Context₁ shared) (Context₂ shared)
-            (OracleDeco₁ shared) (OracleDeco₂ shared))
-          []ₒ)
+      Interaction.Spec.ShapeOver.mapOutput Interaction.Spec.counterpartMonadicShape
+        (agent := PUnit.unit)
+        (spec := ((Context₁ shared).append (Context₂ shared)).toInteractionSpec)
+        (ctxs := Interaction.RoleDecoration.withMonads
+          (((Context₁ shared).append (Context₂ shared)).toSpecRoles
+            (Spec.RoleDeco.append (Context₁ shared) (Context₂ shared)
+              (Roles₁ shared) (Roles₂ shared)))
+          (((Context₁ shared).append (Context₂ shared)).toMonadDecoration oSpec
+            (OStatementIn shared)
+            (Spec.RoleDeco.append (Context₁ shared) (Context₂ shared)
+              (Roles₁ shared) (Roles₂ shared))
+            (Spec.OracleDeco.append (Context₁ shared) (Context₂ shared)
+              (OracleDeco₁ shared) (OracleDeco₂ shared))
+            []ₒ))
         (fun tr out =>
           Spec.PublicTranscript.unliftAppend (Context₁ shared) (Context₂ shared)
             (fun pt₁ pt₂ => StatementOut shared pt₁ pt₂)

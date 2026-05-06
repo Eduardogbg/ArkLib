@@ -365,11 +365,13 @@ def Reduction.ofChain
         strat'
   verifier := {
     toFun := fun shared stmtIn =>
-      Interaction.Spec.Counterpart.withMonads.mapOutput
-        (Spec.Chain.toSpec n (c shared)).toInteractionSpec
-        ((Spec.Chain.toSpec n (c shared)).toSpecRoles (Spec.Chain.toRoles n (c shared)))
-        ((Spec.Chain.toSpec n (c shared)).toMonadDecoration oSpec (OStatementIn shared)
-          (Spec.Chain.toRoles n (c shared)) (Spec.Chain.toOracleDeco n (c shared)) []ₒ)
+      Interaction.Spec.ShapeOver.mapOutput Interaction.Spec.counterpartMonadicShape
+        (agent := PUnit.unit)
+        (spec := (Spec.Chain.toSpec n (c shared)).toInteractionSpec)
+        (ctxs := Interaction.RoleDecoration.withMonads
+          ((Spec.Chain.toSpec n (c shared)).toSpecRoles (Spec.Chain.toRoles n (c shared)))
+          ((Spec.Chain.toSpec n (c shared)).toMonadDecoration oSpec (OStatementIn shared)
+            (Spec.Chain.toRoles n (c shared)) (Spec.Chain.toOracleDeco n (c shared)) []ₒ))
         (fun tr verifierState =>
           let pt := (Spec.Chain.toSpec n (c shared)).projectPublic tr
           verifierStmtResult shared pt verifierState)
@@ -794,13 +796,15 @@ def Reduction.ofIndexedChain
         strat'
   verifier := {
     toFun := fun shared stmtIn =>
-      Interaction.Spec.Counterpart.withMonads.mapOutput
-        (Spec.IndexedChain.toSpec n (c shared)).toInteractionSpec
-        ((Spec.IndexedChain.toSpec n (c shared)).toSpecRoles
-          (Spec.IndexedChain.toRoles n (c shared)))
-        ((Spec.IndexedChain.toSpec n (c shared)).toMonadDecoration oSpec (OStatementIn shared)
-          (Spec.IndexedChain.toRoles n (c shared)) (Spec.IndexedChain.toOracleDeco n (c shared))
-          []ₒ)
+      Interaction.Spec.ShapeOver.mapOutput Interaction.Spec.counterpartMonadicShape
+        (agent := PUnit.unit)
+        (spec := (Spec.IndexedChain.toSpec n (c shared)).toInteractionSpec)
+        (ctxs := Interaction.RoleDecoration.withMonads
+          ((Spec.IndexedChain.toSpec n (c shared)).toSpecRoles
+            (Spec.IndexedChain.toRoles n (c shared)))
+          ((Spec.IndexedChain.toSpec n (c shared)).toMonadDecoration oSpec (OStatementIn shared)
+            (Spec.IndexedChain.toRoles n (c shared)) (Spec.IndexedChain.toOracleDeco n (c shared))
+            []ₒ))
         (fun tr verifierState =>
           let pt := (Spec.IndexedChain.toSpec n (c shared)).projectPublic tr
           verifierStmtResult shared pt verifierState)
@@ -909,13 +913,15 @@ def Reduction.ofPathChain
         strat'
   verifier := {
     toFun := fun shared stmtIn =>
-      Interaction.Spec.Counterpart.withMonads.mapOutput
-        (Spec.PathChain.toSpec n (c shared)).toInteractionSpec
-        ((Spec.PathChain.toSpec n (c shared)).toSpecRoles
-          (Spec.PathChain.toRoles n (c shared)))
-        ((Spec.PathChain.toSpec n (c shared)).toMonadDecoration oSpec (OStatementIn shared)
-          (Spec.PathChain.toRoles n (c shared)) (Spec.PathChain.toOracleDeco n (c shared))
-          []ₒ)
+      Interaction.Spec.ShapeOver.mapOutput Interaction.Spec.counterpartMonadicShape
+        (agent := PUnit.unit)
+        (spec := (Spec.PathChain.toSpec n (c shared)).toInteractionSpec)
+        (ctxs := Interaction.RoleDecoration.withMonads
+          ((Spec.PathChain.toSpec n (c shared)).toSpecRoles
+            (Spec.PathChain.toRoles n (c shared)))
+          ((Spec.PathChain.toSpec n (c shared)).toMonadDecoration oSpec (OStatementIn shared)
+            (Spec.PathChain.toRoles n (c shared)) (Spec.PathChain.toOracleDeco n (c shared))
+            []ₒ))
         (fun tr verifierState =>
           let pt := (Spec.PathChain.toSpec n (c shared)).projectPublic tr
           verifierStmtResult shared pt verifierState)
