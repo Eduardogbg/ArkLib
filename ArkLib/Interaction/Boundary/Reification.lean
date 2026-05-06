@@ -633,10 +633,12 @@ def pullback
     let innerWit :=
       toContext.wit.proj outerStmt outerWit
     let strat ← reduction.prover innerStmt ⟨PUnit.unit, innerOStmtIn⟩ innerWit
-    pure <| Interaction.Spec.Strategy.withRolesAndMonads.mapOutput
-      (InnerContext innerStmt).toInteractionSpec
-      ((InnerContext innerStmt).toSpecRoles (InnerRoles innerStmt))
-      ((InnerContext innerStmt).toProverMonadDecoration oSpec)
+    pure <| Interaction.Spec.ShapeOver.mapOutput Interaction.Spec.focalMonadicShape
+      (agent := PUnit.unit)
+      (spec := (InnerContext innerStmt).toInteractionSpec)
+      (ctxs := Interaction.RoleDecoration.withMonads
+        ((InnerContext innerStmt).toSpecRoles (InnerRoles innerStmt))
+        ((InnerContext innerStmt).toProverMonadDecoration oSpec))
       (fun tr out =>
         let pt := (InnerContext innerStmt).projectPublic tr
         let innerStmtOut := out.stmt.stmt

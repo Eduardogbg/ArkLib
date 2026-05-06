@@ -110,10 +110,12 @@ def Reduction.freezeSharedToPUnit
           (WitnessOut shared ((Context shared).projectPublic tr))
       | _, ⟨stmtOut, witOut⟩ => ⟨⟨stmtOut.stmt, stmtOut.oracleStmt⟩, witOut⟩
     let strat ← reduction.prover shared input' w
-    pure <| Interaction.Spec.Strategy.withRolesAndMonads.mapOutput
-      (Context shared).toInteractionSpec
-      ((Context shared).toSpecRoles (Roles shared))
-      ((Context shared).toProverMonadDecoration oSpec)
+    pure <| Interaction.Spec.ShapeOver.mapOutput Interaction.Spec.focalMonadicShape
+      (agent := PUnit.unit)
+      (spec := (Context shared).toInteractionSpec)
+      (ctxs := Interaction.RoleDecoration.withMonads
+        ((Context shared).toSpecRoles (Roles shared))
+        ((Context shared).toProverMonadDecoration oSpec))
       remapOutput strat
   verifier := {
     toFun := fun _ stmt =>
@@ -175,10 +177,12 @@ def Reduction.pullbackShared
           (WitnessOut (f shared) ((Context (f shared)).projectPublic tr))
       | _, ⟨stmtOut, witOut⟩ => ⟨⟨stmtOut.stmt, stmtOut.oracleStmt⟩, witOut⟩
     let strat ← reduction.prover (f shared) input' w
-    pure <| Interaction.Spec.Strategy.withRolesAndMonads.mapOutput
-      (Context (f shared)).toInteractionSpec
-      ((Context (f shared)).toSpecRoles (Roles (f shared)))
-      ((Context (f shared)).toProverMonadDecoration oSpec)
+    pure <| Interaction.Spec.ShapeOver.mapOutput Interaction.Spec.focalMonadicShape
+      (agent := PUnit.unit)
+      (spec := (Context (f shared)).toInteractionSpec)
+      (ctxs := Interaction.RoleDecoration.withMonads
+        ((Context (f shared)).toSpecRoles (Roles (f shared)))
+        ((Context (f shared)).toProverMonadDecoration oSpec))
       remapOutput strat
   verifier := {
     toFun := fun shared stmt =>
@@ -673,10 +677,12 @@ def Reduction.comp
             ⟨midOut.stmt.stmt, midOut.stmt.oracleStmt⟩
           let strat₂ ← (r₂ shared pt₁).prover PUnit.unit midStmt midOut.wit
           let strat₂' :=
-            Interaction.Spec.Strategy.withRolesAndMonads.mapOutput
-              (Context₂ shared pt₁).toInteractionSpec
-              ((Context₂ shared pt₁).toSpecRoles (Roles₂ shared pt₁))
-              ((Context₂ shared pt₁).toProverMonadDecoration oSpec)
+            Interaction.Spec.ShapeOver.mapOutput Interaction.Spec.focalMonadicShape
+              (agent := PUnit.unit)
+              (spec := (Context₂ shared pt₁).toInteractionSpec)
+              (ctxs := Interaction.RoleDecoration.withMonads
+                ((Context₂ shared pt₁).toSpecRoles (Roles₂ shared pt₁))
+                ((Context₂ shared pt₁).toProverMonadDecoration oSpec))
               (fun tr₂ out =>
                 (⟨⟨out.stmt.stmt, out.stmt.oracleStmt⟩, out.wit⟩ :
                   HonestProverOutput

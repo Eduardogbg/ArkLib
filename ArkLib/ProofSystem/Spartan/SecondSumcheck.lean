@@ -523,10 +523,12 @@ def secondSumcheckContinuationReduction {ι : Type} {oSpec : OracleSpec.{0, 0} �
         ⟨PUnit.unit, sWithOracles.oracleStmt⟩
         witness
     pure <|
-      Interaction.Spec.Strategy.withRolesAndMonads.mapOutput
-        (secondSumcheckContext R pp).toInteractionSpec
-        ((secondSumcheckContext R pp).toSpecRoles (secondSumcheckRoles R pp))
-        ((secondSumcheckContext R pp).toProverMonadDecoration oSpec)
+      Interaction.Spec.ShapeOver.mapOutput Interaction.Spec.focalMonadicShape
+        (agent := PUnit.unit)
+        (spec := (secondSumcheckContext R pp).toInteractionSpec)
+        (ctxs := Interaction.RoleDecoration.withMonads
+          ((secondSumcheckContext R pp).toSpecRoles (secondSumcheckRoles R pp))
+          ((secondSumcheckContext R pp).toProverMonadDecoration oSpec))
         (fun _ out =>
           (⟨⟨out.stmt.stmt, out.stmt.oracleStmt⟩, out.wit⟩ :
             HonestProverOutput
