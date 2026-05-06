@@ -182,7 +182,7 @@ noncomputable def batchingReduction {ι : Type} {oSpec : OracleSpec.{0, 0} ι}
                 shared)
               (Fri.OracleLayer.HonestPoly (F := F) s d 0))
     pure <|
-      Interaction.Spec.Strategy.withRolesAndMonads.ofWithRolesConstant
+      Interaction.Spec.Strategy.withRolesToConstantMonads
         (batchingSpec (F := F) m).toInteractionSpec
         ((batchingSpec (F := F) m).toSpecRoles (batchingRoles (F := F) m))
         proverStep

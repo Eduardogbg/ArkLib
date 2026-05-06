@@ -468,7 +468,7 @@ def mapOraclesHom
 
 /-- Rewrite the receiver-node oracle effects of a counterpart by constructing
 an oracle-specific monad-decoration hom and using the generic
-`Counterpart.withMonads.mapDecoration` traversal. -/
+`Counterpart.mapMonadDecoration` traversal. -/
 def mapOracles
     {ι : Type} {oSpec : OracleSpec.{0, 0} ι}
     {ιₛ₁ : Type} {OStmt₁ : ιₛ₁ → Type} [∀ i, OracleInterface (OStmt₁ i)]
@@ -485,7 +485,7 @@ def mapOracles
     Interaction.Spec.Counterpart.withMonads s.toInteractionSpec
       (s.toSpecRoles roles)
       (s.toMonadDecoration oSpec OStmt₂ roles od accSpec₂) Output :=
-  Interaction.Spec.Counterpart.withMonads.mapDecoration s.toInteractionSpec
+  Interaction.Spec.Counterpart.mapMonadDecoration s.toInteractionSpec
     (s.toSpecRoles roles)
     (mapOraclesHom s roles od accSpec₁ accSpec₂ reroute)
     cpt
@@ -695,7 +695,7 @@ def Reduction.comp
                       ((Context₂ shared pt₁).projectPublic tr₂)))) strat₂
           pure strat₂'
     let stratConstant :=
-      Interaction.Spec.Strategy.withRolesAndMonads.mapDecoration
+      Interaction.Spec.Strategy.mapMonadDecoration
         ((Context₁ shared).append (Context₂ shared)).toInteractionSpec
         (((Context₁ shared).append (Context₂ shared)).toSpecRoles
           (Spec.RoleDeco.append (Context₁ shared) (Context₂ shared)

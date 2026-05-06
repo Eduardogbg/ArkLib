@@ -359,7 +359,7 @@ def Reduction.ofChain
               (WitnessOut shared pt)))
         strat
     pure <|
-      Interaction.Spec.Strategy.withRolesAndMonads.ofWithRolesConstant
+      Interaction.Spec.Strategy.withRolesToConstantMonads
         (Spec.Chain.toSpec n (c shared)).toInteractionSpec
         ((Spec.Chain.toSpec n (c shared)).toSpecRoles (Spec.Chain.toRoles n (c shared)))
         strat'
@@ -789,7 +789,7 @@ def Reduction.ofIndexedChain
               (WitnessOut shared pt)))
         strat
     pure <|
-      Interaction.Spec.Strategy.withRolesAndMonads.ofWithRolesConstant
+      Interaction.Spec.Strategy.withRolesToConstantMonads
         (Spec.IndexedChain.toSpec n (c shared)).toInteractionSpec
         ((Spec.IndexedChain.toSpec n (c shared)).toSpecRoles
           (Spec.IndexedChain.toRoles n (c shared)))
@@ -906,7 +906,7 @@ def Reduction.ofPathChain
               (WitnessOut shared pt)))
         strat
     pure <|
-      Interaction.Spec.Strategy.withRolesAndMonads.ofWithRolesConstant
+      Interaction.Spec.Strategy.withRolesToConstantMonads
         (Spec.PathChain.toSpec n (c shared)).toInteractionSpec
         ((Spec.PathChain.toSpec n (c shared)).toSpecRoles
           (Spec.PathChain.toRoles n (c shared)))

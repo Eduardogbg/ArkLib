@@ -126,7 +126,7 @@ def Spec.runWithOracleCounterpartStaged
       contP, contC => do
       let strat₂ ← contP ⟨⟩ strat₁
       let strat₂' :=
-        Interaction.Spec.Strategy.withRolesAndMonads.ofWithRolesConstant
+        Interaction.Spec.Strategy.withRolesToConstantMonads
           (s₂ ⟨⟩).toInteractionSpec
           ((s₂ ⟨⟩).toSpecRoles (r₂ ⟨⟩))
           strat₂
@@ -283,7 +283,7 @@ def Reduction.runConcrete
                 ((Context shared).projectPublic tr))))) :=
   let inputImpl := OracleInterface.simOracle0 (OStatementIn shared) s.oracleStmt
   let prover' :=
-    Interaction.Spec.Strategy.withRolesAndMonads.ofWithRolesConstant
+    Interaction.Spec.Strategy.withRolesToConstantMonads
       (Context shared).toInteractionSpec
       ((Context shared).toSpecRoles (Roles shared))
       prover
@@ -714,7 +714,7 @@ def Verifier.run
               (Context shared).toOracleSpec (OracleDeco shared)
                 ((Context shared).projectPublic tr))))) := do
   let prover' :=
-    Interaction.Spec.Strategy.withRolesAndMonads.ofWithRolesConstant
+    Interaction.Spec.Strategy.withRolesToConstantMonads
       (Context shared).toInteractionSpec
       ((Context shared).toSpecRoles (Roles shared))
       prover
@@ -1035,7 +1035,7 @@ theorem Verifier.run_mapOutputWithRoles
       (fun z => ⟨z.1, fP z.1 z.2.1, z.2.2⟩) <$>
         verifier.run shared stmt inputImpl prover := by
   simp only [Verifier.run]
-  rw [Interaction.Spec.Strategy.withRolesAndMonads.ofWithRolesConstant_mapOutputWithRoles]
+  rw [Interaction.Spec.Strategy.withRolesToConstantMonads_mapOutputWithRoles]
   have hrun :
       Spec.runWithOracleCounterpart inputImpl
         (Context shared) (Roles shared) (OracleDeco shared) []ₒ (fun q => q.elim)
@@ -1048,7 +1048,7 @@ theorem Verifier.run_mapOutputWithRoles
               ⟨OracleComp oSpec, inferInstance⟩
               (Context shared).toInteractionSpec))
           fP
-          (Interaction.Spec.Strategy.withRolesAndMonads.ofWithRolesConstant
+          (Interaction.Spec.Strategy.withRolesToConstantMonads
             (Context shared).toInteractionSpec
             ((Context shared).toSpecRoles (Roles shared))
             prover))
@@ -1056,7 +1056,7 @@ theorem Verifier.run_mapOutputWithRoles
         (fun z => ⟨z.1, fP z.1 z.2.1, z.2.2⟩) <$>
           Spec.runWithOracleCounterpart inputImpl
             (Context shared) (Roles shared) (OracleDeco shared) []ₒ (fun q => q.elim)
-            (Interaction.Spec.Strategy.withRolesAndMonads.ofWithRolesConstant
+            (Interaction.Spec.Strategy.withRolesToConstantMonads
               (Context shared).toInteractionSpec
               ((Context shared).toSpecRoles (Roles shared))
               prover)
@@ -1065,7 +1065,7 @@ theorem Verifier.run_mapOutputWithRoles
       (Spec.runWithOracleCounterpart_mapOutputWithMonads inputImpl
         (Context shared) (Roles shared) (OracleDeco shared) []ₒ (fun q => q.elim)
         fP
-        (Interaction.Spec.Strategy.withRolesAndMonads.ofWithRolesConstant
+        (Interaction.Spec.Strategy.withRolesToConstantMonads
           (Context shared).toInteractionSpec
           ((Context shared).toSpecRoles (Roles shared))
           prover)

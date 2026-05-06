@@ -93,7 +93,7 @@ def finalFoldReduction {SharedIn : Type} {ι : Type} {oSpec : OracleSpec.{0, 0} 
                     shared)
                   PUnit)))
     pure <|
-      Interaction.Spec.Strategy.withRolesAndMonads.ofWithRolesConstant
+      Interaction.Spec.Strategy.withRolesToConstantMonads
         (finalFoldSpec (F := F) (d := d)).toInteractionSpec
         ((finalFoldSpec (F := F) (d := d)).toSpecRoles
           (finalFoldRoles (F := F) (d := d)))

@@ -93,7 +93,7 @@ def witnessReduction {ι : Type} {oSpec : OracleSpec.{0, 0} ι} :
                 PUnit.unit)
               (Witness R pp))⟩
     pure <|
-      Interaction.Spec.Strategy.withRolesAndMonads.ofWithRolesConstant
+      Interaction.Spec.Strategy.withRolesToConstantMonads
         (witnessSpec R pp).toInteractionSpec
         ((witnessSpec R pp).toSpecRoles (witnessRoles R pp))
         proverStep
@@ -171,7 +171,7 @@ def firstChallengeReduction {ι : Type} {oSpec : OracleSpec.{0, 0} ι}
           ⟨⟨state, sWithOracles.oracleStmt⟩,
             PUnit.unit⟩
     pure <|
-      Interaction.Spec.Strategy.withRolesAndMonads.ofWithRolesConstant
+      Interaction.Spec.Strategy.withRolesToConstantMonads
         (firstChallengeSpec R pp).toInteractionSpec
         ((firstChallengeSpec R pp).toSpecRoles (firstChallengeRoles R pp))
         proverStep

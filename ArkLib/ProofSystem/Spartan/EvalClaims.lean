@@ -95,7 +95,7 @@ def evalClaimReduction {ι : Type} {oSpec : OracleSpec.{0, 0} ι} :
           ⟨⟨⟨claims, sWithOracles.stmt⟩, sWithOracles.oracleStmt⟩,
             PUnit.unit⟩⟩
     pure <|
-      Interaction.Spec.Strategy.withRolesAndMonads.ofWithRolesConstant
+      Interaction.Spec.Strategy.withRolesToConstantMonads
         (evalClaimSpec R).toInteractionSpec
         ((evalClaimSpec R).toSpecRoles (evalClaimRoles R))
         proverStep
@@ -173,7 +173,7 @@ def linearCombinationReduction {ι : Type} {oSpec : OracleSpec.{0, 0} ι}
           ⟨⟨⟨ρ, sWithOracles.stmt⟩, sWithOracles.oracleStmt⟩,
             PUnit.unit⟩
     pure <|
-      Interaction.Spec.Strategy.withRolesAndMonads.ofWithRolesConstant
+      Interaction.Spec.Strategy.withRolesToConstantMonads
         (linearCombinationSpec R).toInteractionSpec
         ((linearCombinationSpec R).toSpecRoles (linearCombinationRoles R))
         proverStep
