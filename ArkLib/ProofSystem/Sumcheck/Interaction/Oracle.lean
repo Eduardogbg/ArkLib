@@ -33,10 +33,9 @@ variable (deg : ℕ)
 /-- Decorated oracle protocol for one round: the prover provides the round
 polynomial as an oracle message, then the verifier samples a public challenge. -/
 def roundProtocol : Interaction.Oracle.Spec.Protocol :=
-  Interaction.Oracle.Spec.Protocol.oracleWith (CDegreeLE R deg)
-    instOracleInterfaceCDegreeLE <|
-    Interaction.Oracle.Spec.Protocol.public .receiver R fun _ =>
-      Interaction.Oracle.Spec.Protocol.done
+  Interaction.Oracle.Spec.Protocol.oracle (CDegreeLE R deg)
+    (Interaction.Oracle.Spec.Protocol.public .receiver R fun _ =>
+      Interaction.Oracle.Spec.Protocol.done)
 
 /-- Oracle-spec shape for one sum-check oracle round. -/
 abbrev roundSpec : Interaction.Oracle.Spec :=
@@ -73,79 +72,6 @@ abbrev RoundPublicTranscript :=
 abbrev roundChallenge (pt : RoundPublicTranscript R deg) : R :=
   pt.2.1
 
-/-- The verifier counterpart type for one oracle sum-check round. -/
-abbrev RoundCounterpart
-    {ι : Type} (oSpec : OracleSpec.{0, 0} ι)
-    {ιₛᵢ : Type} (OStmtIn : ιₛᵢ → Type)
-    [∀ i, OracleInterface (OStmtIn i)]
-    {ιₐ : Type} (accSpec : OracleSpec.{0, 0} ιₐ)
-    (Output : Interaction.Spec.Transcript (roundSpec R deg).toInteractionSpec → Type) :=
-  Interaction.Spec.StrategyOver counterpartMonadicSyntax PUnit.unit
-    (roundSpec R deg).toInteractionSpec
-    (RoleDecoration.withMonads ((roundSpec R deg).toSpecRoles (roundRoles R deg))
-      ((roundSpec R deg).toMonadDecoration oSpec OStmtIn
-        (roundRoles R deg) (roundOracleDeco R deg) accSpec))
-    Output
-
-/-- The live-claim oracle verifier for one sum-check round.
-
-The verifier observes only the oracle handle for the prover's round polynomial,
-queries it on the domain, checks the sum against the current target, samples a
-challenge, and returns the next claim on success. -/
-noncomputable def verifierStep
-    {ι : Type} {oSpec : OracleSpec.{0, 0} ι}
-    {ιₛᵢ : Type} (OStmtIn : ιₛᵢ → Type)
-    [∀ i, OracleInterface (OStmtIn i)]
-    {ιₐ : Type} (accSpec : OracleSpec.{0, 0} ιₐ)
-    {m_dom : ℕ} (D : Fin m_dom → R) (target : RoundClaim R)
-    (sampleChallenge : OracleComp oSpec R) :
-    RoundCounterpart R deg oSpec OStmtIn accSpec (fun _ => Option (RoundClaim R)) :=
-  let oiSpec := @OracleInterface.spec (CDegreeLE R deg) instOracleInterfaceCDegreeLE
-  fun _ =>
-    let receiverStep :
-        OracleComp (oSpec + [OStmtIn]ₒ + (accSpec + oiSpec))
-          ((_ : R) × Option (RoundClaim R)) := do
-        let total ← (Finset.univ : Finset (Fin m_dom)).toList.foldlM
-          (fun (acc : R) (j : Fin m_dom) => do
-            let val : R ← liftM <| oiSpec.query (D j)
-            pure (acc + val))
-          (0 : R)
-        let chal : R ← liftM sampleChallenge
-        if total == target then do
-          let polyAtChal : R ← liftM <| oiSpec.query chal
-          pure ⟨chal, some polyAtChal⟩
-        else
-          pure ⟨chal, none⟩
-    receiverStep
-
-/-- The chained verifier step for one sum-check round.
-
-Once a previous round has rejected, later rounds keep the same interaction shape
-but preserve the rejecting `none` state. -/
-noncomputable def verifierStepOption
-    {ι : Type} {oSpec : OracleSpec.{0, 0} ι}
-    {ιₛᵢ : Type} (OStmtIn : ιₛᵢ → Type)
-    [∀ i, OracleInterface (OStmtIn i)]
-    {ιₐ : Type} (accSpec : OracleSpec.{0, 0} ιₐ)
-    {m_dom : ℕ} (D : Fin m_dom → R) (target : Option (RoundClaim R))
-    (sampleChallenge : OracleComp oSpec R) :
-    RoundCounterpart R deg oSpec OStmtIn accSpec (fun _ => Option (RoundClaim R)) :=
-  match target with
-  | none =>
-      fun _ =>
-        let receiverStep :
-            OracleComp
-              (oSpec + [OStmtIn]ₒ +
-                (accSpec + @OracleInterface.spec (CDegreeLE R deg)
-                  instOracleInterfaceCDegreeLE))
-              ((_ : R) × Option (RoundClaim R)) := do
-            let chal : R ← liftM sampleChallenge
-            pure ⟨chal, none⟩
-        receiverStep
-  | some target =>
-      verifierStep (R := R) (deg := deg) OStmtIn accSpec D target sampleChallenge
-
 end
 
 end Sumcheck
-

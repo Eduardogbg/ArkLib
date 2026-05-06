@@ -5,6 +5,7 @@ Authors: Quang Dao
 -/
 import ArkLib.OracleReduction.Basic
 import ArkLib.Interaction.Reduction
+import ArkLib.Interaction.Choreo
 
 open Interaction.Spec.TwoParty
 
@@ -179,6 +180,67 @@ def verifier :
     pure ⟨c, fun (z : F) =>
       pure (if z • g = R + c • pk then some () else none)⟩)
 
+/-- Schnorr written once as a scoped two-party choreography.
+
+The scoped choreography core keeps public messages in continuation scope, so the
+verifier can refer to `R`, `c`, and `z` without manually packing them into local
+state names such as `pkAndR`. Private prover state is unpacked by pattern at the
+next prover action, instead of being projected from an ad-hoc tuple name. -/
+@[inline, specialize]
+def choreography :
+    Choreo.Scoped.Program (OracleComp unifSpec)
+      F G (Option Unit × PUnit) (Option Unit) :=
+  choreo_begin
+  prover_send[G] R from sk => do
+    let r ← $ᵗ F
+    send (r • g : G) keeping ((sk, r) : F × F)
+  ;;
+  verifier_send[F] c from pk => do
+    let c ← $ᵗ F
+    send c keeping pk
+  ;;
+  prover_send[F] z from ⟨sk, r⟩ =>
+    send (r + c * sk) keeping ()
+  ;;
+  choreo_end
+    prover _pfinal => (accept, ()) ;;
+    verifier pk => if z • g = R + c • pk then accept else reject
+
+/-- The choreography produces the same interaction tree as the hand-written
+Schnorr `spec`. -/
+example : (choreography F G g).spec = spec F G := rfl
+
+/-- The choreography produces the same prover-perspective roles as
+`proverRoles`. -/
+example : (choreography F G g).roles = proverRoles F G := rfl
+
+/-- Honest Schnorr prover projected from the choreography. -/
+@[inline, specialize]
+def proverFromChoreo :
+    Prover (OracleComp unifSpec) G
+      (fun _ => spec F G) (fun _ => proverRoles F G)
+      (fun _ => PUnit) (fun _ => F)
+      (fun _ _ => Option Unit) (fun _ _ => PUnit) :=
+  fun _pk _ sk => (choreography F G g).prover sk
+
+/-- Honest Schnorr verifier projected from the choreography. -/
+@[inline, specialize]
+def verifierFromChoreo :
+    Verifier (OracleComp unifSpec) G
+      (fun _ => spec F G) (fun _ => proverRoles F G)
+      (fun _ => PUnit) (fun _ _ => Option Unit) :=
+  fun pk _ => (choreography F G g).verifier pk
+
+/-- Schnorr packaged as a reduction via the choreography. -/
+@[inline, specialize]
+def reductionFromChoreo :
+    Reduction (OracleComp unifSpec) G
+      (fun _ => spec F G) (fun _ => proverRoles F G)
+      (fun _ => PUnit) (fun _ => F)
+      (fun _ _ => Option Unit) (fun _ _ => PUnit) where
+  prover := proverFromChoreo F G g
+  verifier := verifierFromChoreo F G g
+
 /-- Schnorr's Σ-protocol packaged as an `Interaction.Reduction`. -/
 @[inline, specialize]
 def reduction :
@@ -188,6 +250,27 @@ def reduction :
       (fun _ _ => Option Unit) (fun _ _ => PUnit) where
   prover := prover F G g
   verifier := verifier F G g
+
+/-- The projected prover is propositionally the same as the hand-written prover. -/
+theorem proverFromChoreo_eq_prover : proverFromChoreo F G g = prover F G g := by
+  funext pk stmt sk
+  simp only [proverFromChoreo, prover, choreography, Choreo.Scoped.proverSendConst,
+    Choreo.Scoped.verifierSendConst, Choreo.Scoped.done, bind_pure_comp,
+    map_pure, Functor.map_map]
+  rfl
+
+/-- The projected verifier is propositionally the same as the hand-written verifier. -/
+theorem verifierFromChoreo_eq_verifier : verifierFromChoreo F G g = verifier F G g := by
+  funext pk stmt R
+  simp only [verifierFromChoreo, verifier, choreography, Choreo.Scoped.proverSendConst,
+    Choreo.Scoped.verifierSendConst, Choreo.Scoped.done, bind_pure_comp,
+    Functor.map_map]
+  rfl
+
+/-- The projected reduction is propositionally the same as the hand-written reduction. -/
+theorem reductionFromChoreo_eq_reduction : reductionFromChoreo F G g = reduction F G g := by
+  simp only [reductionFromChoreo, reduction, proverFromChoreo_eq_prover,
+    verifierFromChoreo_eq_verifier]
 
 /-! ### Type-unfolding checks
 
@@ -213,4 +296,3 @@ example :
 end Interactive
 
 end Schnorr
-

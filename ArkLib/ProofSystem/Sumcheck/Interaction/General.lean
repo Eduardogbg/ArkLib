@@ -6,6 +6,7 @@ Authors: Quang Dao
 import ArkLib.ProofSystem.Sumcheck.Interaction.SingleRound
 import ArkLib.Interaction.Oracle.Chain
 import ArkLib.Interaction.Oracle.Protocol
+import ArkLib.Interaction.Choreo
 
 /-!
 # Sum-Check Multi-Round Oracle Surface
@@ -19,6 +20,7 @@ to `PolyStmt ... n` at each round.
 
 namespace Sumcheck
 
+open Interaction.Spec.TwoParty
 open Interaction CompPoly OracleComp OracleSpec
 
 section
@@ -99,6 +101,71 @@ private structure ProverState (numVars : Nat) (k : Nat) where
   oracleStmt : OracleStatement (Sumcheck.PolyFamily R deg numVars)
   residual : Sumcheck.PolyStmt R deg k
 
+/-- Honest prover strategy for one step of the concrete sum-check chain.
+
+This is deliberately kept as a lower-level chain handler. The reduction-level
+choreography surface is currently represented by `SingleRound.roundProgram`;
+multi-round should move back to choreography only once the DSL can compile an
+entire chain/telescope together with its single `simulate` field. -/
+private def proverRoundStep (m : Type → Type) [Monad m]
+    {NextState : Type}
+    {m_dom : ℕ} (D : Fin m_dom → R)
+    {numVars : ℕ}
+    (poly : Sumcheck.PolyStmt R deg (numVars + 1))
+    (computeNext : CDegreeLE R deg → R → NextState) :
+    Interaction.Spec.StrategyOver (pairedSyntax m)
+      Interaction.TwoParty.Participant.focal
+      (roundSpec R deg).toInteractionSpec
+      ((roundSpec R deg).toSpecRoles (roundRoles R deg))
+      (fun _ => NextState) :=
+  let sentPoly := honestRoundPoly (R := R) (deg := deg) D poly
+  pure ⟨sentPoly, fun chal => pure (computeNext sentPoly chal)⟩
+
+/-- Verifier strategy for one step of the concrete sum-check chain.
+
+This is not the final choreography surface; it is the low-level handler used by
+`Oracle.Spec.Chain` until a reduction-level chain choreography compiler exists. -/
+private noncomputable def verifierRoundStepOption
+    {ι : Type} {oSpec : OracleSpec.{0, 0} ι}
+    {m_dom : ℕ} (D : Fin m_dom → R) (numVars : Nat)
+    (target : Option (RoundClaim R))
+    (sampleChallenge : OracleComp oSpec R) :
+    Interaction.Spec.StrategyOver counterpartMonadicSyntax PUnit.unit
+      (roundSpec R deg).toInteractionSpec
+      (RoleDecoration.withMonads ((roundSpec R deg).toSpecRoles (roundRoles R deg))
+        ((roundSpec R deg).toMonadDecoration oSpec (Sumcheck.PolyFamily R deg numVars)
+          (roundRoles R deg) (roundOracleDeco R deg) []ₒ))
+      (fun _ => Option (RoundClaim R)) :=
+  let oiSpec := @OracleInterface.spec (CDegreeLE R deg) inferInstance
+  match target with
+  | none =>
+      fun _ =>
+        let receiverStep :
+            OracleComp
+              (oSpec + [Sumcheck.PolyFamily R deg numVars]ₒ + ([]ₒ + oiSpec))
+              ((_ : R) × Option (RoundClaim R)) := do
+            let chal : R ← liftM sampleChallenge
+            pure ⟨chal, none⟩
+        receiverStep
+  | some target =>
+      fun _ =>
+        let receiverStep :
+            OracleComp
+              (oSpec + [Sumcheck.PolyFamily R deg numVars]ₒ + ([]ₒ + oiSpec))
+              ((_ : R) × Option (RoundClaim R)) := do
+            let total ← (Finset.univ : Finset (Fin m_dom)).toList.foldlM
+              (fun (acc : R) (j : Fin m_dom) => do
+                let val : R ← liftM <| oiSpec.query (D j)
+                pure (acc + val))
+              (0 : R)
+            let chal : R ← liftM sampleChallenge
+            if total == target then do
+              let polyAtChal : R ← liftM <| oiSpec.query chal
+              pure ⟨chal, some polyAtChal⟩
+            else
+              pure ⟨chal, none⟩
+        receiverStep
+
 /-- Prover round handlers for the concrete sum-check chain. -/
 private noncomputable def proverRoundSteps
     {ι : Type} {oSpec : OracleSpec.{0, 0} ι}
@@ -109,12 +176,11 @@ private noncomputable def proverRoundSteps
         n (fullChain R deg n)
   | 0 => PUnit.unit
   | n + 1 =>
-      ⟨fun state => do
-        let sentPoly := honestRoundPoly (R := R) (deg := deg) D state.residual
+      ⟨fun state =>
         pure <|
-          roundProverStep (m := OracleComp oSpec) (R := R) (deg := deg)
+          proverRoundStep (m := OracleComp oSpec) (R := R) (deg := deg)
             D state.residual
-            (fun chal =>
+            (fun sentPoly chal =>
               { claim := state.claim.bind fun _ => some (CPolynomial.eval chal sentPoly.1)
                 oracleStmt := state.oracleStmt
                 residual := stepResidual (R := R) (deg := deg) chal state.residual }),
@@ -133,12 +199,58 @@ private noncomputable def verifierRoundSteps
   | 0 => PUnit.unit
   | n + 1 =>
       ⟨fun claim =>
-        verifierStepOption (R := R) (deg := deg)
-          (Sumcheck.PolyFamily R deg numVars) []ₒ D claim sampleChallenge,
+        verifierRoundStepOption (R := R) (deg := deg) (oSpec := oSpec)
+          D numVars claim sampleChallenge,
         fun _ => verifierRoundSteps (oSpec := oSpec) D numVars sampleChallenge n⟩
 
+/-- Stateful oracle choreography program for the `n`-round sum-check reduction. -/
+private noncomputable def reductionProgram
+    {ι : Type} {oSpec : OracleSpec.{0, 0} ι}
+    {m_dom : ℕ} (D : Fin m_dom → R)
+    (sampleChallenge : OracleComp oSpec R) (n : Nat) :
+    Interaction.Choreo.OracleProtocol.ChainProgram
+      (oSpec := oSpec)
+      (SharedIn := RoundClaim R)
+      (StatementIn := fun _ => PUnit)
+      (OStatementIn := fun _ => Sumcheck.PolyFamily R deg n)
+      (WitnessIn := fun _ => PUnit)
+      (n := n)
+      (chain := fun _ => fullChain R deg n)
+      (StatementOut := fun _ _ => Option (FinalClaim R n))
+      (OStatementOut := fun _ _ => Sumcheck.PolyFamily R deg n)
+      (WitnessOut := fun _ _ => PUnit) where
+  ProverState := fun _ {k} _ => ProverState (R := R) (deg := deg) n k
+  VerifierState := fun _ {_k} _ => Option (RoundClaim R)
+  proverInit := fun shared sWithOracles _ =>
+    { claim := some shared
+      oracleStmt := sWithOracles.oracleStmt
+      residual := sWithOracles.oracleStmt () }
+  verifierInit := fun shared _ => some shared
+  proverSteps := fun _ =>
+    proverRoundSteps (R := R) (deg := deg) (oSpec := oSpec)
+      D n n
+  verifierSteps := fun _ =>
+    verifierRoundSteps (R := R) (deg := deg) (oSpec := oSpec)
+      D n sampleChallenge n
+  proverStmtResult := fun _ pt state =>
+    finalClaimFromOption R deg n pt
+      (Interaction.Oracle.Spec.Chain.terminalOutput
+        (fun {k} _ => ProverState (R := R) (deg := deg) n k)
+        n (fullChain R deg n) pt state).claim
+  verifierStmtResult := fun _ pt state =>
+    finalClaimFromOption R deg n pt
+      (Interaction.Oracle.Spec.Chain.terminalOutput
+        (fun {_k} _ => Option (RoundClaim R))
+        n (fullChain R deg n) pt state)
+  oracleStmtResult := fun _ pt state =>
+    (Interaction.Oracle.Spec.Chain.terminalOutput
+      (fun {k} _ => ProverState (R := R) (deg := deg) n k)
+      n (fullChain R deg n) pt state).oracleStmt
+  witnessResult := fun _ _ _ => PUnit.unit
+  simulate := fun _ _ q => liftM <| ([Sumcheck.PolyFamily R deg n]ₒ).query q
+
 /-- The `n`-round sum-check reduction, built by composing one-round oracle
-reductions.
+choreographies.
 
 The input statement is the initial claim. The singleton input oracle statement
 is the bounded-degree polynomial itself and is carried unchanged through all
@@ -160,47 +272,8 @@ noncomputable def reduction
       (fun _ _ => Option (FinalClaim R n))
       (fun _ _ => Sumcheck.PolyFamily R deg n)
       (fun _ _ => PUnit) := by
-  exact
-    Interaction.Oracle.Reduction.ofChain
-      (oSpec := oSpec)
-      (SharedIn := RoundClaim R)
-      (StatementIn := fun _ => PUnit)
-      (WitnessIn := fun _ => PUnit)
-      (ιₛᵢ := fun _ : RoundClaim R => Unit)
-      (OStatementIn := fun _ => Sumcheck.PolyFamily R deg n)
-      (n := n)
-      (c := fun _ => fullChain R deg n)
-      (StatementOut := fun _ _ => Option (FinalClaim R n))
-      (ιₛₒ := fun _ _ => Unit)
-      (OStatementOut := fun _ _ => Sumcheck.PolyFamily R deg n)
-      (WitnessOut := fun _ _ => PUnit)
-      (ProverState := fun _ {k} _ => ProverState (R := R) (deg := deg) n k)
-      (VerifierState := fun _ {_k} _ => Option (RoundClaim R))
-      (fun shared sWithOracles _ =>
-        { claim := some shared
-          oracleStmt := sWithOracles.oracleStmt
-          residual := sWithOracles.oracleStmt () })
-      (fun shared _ => some shared)
-      (fun _ => proverRoundSteps (R := R) (deg := deg) (oSpec := oSpec) D n n)
-      (fun _ =>
-        verifierRoundSteps (R := R) (deg := deg) (oSpec := oSpec)
-          D n sampleChallenge n)
-      (fun _ pt state =>
-        finalClaimFromOption R deg n pt
-          (Interaction.Oracle.Spec.Chain.terminalOutput
-            (fun {k} _ => ProverState (R := R) (deg := deg) n k)
-            n (fullChain R deg n) pt state).claim)
-      (fun _ pt state =>
-        finalClaimFromOption R deg n pt
-          (Interaction.Oracle.Spec.Chain.terminalOutput
-            (fun {_k} _ => Option (RoundClaim R))
-            n (fullChain R deg n) pt state))
-      (fun _ pt state =>
-        (Interaction.Oracle.Spec.Chain.terminalOutput
-          (fun {k} _ => ProverState (R := R) (deg := deg) n k)
-          n (fullChain R deg n) pt state).oracleStmt)
-      (fun _ _ _ => PUnit.unit)
-      (fun _ _ q => liftM <| ([Sumcheck.PolyFamily R deg n]ₒ).query q)
+  exact (reductionProgram (R := R) (deg := deg) (oSpec := oSpec)
+    D sampleChallenge n).toReduction
 
 end
 

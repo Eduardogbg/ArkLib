@@ -7,6 +7,7 @@ import ArkLib.Data.CompPoly.Fold
 import ArkLib.Data.CodingTheory.ReedSolomon.FftDomain
 import ArkLib.Data.GroupTheory.Smooth
 import ArkLib.Interaction.Oracle.Core
+import ArkLib.Interaction.Oracle.Protocol
 import ArkLib.ToMathlib.Finset.Basic
 import CompPoly.Fields.Basic
 
@@ -280,18 +281,25 @@ def roundFiberIdx
             exact Nat.mul_le_mul_left _ (Nat.succ_le_of_lt u.2)
       simpa [evalSize_factor (n := n) (s := s) h_domain i] using hSum⟩
 
+/-- Decorated oracle protocol for the `i`-th non-final fold round. -/
+def foldRoundProtocol
+    (_D : Subgroup Fˣ) (_x : Fˣ) (_s : Fin (k + 1) → ℕ+) (i : Fin k) :
+    Interaction.Oracle.Spec.Protocol :=
+  Interaction.Oracle.Spec.Protocol.public .receiver F fun _ =>
+    Interaction.Oracle.Spec.Protocol.oracle (Codeword (F := F) _s n i.1.succ)
+      Interaction.Oracle.Spec.Protocol.done
+
 /-- The interaction shape of the `i`-th non-final fold round. -/
 def foldRoundSpec
     (_D : Subgroup Fˣ) (_x : Fˣ) (_s : Fin (k + 1) → ℕ+) (i : Fin k) :
     Interaction.Oracle.Spec :=
-  .public F fun _ =>
-    .oracle (Codeword (F := F) _s n i.1.succ) fun _ => .done
+  (foldRoundProtocol (F := F) (n := n) _D _x _s i).spec
 
 /-- Role decoration for a non-final fold round. -/
 def foldRoundRoles
     (_D : Subgroup Fˣ) (_x : Fˣ) (_s : Fin (k + 1) → ℕ+) (i : Fin k) :
     Interaction.Oracle.Spec.RoleDeco (foldRoundSpec (F := F) (n := n) _D _x _s i) :=
-  ⟨.receiver, fun _ => ⟨⟩⟩
+  (foldRoundProtocol (F := F) (n := n) _D _x _s i).roles
 
 /-- Oracle decoration for a non-final fold round: only the prover's codeword
 message is queryable. -/
@@ -299,7 +307,7 @@ def foldRoundOD
     (_D : Subgroup Fˣ) (_x : Fˣ) (_s : Fin (k + 1) → ℕ+) (i : Fin k) :
     Interaction.Oracle.Spec.OracleDeco
       (foldRoundSpec (F := F) (n := n) _D _x _s i) :=
-  fun _ => ⟨inferInstance, ⟨⟩⟩
+  (foldRoundProtocol (F := F) (n := n) _D _x _s i).oracleDeco
 
 /-- Challenge sent by the verifier in a non-final fold round. -/
 abbrev foldRoundChallenge
@@ -317,21 +325,26 @@ abbrev foldRoundCodeword
   match tr with
   | ⟨_, ⟨codeword, _⟩⟩ => codeword
 
+/-- Decorated oracle protocol for the terminal fold round. -/
+def finalFoldRoundProtocol : Interaction.Oracle.Spec.Protocol :=
+  Interaction.Oracle.Spec.Protocol.public .receiver F fun _ =>
+    Interaction.Oracle.Spec.Protocol.oracle (CDegreeLE F d)
+      Interaction.Oracle.Spec.Protocol.done
+
 /-- The final fold round receives one last challenge and returns the final
 degree-bounded polynomial. -/
 def finalFoldSpec : Interaction.Oracle.Spec :=
-  .public F fun _ =>
-    .oracle (CDegreeLE F d) fun _ => .done
+  (finalFoldRoundProtocol (F := F) (d := d)).spec
 
 /-- Role decoration for the final fold round. -/
 def finalFoldRoles : Interaction.Oracle.Spec.RoleDeco (finalFoldSpec (F := F) (d := d)) :=
-  ⟨.receiver, fun _ => ⟨⟩⟩
+  (finalFoldRoundProtocol (F := F) (d := d)).roles
 
 /-- Oracle decoration for the final fold round: only the final polynomial is
 queryable. -/
 def finalFoldOD :
     Interaction.Oracle.Spec.OracleDeco (finalFoldSpec (F := F) (d := d)) :=
-  fun _ => ⟨instOracleInterfaceCDegreeLE, ⟨⟩⟩
+  (finalFoldRoundProtocol (F := F) (d := d)).oracleDeco
 
 /-- Final-round challenge. -/
 abbrev finalFoldChallenge
@@ -355,6 +368,7 @@ def honestCodeword (i : ℕ) (p : HonestPoly (F := F) (s := s) (d := d) i) :
     Codeword (F := F) s n i :=
   fun idx => evalAtIdx (D := D) (x := x) (s := s) p.1 idx
 
+omit [Finite F] in
 /-- Degree bound for honest non-final folding. -/
 theorem honestFoldPoly_natDegree_le {i : Fin k}
     (p : HonestPoly (F := F) (s := s) (d := d) i.1)
@@ -385,6 +399,7 @@ def honestFoldPoly {i : Fin k}
   ⟨CompPoly.CPolynomial.foldNth (2 ^ (s i.castSucc).1) p.1 α,
     honestFoldPoly_natDegree_le (s := s) (d := d) p α⟩
 
+omit [Finite F] in
 /-- Honest final folding of the current polynomial state into the terminal
 degree-bounded polynomial. -/
 theorem honestFinalPolynomial_natDegree_le
