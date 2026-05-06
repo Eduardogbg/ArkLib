@@ -11,7 +11,7 @@ import ArkLib.Interaction.Reduction
 
 This module implements the basic Fiat-Shamir (FS) transform for the `Interaction`
 core when the verifier is public-coin in the strong, replayable sense captured
-by `Spec.PublicCoinCounterpart`. The construction works as follows:
+by `Spec.publicCoinCounterpartSyntax`. The construction works as follows:
 
 1. Replacing the random verifier with a deterministic `ReplayOracle`
    (= `Counterpart Id`), which is bundled into the statement.

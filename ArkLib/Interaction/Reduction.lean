@@ -45,8 +45,9 @@ SharedIn and output are represented as:
   needed) are chosen by the caller through the `StatementOut` type
   (e.g., `StatementOut = fun _ _ => Option Bool`).
 - **PublicCoinVerifier**: a stronger verifier surface whose receiver nodes are
-  replayable public-coin continuations (`Spec.PublicCoinCounterpart`), used by
-  the interaction-native Fiat-Shamir transform.
+  replayable public-coin continuations, expressed as a `StrategyOver` over
+  `Spec.publicCoinCounterpartSyntax`, used by the interaction-native
+  Fiat-Shamir transform.
 - **Reduction**: pairs a prover with a verifier for the same protocol spec.
 - **PublicCoinReduction**: pairs a prover with a public-coin verifier; forgetting
   the extra verifier structure recovers an ordinary `Reduction`.
@@ -122,7 +123,7 @@ abbrev Verifier (m : Type u → Type u)
     Spec.Counterpart m (Context i) (Roles i) (fun tr => StatementOut i tr)
 
 /-- A verifier whose receiver nodes are public-coin in the strong replayable
-sense captured by `Spec.PublicCoinCounterpart`.
+sense captured by `Spec.publicCoinCounterpartSyntax`.
 
 An ordinary `Verifier` is enough to execute a protocol, but not enough to
 replay a prescribed receiver transcript: at a verifier node, the continuation
@@ -137,7 +138,7 @@ abbrev PublicCoinVerifier (m : Type u → Type u)
     (StatementIn : SharedIn → Type w)
     (StatementOut : (i : SharedIn) → Spec.Transcript (Context i) → Type u) :=
   (i : SharedIn) → StatementIn i →
-    Spec.PublicCoinCounterpart m (Context i) (Roles i)
+    Spec.StrategyOver (Spec.publicCoinCounterpartSyntax m) PUnit.unit (Context i) (Roles i)
       (fun tr => StatementOut i tr)
 
 namespace PublicCoinVerifier
@@ -151,7 +152,7 @@ def toVerifier {m : Type u → Type u} [Monad m]
     {StatementOut : (i : SharedIn) → Spec.Transcript (Context i) → Type u}
     (verifier : PublicCoinVerifier m SharedIn Context Roles StatementIn StatementOut) :
     Verifier m SharedIn Context Roles StatementIn StatementOut :=
-  fun i stmt => (verifier i stmt).toCounterpart
+  fun i stmt => Spec.PublicCoinCounterpart.toCounterpart (verifier i stmt)
 
 /-- Replay a full transcript through a public-coin verifier. -/
 def replay {m : Type u → Type u} [Monad m]
