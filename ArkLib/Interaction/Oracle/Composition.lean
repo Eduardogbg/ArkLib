@@ -197,11 +197,11 @@ namespace Prover
 
 /-- Compose two monad-decorated strategies on `Oracle.Spec` by structural recursion.
 
-This is the public-transcript-indexed oracle analogue of
-`Interaction.Spec.Strategy.withRolesAndMonads.compFlat`. The continuation that
-constructs the suffix strategy runs in `m`; `setupLift` embeds that construction
-effect into each first-phase node monad, so the first phase may use arbitrary
-node effects rather than a globally constant prover monad.
+This is the public-transcript-indexed oracle analogue of composing
+monad-decorated strategies along append. The continuation that constructs the
+suffix strategy runs in `m`; `setupLift` embeds that construction effect into
+each first-phase node monad, so the first phase may use arbitrary node effects
+rather than a globally constant prover monad.
 
 The suffix is indexed by `s₁.projectPublic tr₁`, whose oracle-message nodes
 record explicit `PUnit` markers rather than concrete oracle messages. -/
