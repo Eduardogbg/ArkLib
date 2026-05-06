@@ -654,21 +654,20 @@ def Reduction.comp
           (Spec.PublicTranscript.split (Context₁ shared) (Context₂ shared) pt).2) where
   prover shared sWithOracles w := do
     let strat₁ ← r₁.prover shared sWithOracles w
-    let strat₁' :=
-      Interaction.Spec.Strategy.withRolesAndMonads.toWithRolesConstant
-        (Context₁ shared).toInteractionSpec
-        ((Context₁ shared).toSpecRoles (Roles₁ shared))
-        strat₁
     let strat ←
-      Prover.compAux (Context₁ shared) (Context₂ shared)
+      Prover.compAuxWithMonads (Context₁ shared) (Context₂ shared)
         (Roles₁ shared) (Roles₂ shared)
+        (md₂ := fun pt₁ => (Context₂ shared pt₁).toProverMonadDecoration oSpec)
+        (Interaction.Spec.MonadDecoration.Hom.id
+          (Context₁ shared).toInteractionSpec
+          ((Context₁ shared).toProverMonadDecoration oSpec))
         (OutType := fun pt₁ pt₂ =>
           HonestProverOutput
             (StatementWithOracles
               (fun _ => StatementOut shared pt₁ pt₂)
               (fun _ => OStatementOut shared pt₁ pt₂) shared)
             (WitnessOut shared pt₁ pt₂))
-        strat₁'
+        strat₁
         fun tr₁ midOut => do
           let pt₁ := (Context₁ shared).projectPublic tr₁
           let midStmt : StatementWithOracles
@@ -694,13 +693,25 @@ def Reduction.comp
                       shared)
                     (WitnessOut shared pt₁
                       ((Context₂ shared pt₁).projectPublic tr₂)))) strat₂
-          pure <|
-            Interaction.Spec.Strategy.withRolesAndMonads.toWithRolesConstant
-              (Context₂ shared pt₁).toInteractionSpec
-              ((Context₂ shared pt₁).toSpecRoles (Roles₂ shared pt₁))
-              strat₂'
+          pure strat₂'
+    let stratConstant :=
+      Interaction.Spec.Strategy.withRolesAndMonads.mapDecoration
+        ((Context₁ shared).append (Context₂ shared)).toInteractionSpec
+        (((Context₁ shared).append (Context₂ shared)).toSpecRoles
+          (Spec.RoleDeco.append (Context₁ shared) (Context₂ shared)
+            (Roles₁ shared) (Roles₂ shared)))
+        (Spec.MonadDecoration.appendPublicConstantHom
+          (Spec.proverNodeMonad oSpec) (Context₁ shared) (Context₂ shared))
+        strat
     let stratSplit :=
-      Interaction.Spec.Strategy.mapOutputWithRoles
+      Interaction.Spec.ShapeOver.mapOutput Interaction.Spec.focalMonadicShape
+        (agent := PUnit.unit)
+        (spec := ((Context₁ shared).append (Context₂ shared)).toInteractionSpec)
+        (ctxs := Interaction.RoleDecoration.withMonads
+          (((Context₁ shared).append (Context₂ shared)).toSpecRoles
+            (Spec.RoleDeco.append (Context₁ shared) (Context₂ shared)
+              (Roles₁ shared) (Roles₂ shared)))
+          (((Context₁ shared).append (Context₂ shared)).toProverMonadDecoration oSpec))
         (fun tr out =>
           Spec.PublicTranscript.unliftAppend (Context₁ shared) (Context₂ shared)
             (fun pt₁ pt₂ =>
@@ -710,14 +721,8 @@ def Reduction.comp
                   (fun _ => OStatementOut shared pt₁ pt₂) shared)
                 (WitnessOut shared pt₁ pt₂))
             (((Context₁ shared).append (Context₂ shared)).projectPublic tr) out)
-        strat
-    pure <|
-      Interaction.Spec.Strategy.withRolesAndMonads.ofWithRolesConstant
-        ((Context₁ shared).append (Context₂ shared)).toInteractionSpec
-        (((Context₁ shared).append (Context₂ shared)).toSpecRoles
-          (Spec.RoleDeco.append (Context₁ shared) (Context₂ shared)
-            (Roles₁ shared) (Roles₂ shared)))
-        stratSplit
+        stratConstant
+    pure stratSplit
   verifier := {
     toFun := fun shared stmtIn =>
       Interaction.Spec.ShapeOver.mapOutput Interaction.Spec.counterpartMonadicShape

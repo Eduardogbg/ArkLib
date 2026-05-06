@@ -770,9 +770,8 @@ theorem reifiedKnowledgeSoundness_implies_reifiedSoundness
       verifier.run shared stmt inputImpl proverKS =
         (fun z => ⟨z.1, acceptWitness shared z.1, z.2.2⟩) <$>
           verifier.run shared stmt inputImpl prover := by
-    simp only [Verifier.run, proverKS]
-    rw [Spec.runWithOracleCounterpart_mapOutputWithRoles]
-    simp [Functor.map_map]
+    simp only [proverKS]
+    rw [Verifier.run_mapOutputWithRoles]
   have hKS' := hKS shared stmt inputImpl proverKS
   rw [hrun, probEvent_map] at hKS'
   refine le_trans ?_ hKS'

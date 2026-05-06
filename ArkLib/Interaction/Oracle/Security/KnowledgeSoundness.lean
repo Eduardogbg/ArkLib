@@ -236,7 +236,7 @@ The caller supplies:
 The proof constructs a KS adversary from the soundness adversary by mapping
 its output through `acceptWitness`. Since `acceptWitness` depends only on the
 full transcript, this is a valid `Strategy.mapOutputWithRoles` map. The
-`Spec.runWithOracleCounterpart_mapOutputWithRoles` lemma guarantees this does
+`Verifier.run_mapOutputWithRoles` lemma guarantees this does
 not change the transcript or verifier-side output distribution. -/
 theorem knowledgeSoundness_implies_soundness
     {ι : Type} {oSpec : OracleSpec.{0, 0} ι}
@@ -308,9 +308,8 @@ theorem knowledgeSoundness_implies_soundness
       verifier.run shared stmt inputImpl proverKS =
         (fun z => ⟨z.1, acceptWitness shared z.1, z.2.2⟩) <$>
           verifier.run shared stmt inputImpl prover := by
-    simp only [Verifier.run, proverKS]
-    rw [Spec.runWithOracleCounterpart_mapOutputWithRoles]
-    simp [Functor.map_map]
+    simp only [proverKS]
+    rw [Verifier.run_mapOutputWithRoles]
   have hKS' := hKS shared stmt inputImpl proverKS
   rw [hrun, probEvent_map] at hKS'
   refine le_trans ?_ hKS'
