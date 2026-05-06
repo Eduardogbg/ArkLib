@@ -72,7 +72,7 @@ def finalFoldReduction {SharedIn : Type} {ι : Type} {oSpec : OracleSpec.{0, 0} 
               shared)
             PUnit :=
         ⟨⟨stmtOut, sWithOracles.oracleStmt⟩, PUnit.unit⟩
-      simpa [Spec.StrategyOver, Spec.pairedSyntax, Spec.Participant.focal] using
+      simpa [Spec.StrategyOver, Spec.pairedSyntax, TwoParty.Participant.focal] using
         (pure <|
           (pure <|
               (show (finalPoly : CDegreeLE F d) ×
