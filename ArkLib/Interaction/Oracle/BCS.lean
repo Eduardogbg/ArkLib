@@ -5,7 +5,7 @@ Authors: Quang Dao
 -/
 import ArkLib.Interaction.Oracle.Spec
 
-open Interaction.Spec.TwoParty
+open Interaction.TwoParty
 
 /-!
 # BCS Transform on Oracle.Spec
@@ -113,7 +113,7 @@ abbrev SharedTranscript {m : Type → Type} (s : Oracle.Spec) (cd : CommitDeco m
 /-- Project an original transcript to the shared transcript. -/
 def projectShared {m : Type → Type} :
     (s : Oracle.Spec) → (cd : CommitDeco m s) →
-    Interaction.Spec.Transcript s.toInteractionSpec → SharedTranscript s cd
+    FullTranscript s → SharedTranscript s cd
   | .done, _, _ => ⟨⟩
   | .«public» _ rest, cdRest, ⟨x, tr⟩ =>
       ⟨x, projectShared (rest x) (cdRest x) tr⟩
@@ -169,11 +169,11 @@ def bcsOracleDeco :
       ⟨oi, bcsOracleDeco (cont ⟨⟩) odRest cdRest⟩
 
 /-- Project a full BCS transcript to the shared transcript. Uses the full
-`Interaction.Spec.Transcript` (not `PublicTranscript`) because non-committed
-oracle messages appear in the full transcript but not in `PublicTranscript`. -/
+runtime transcript (not `PublicTranscript`) because non-committed oracle
+messages appear in the full transcript but not in `PublicTranscript`. -/
 def bcsProjectShared :
     (s : Oracle.Spec) → (cd : CommitDeco m s) →
-    Interaction.Spec.Transcript (bcsSpec s cd).toInteractionSpec →
+    FullTranscript (bcsSpec s cd) →
     SharedTranscript s cd
   | .done, _, _ => ⟨⟩
   | .«public» _ rest, cdRest, ⟨x, tr⟩ =>
@@ -212,14 +212,9 @@ compatibility between original and BCS strategies. -/
 def wrapWithCommitments :
     (s : Oracle.Spec) → (roles : RoleDeco s) → (cd : CommitDeco m s) →
     (OutType : SharedTranscript s cd → Type) →
-    Interaction.Spec.StrategyOver (pairedSyntax m)
-      Interaction.TwoParty.Participant.focal
-      s.toInteractionSpec (s.toSpecRoles roles)
+    FocalStrategy m s roles
       (fun tr => OutType (projectShared s cd tr)) →
-    Interaction.Spec.StrategyOver (pairedSyntax m)
-      Interaction.TwoParty.Participant.focal
-      (bcsSpec s cd).toInteractionSpec
-      ((bcsSpec s cd).toSpecRoles (bcsRoleDeco s roles cd))
+    FocalStrategy m (bcsSpec s cd) (bcsRoleDeco s roles cd)
       (fun tr => OutType (bcsProjectShared s cd tr))
   | .done, _, _, _, strategy => strategy
   | .«public» _ rest, ⟨.sender, rRest⟩, cdRest, OutType, strategy => do
@@ -244,18 +239,13 @@ def wrapWithCommitments :
 as witness for the opening phase.
 
 At committed `.oracle` nodes, the oracle message `x` and commitment witness
-are extracted and paired into the output via `Spec.TwoParty.Focal.mapOutput`. -/
+are extracted and paired into the output via `TwoParty.Focal.mapOutput`. -/
 def wrapWithCommitmentsExt :
     (s : Oracle.Spec) → (roles : RoleDeco s) → (cd : CommitDeco m s) →
     (OutType : SharedTranscript s cd → Type) →
-    Interaction.Spec.StrategyOver (pairedSyntax m)
-      Interaction.TwoParty.Participant.focal
-      s.toInteractionSpec (s.toSpecRoles roles)
+    FocalStrategy m s roles
       (fun tr => OutType (projectShared s cd tr)) →
-    Interaction.Spec.StrategyOver (pairedSyntax m)
-      Interaction.TwoParty.Participant.focal
-      (bcsSpec s cd).toInteractionSpec
-      ((bcsSpec s cd).toSpecRoles (bcsRoleDeco s roles cd))
+    FocalStrategy m (bcsSpec s cd) (bcsRoleDeco s roles cd)
       (fun tr => OutType (bcsProjectShared s cd tr) ×
                  OracleWitness s cd (bcsProjectShared s cd tr))
   | .done, _, _, _, strategy => (strategy, ⟨⟩)
@@ -272,7 +262,9 @@ def wrapWithCommitmentsExt :
       let ⟨x, restStrategy⟩ ← strategy
       let ⟨cm, cwit⟩ ← nc.commit x
       let bcsRest := wrapWithCommitmentsExt (cont ⟨⟩) roles cdRest OutType restStrategy
-      return ⟨cm, Interaction.Spec.TwoParty.Focal.mapOutput
+      return ⟨cm, Interaction.ShapeOver.mapOutput (pairedShapeOver m)
+        (ctxs := toRuntimeRoles (bcsSpec (cont ⟨⟩) cdRest)
+          (bcsRoleDeco (cont ⟨⟩) roles cdRest))
         (fun _ ⟨out, owit⟩ => (out, x, cwit, owit)) bcsRest⟩
   | .«oracle» _ cont, roles, ⟨none, cdRest⟩, OutType, strategy => do
       let ⟨x, restStrategy⟩ ← strategy
@@ -359,12 +351,12 @@ structure PublicQueryVerifier {ι : Type} (oSpec : OracleSpec.{0, 0} ι)
   queryFn : StmtIn → (st : SharedTranscript s cd) →
     OracleQueryDeco s od cd st
   decide : StmtIn →
-    (bcsTr : Interaction.Spec.Transcript (bcsSpec s cd).toInteractionSpec) →
+    (bcsTr : FullTranscript (bcsSpec s cd)) →
     (qd : OracleQueryDeco s od cd (bcsProjectShared s cd bcsTr)) →
     OracleResponseDeco s od cd (bcsProjectShared s cd bcsTr) qd →
     OracleComp (oSpec + [OStmtIn]ₒ +
       (bcsSpec s cd).toOracleSpec (bcsOracleDeco s od cd)
-        ((bcsSpec s cd).projectPublic bcsTr))
+        ((bcsSpec s cd).projectPublicFull bcsTr))
       (StmtOut (bcsProjectShared s cd bcsTr))
 
 /-! ## Phase 1 helpers -/
@@ -374,20 +366,15 @@ variable {ι : Type} {oSpec : OracleSpec.{0, 0} ι}
 variable {ιₛᵢ : Type} {OStmtIn : ιₛᵢ → Type} [∀ i, OracleInterface.{0, 0} (OStmtIn i)]
 
 /-- Phase 1 of BCS: the prover's strategy on `bcsSpec`, obtained from
-`wrapWithCommitmentsExt`. Given an original prover strategy on
-`s.toInteractionSpec`, produces a strategy on `(bcsSpec s cd).toInteractionSpec`
-whose output includes both the original output and the `OracleWitness`. -/
+`wrapWithCommitmentsExt`. Given an original native oracle prover strategy,
+produces a native BCS strategy whose output includes both the original output
+and the `OracleWitness`. -/
 def bcsPhase1Prover
     (s : Oracle.Spec) (roles : RoleDeco s) (cd : CommitDeco (OracleComp oSpec) s)
     (OutType : SharedTranscript s cd → Type) :
-    Interaction.Spec.StrategyOver (pairedSyntax (OracleComp oSpec))
-      Interaction.TwoParty.Participant.focal
-      s.toInteractionSpec (s.toSpecRoles roles)
+    FocalStrategy (OracleComp oSpec) s roles
       (fun tr => OutType (projectShared s cd tr)) →
-    Interaction.Spec.StrategyOver (pairedSyntax (OracleComp oSpec))
-      Interaction.TwoParty.Participant.focal
-      (bcsSpec s cd).toInteractionSpec
-      ((bcsSpec s cd).toSpecRoles (bcsRoleDeco s roles cd))
+    FocalStrategy (OracleComp oSpec) (bcsSpec s cd) (bcsRoleDeco s roles cd)
       (fun tr => OutType (bcsProjectShared s cd tr) ×
                  OracleWitness s cd (bcsProjectShared s cd tr)) :=
   wrapWithCommitmentsExt s roles cd OutType
@@ -417,7 +404,7 @@ data by providing responses computed from the oracle messages. -/
 def answerCommittedQueries :
     (s : Oracle.Spec) → (od : OracleDeco s) → {m : Type → Type} →
     (cd : CommitDeco m s) →
-    (tr : Interaction.Spec.Transcript s.toInteractionSpec) →
+    (tr : FullTranscript s) →
     (qd : OracleQueryDeco s od cd (projectShared s cd tr)) →
     OracleResponseDeco s od cd (projectShared s cd tr) qd
   | .done, _, _, _, _, _ => ⟨⟩
@@ -441,12 +428,12 @@ def bcsPhase2
     {StmtIn : Type} {StmtOut : SharedTranscript s cd → Type}
     (pqv : PublicQueryVerifier oSpec OStmtIn s roles od cd StmtIn StmtOut)
     (stmt : StmtIn)
-    (bcsTr : Interaction.Spec.Transcript (bcsSpec s cd).toInteractionSpec)
+    (bcsTr : FullTranscript (bcsSpec s cd))
     (qd : OracleQueryDeco s od cd (bcsProjectShared s cd bcsTr))
     (rd : OracleResponseDeco s od cd (bcsProjectShared s cd bcsTr) qd) :
     OracleComp (oSpec + [OStmtIn]ₒ +
       (bcsSpec s cd).toOracleSpec (bcsOracleDeco s od cd)
-        ((bcsSpec s cd).projectPublic bcsTr))
+        ((bcsSpec s cd).projectPublicFull bcsTr))
       (StmtOut (bcsProjectShared s cd bcsTr)) :=
   pqv.decide stmt bcsTr qd rd
 

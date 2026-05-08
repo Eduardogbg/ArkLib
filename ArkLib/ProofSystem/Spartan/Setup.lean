@@ -6,7 +6,7 @@ Authors: Quang Dao
 import ArkLib.ProofSystem.Spartan.OracleInterfaces
 import ArkLib.Interaction.Oracle.Composition
 
-open Interaction.Spec.TwoParty
+open Interaction.TwoParty
 
 open MvPolynomial Matrix
 open Interaction OracleComp OracleSpec
@@ -95,7 +95,7 @@ def witnessReduction {ι : Type} {oSpec : OracleSpec.{0, 0} ι} :
                 PUnit.unit)
               (Witness R pp))⟩
     pure <|
-      Interaction.Spec.TwoParty.Focal.toConstantMonads
+      Interaction.TwoParty.Focal.toConstantMonads
         (witnessSpec R pp).toInteractionSpec
         ((witnessSpec R pp).toSpecRoles (witnessRoles R pp))
         proverStep
@@ -173,7 +173,7 @@ def firstChallengeReduction {ι : Type} {oSpec : OracleSpec.{0, 0} ι}
           ⟨⟨state, sWithOracles.oracleStmt⟩,
             PUnit.unit⟩
     pure <|
-      Interaction.Spec.TwoParty.Focal.toConstantMonads
+      Interaction.TwoParty.Focal.toConstantMonads
         (firstChallengeSpec R pp).toInteractionSpec
         ((firstChallengeSpec R pp).toSpecRoles (firstChallengeRoles R pp))
         proverStep

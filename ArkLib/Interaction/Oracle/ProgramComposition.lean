@@ -6,7 +6,7 @@ Authors: Quang Dao
 import ArkLib.Interaction.Oracle.Composition
 import ArkLib.Interaction.Oracle.Program
 
-open Interaction.Spec.TwoParty
+open Interaction.TwoParty
 
 /-!
 # Programmatic oracle verifier composition helpers

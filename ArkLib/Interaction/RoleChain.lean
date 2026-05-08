@@ -6,7 +6,7 @@ Authors: Quang Dao
 import VCVio.Interaction.Basic.Replicate
 import VCVio.Interaction.TwoParty.Compose
 
-open Interaction.Spec.TwoParty
+open Interaction.TwoParty
 
 /-!
 # Decorated Two-Party Chains

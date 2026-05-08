@@ -13,7 +13,7 @@ Additive execution support for explicit verifier access families. The ordinary
 oracle execution module remains the stable runner.
 -/
 
-open Interaction.Spec.TwoParty
+open Interaction.TwoParty
 open OracleComp OracleSpec
 
 namespace Interaction

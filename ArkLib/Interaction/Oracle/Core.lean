@@ -7,7 +7,7 @@ import ArkLib.Interaction.Reduction
 import ArkLib.Interaction.Oracle.Spec
 import VCVio.Interaction.TwoParty.Refine
 
-open Interaction.Spec.TwoParty
+open Interaction.TwoParty
 
 /-!
 # Oracle.Spec Prover, Verifier, and Reduction

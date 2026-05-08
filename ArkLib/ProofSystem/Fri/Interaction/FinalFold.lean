@@ -6,7 +6,7 @@ Authors: Quang Dao
 import ArkLib.ProofSystem.Fri.Interaction.Core
 import ArkLib.Interaction.Oracle.Execution
 
-open Interaction.Spec.TwoParty
+open Interaction.TwoParty
 
 /-!
 # FRI Interaction: Final Fold
@@ -95,7 +95,7 @@ def finalFoldReduction {SharedIn : Type} {ι : Type} {oSpec : OracleSpec.{0, 0} 
                     shared)
                   PUnit)))
     pure <|
-      Interaction.Spec.TwoParty.Focal.toConstantMonads
+      Interaction.TwoParty.Focal.toConstantMonads
         (finalFoldSpec (F := F) (d := d)).toInteractionSpec
         ((finalFoldSpec (F := F) (d := d)).toSpecRoles
           (finalFoldRoles (F := F) (d := d)))

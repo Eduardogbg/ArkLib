@@ -5,7 +5,7 @@ Authors: Quang Dao
 -/
 import ArkLib.Interaction.Security.Soundness
 
-open Interaction.Spec.TwoParty
+open Interaction.TwoParty
 
 /-!
 # Knowledge Soundness for Interactive Verifiers
@@ -189,14 +189,14 @@ theorem knowledgeSoundness_implies_soundness
   let proverKS :
       Spec.StrategyOver (pairedSyntax m) Interaction.TwoParty.Participant.focal
         (Context shared) (Roles shared) (WitnessOut shared) :=
-    Spec.TwoParty.Focal.mapOutput
+    TwoParty.Focal.mapOutput
       (fun tr _ => acceptWitness shared tr) prover
   have hrun :
       Verifier.run verifier shared stmt proverKS =
         (fun z => ⟨z.1, acceptWitness shared z.1, z.2.2⟩) <$>
           Verifier.run verifier shared stmt prover := by
-    simpa [Verifier.run, proverKS, Spec.TwoParty.Counterpart.mapOutput_id] using
-      (Spec.TwoParty.run_mapOutput_mapOutput
+    simpa [Verifier.run, proverKS, TwoParty.Counterpart.mapOutput_id] using
+      (TwoParty.run_mapOutput_mapOutput
         (fP := fun tr (_ : OutputP tr) => acceptWitness shared tr)
         (fC := fun _ sOut => sOut)
         prover (verifier shared stmt))

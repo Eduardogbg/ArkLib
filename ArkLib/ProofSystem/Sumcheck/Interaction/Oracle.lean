@@ -7,7 +7,7 @@ import ArkLib.ProofSystem.Sumcheck.Interaction.Defs
 import ArkLib.Interaction.Oracle.Core
 import ArkLib.Interaction.Oracle.Protocol
 
-open Interaction.Spec.TwoParty
+open Interaction.TwoParty
 
 /-!
 # Sum-Check Oracle Round Primitives

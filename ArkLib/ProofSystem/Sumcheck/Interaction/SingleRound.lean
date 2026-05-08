@@ -7,7 +7,7 @@ import ArkLib.ProofSystem.Sumcheck.Interaction.Oracle
 import ArkLib.Interaction.Oracle.Execution
 import ArkLib.Interaction.Choreo
 
-open Interaction.Spec.TwoParty
+open Interaction.TwoParty
 
 /-!
 # Sum-Check Single Round

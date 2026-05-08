@@ -6,7 +6,7 @@ Authors: Quang Dao
 import ArkLib.Interaction.Oracle.Security.Completeness
 import ArkLib.Interaction.Oracle.Security.KnowledgeSoundness
 
-open Interaction.Spec.TwoParty
+open Interaction.TwoParty
 
 /-!
 # Concrete Reification for Oracle.Spec Protocols
@@ -769,7 +769,7 @@ theorem reifiedKnowledgeSoundness_implies_reifiedSoundness
         (Context shared).toInteractionSpec
         ((Context shared).toSpecRoles (Roles shared))
         (fun tr => WitnessOut shared ((Context shared).projectPublic tr)) :=
-    Interaction.Spec.TwoParty.Focal.mapOutput
+    Interaction.TwoParty.Focal.mapOutput
       (fun tr _ => acceptWitness shared tr) prover
   have hrun :
       verifier.run shared stmt inputImpl proverKS =

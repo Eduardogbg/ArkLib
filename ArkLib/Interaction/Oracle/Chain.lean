@@ -5,7 +5,7 @@ Authors: Quang Dao
 -/
 import ArkLib.Interaction.Oracle.Composition
 
-open Interaction.Spec.TwoParty
+open Interaction.TwoParty
 
 /-!
 # N-ary Chain Composition for Oracle.Spec
@@ -351,7 +351,7 @@ def Reduction.ofChain
     let strat ← Spec.Chain.Prover.comp (ProverState shared)
       n (c shared) (proverInit shared sWithOracles w) (proverSteps shared)
     let strat' :=
-      Interaction.Spec.TwoParty.Focal.mapOutput
+      Interaction.TwoParty.Focal.mapOutput
         (fun tr proverState =>
           let pt := (Spec.Chain.toSpec n (c shared)).projectPublic tr
           (⟨⟨proverStmtResult shared pt proverState,
@@ -364,7 +364,7 @@ def Reduction.ofChain
               (WitnessOut shared pt)))
         strat
     pure <|
-      Interaction.Spec.TwoParty.Focal.toConstantMonads
+      Interaction.TwoParty.Focal.toConstantMonads
         (Spec.Chain.toSpec n (c shared)).toInteractionSpec
         ((Spec.Chain.toSpec n (c shared)).toSpecRoles (Spec.Chain.toRoles n (c shared)))
         strat'
@@ -786,7 +786,7 @@ def Reduction.ofIndexedChain
     let strat ← Spec.IndexedChain.Prover.comp (ProverState shared)
       n (c shared) (proverInit shared sWithOracles w) (proverSteps shared)
     let strat' :=
-      Interaction.Spec.TwoParty.Focal.mapOutput
+      Interaction.TwoParty.Focal.mapOutput
         (fun tr proverState =>
           let pt := (Spec.IndexedChain.toSpec n (c shared)).projectPublic tr
           (⟨⟨proverStmtResult shared pt proverState,
@@ -800,7 +800,7 @@ def Reduction.ofIndexedChain
               (WitnessOut shared pt)))
         strat
     pure <|
-      Interaction.Spec.TwoParty.Focal.toConstantMonads
+      Interaction.TwoParty.Focal.toConstantMonads
         (Spec.IndexedChain.toSpec n (c shared)).toInteractionSpec
         ((Spec.IndexedChain.toSpec n (c shared)).toSpecRoles
           (Spec.IndexedChain.toRoles n (c shared)))
@@ -903,7 +903,7 @@ def Reduction.ofPathChain
     let strat ← Spec.PathChain.Prover.comp (ProverState shared)
       n (c shared) (proverInit shared sWithOracles w) (proverSteps shared)
     let strat' :=
-      Interaction.Spec.TwoParty.Focal.mapOutput
+      Interaction.TwoParty.Focal.mapOutput
         (fun tr proverState =>
           let pt := (Spec.PathChain.toSpec n (c shared)).projectPublic tr
           (⟨⟨proverStmtResult shared pt proverState,
@@ -917,7 +917,7 @@ def Reduction.ofPathChain
               (WitnessOut shared pt)))
         strat
     pure <|
-      Interaction.Spec.TwoParty.Focal.toConstantMonads
+      Interaction.TwoParty.Focal.toConstantMonads
         (Spec.PathChain.toSpec n (c shared)).toInteractionSpec
         ((Spec.PathChain.toSpec n (c shared)).toSpecRoles
           (Spec.PathChain.toRoles n (c shared)))

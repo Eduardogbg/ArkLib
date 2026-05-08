@@ -6,7 +6,7 @@ Authors: Quang Dao
 import ArkLib.Interaction.Reduction
 import VCVio.OracleComp.ProbComp
 
-open Interaction.Spec.TwoParty
+open Interaction.TwoParty
 
 /-!
 # Basic Security Utilities

@@ -5,7 +5,7 @@ Authors: Quang Dao
 -/
 import ArkLib.Interaction.Oracle.Core
 
-open Interaction.Spec.TwoParty
+open Interaction.TwoParty
 
 /-!
 # Oracle.Spec Composition Infrastructure
@@ -281,7 +281,7 @@ def compAuxWithMonads
 At `.oracle` and `.public .sender` nodes, binds the first-phase strategy and
 recurses. At `.public .receiver` nodes, produces a function and recurses.
 
-This is the `Oracle.Spec` analog of `Interaction.Spec.TwoParty.Focal.compFlat`,
+This is the `Oracle.Spec` analog of `Interaction.TwoParty.Focal.compFlat`,
 with the crucial advantage that `toInteractionSpec`, `toSpecRoles`, and
 `projectPublic` all reduce definitionally at each step, so no casts are needed.
 
@@ -502,7 +502,7 @@ def mapOracles
       (RoleDecoration.withMonads (s.toSpecRoles roles)
         (s.toMonadDecoration oSpec OStmt₂ roles od accSpec₂))
       Output :=
-  Interaction.Spec.TwoParty.Counterpart.mapMonadDecoration s.toInteractionSpec
+  Interaction.TwoParty.Counterpart.mapMonadDecoration s.toInteractionSpec
     (s.toSpecRoles roles)
     (mapOraclesHom s roles od accSpec₁ accSpec₂ reroute)
     cpt
@@ -720,7 +720,7 @@ def Reduction.comp
                       ((Context₂ shared pt₁).projectPublic tr₂)))) strat₂
           pure strat₂'
     let stratConstant :=
-      Interaction.Spec.TwoParty.Focal.mapMonadDecoration
+      Interaction.TwoParty.Focal.mapMonadDecoration
         ((Context₁ shared).append (Context₂ shared)).toInteractionSpec
         (((Context₁ shared).append (Context₂ shared)).toSpecRoles
           (Spec.RoleDeco.append (Context₁ shared) (Context₂ shared)

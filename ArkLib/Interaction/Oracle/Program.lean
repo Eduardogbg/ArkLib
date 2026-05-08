@@ -6,7 +6,7 @@ Authors: Quang Dao
 import ArkLib.Interaction.Oracle.Core
 import ArkLib.Interaction.Oracle.ProgramSpec
 
-open Interaction.Spec.TwoParty
+open Interaction.TwoParty
 
 /-!
 # Oracle verifier programs
@@ -608,7 +608,7 @@ def Verifier.WithProgram.run
        Oracle.Verifier.TerminalOutput SharedIn Context OracleDeco OStatementIn
         StatementOut OStatementOut shared ((Context shared).projectPublic tr)) :=
   let prover' :=
-    Interaction.Spec.TwoParty.Focal.toConstantMonads
+    Interaction.TwoParty.Focal.toConstantMonads
       (Context shared).toInteractionSpec
       ((Context shared).toSpecRoles (Roles shared))
       prover

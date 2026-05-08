@@ -7,7 +7,7 @@ import ArkLib.Data.Fin.Basic
 import ArkLib.ProofSystem.Fri.Interaction.General
 import CompPoly.Univariate.ToPoly.Degree
 
-open Interaction.Spec.TwoParty
+open Interaction.TwoParty
 
 /-!
 # Batched FRI Interaction
@@ -184,7 +184,7 @@ noncomputable def batchingReduction {ι : Type} {oSpec : OracleSpec.{0, 0} ι}
                 shared)
               (Fri.OracleLayer.HonestPoly (F := F) s d 0))
     pure <|
-      Interaction.Spec.TwoParty.Focal.toConstantMonads
+      Interaction.TwoParty.Focal.toConstantMonads
         (batchingSpec (F := F) m).toInteractionSpec
         ((batchingSpec (F := F) m).toSpecRoles (batchingRoles (F := F) m))
         proverStep

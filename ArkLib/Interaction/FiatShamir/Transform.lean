@@ -6,7 +6,7 @@ Authors: Quang Dao
 import ArkLib.Interaction.FiatShamir.Basic
 import ArkLib.Interaction.Reduction
 
-open Interaction.Spec.TwoParty
+open Interaction.TwoParty
 
 /-!
 # The Fiat-Shamir Transform

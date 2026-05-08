@@ -1,6 +1,6 @@
 import ArkLib.Interaction.Reduction
 
-open Interaction.Spec.TwoParty
+open Interaction.TwoParty
 
 /-!
 # Interaction-Native Boundaries: Core Layer
@@ -453,7 +453,7 @@ def pullback {m : Type _ → Type _} [Functor m]
       (fun _ => PUnit)
       OuterStmtOut :=
   fun outer _ =>
-    Spec.TwoParty.Counterpart.mapOutput
+    TwoParty.Counterpart.mapOutput
       (fun tr stmtOut => boundary.lift outer tr stmtOut)
       (verifier (projection.proj outer) PUnit.unit)
 
@@ -495,7 +495,7 @@ def pullback {m : Type _ → Type _} [Monad m]
       (projection.proj outerStmt)
       PUnit.unit
       (boundary.wit.proj outerStmt outerWit)
-    pure <| Spec.TwoParty.Focal.mapOutput
+    pure <| TwoParty.Focal.mapOutput
       (fun tr out =>
         boundary.lift outerStmt outerWit tr out.stmt out.wit)
       strat

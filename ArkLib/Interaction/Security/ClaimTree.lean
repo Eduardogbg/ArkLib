@@ -5,7 +5,7 @@ Authors: Quang Dao
 -/
 import ArkLib.Interaction.Security.Basic
 
-open Interaction.Spec.TwoParty
+open Interaction.TwoParty
 
 /-!
 # Claim Trees for Round-by-Round Soundness
@@ -145,7 +145,7 @@ theorem IsSound.bound_terminalProb
       Interaction.TwoParty.Participant.focal spec roles OutputP)
     {claim : Claim} (hBad : ¬ tree.good claim) :
     Pr[fun z => tree.terminalGood z.1 (tree.follow z.1 claim)
-      | Spec.TwoParty.run spec roles prover
+      | TwoParty.run spec roles prover
           (randomChallenger sample spec roles)] ≤ tree.maxPathError := by
   sorry
 /-
@@ -153,7 +153,7 @@ theorem IsSound.bound_terminalProb
   induction tree with
   | done good =>
       simpa [ClaimTree.follow, ClaimTree.terminalGood, ClaimTree.maxPathError,
-        Spec.TwoParty.run_done] using hBad
+        TwoParty.run_done] using hBad
   | @sender _ X rest rRest good NextClaim next advance ih =>
       rcases hSound with ⟨hStayBad, hChildrenSound⟩
       let mx :
@@ -175,7 +175,7 @@ theorem IsSound.bound_terminalProb
                 ((tr : Spec.Transcript (Spec.node X rest)) × OutputP tr × PUnit) :=
             fun z => ⟨⟨xc.1, z.1⟩, z.2.1, z.2.2⟩
           addPrefix <$>
-            Spec.TwoParty.run (rest xc.1) (rRest xc.1) xc.2
+            TwoParty.run (rest xc.1) (rRest xc.1) xc.2
               (randomChallenger sample (rest xc.1) (rRest xc.1))
       have hChild :
           ∀ xc, Pr[event | my xc] ≤ ⨆ x, (next x).maxPathError := by
@@ -212,8 +212,8 @@ theorem IsSound.bound_terminalProb
                 exact mul_le_mul' tsum_probOutput_le_one le_rfl
           _ = ⨆ x, (next x).maxPathError := by simp
       have hrun :
-          Spec.TwoParty.run _ _ prover (randomChallenger sample _ _) = mx >>= my := by
-        simp [mx, my, randomChallenger, Spec.TwoParty.run_sender]
+          TwoParty.run _ _ prover (randomChallenger sample _ _) = mx >>= my := by
+        simp [mx, my, randomChallenger, TwoParty.run_sender]
       simpa [ClaimTree.maxPathError, hrun]
         using hbind
   | @receiver _ X rest rRest good error NextClaim next advance ih =>
@@ -238,7 +238,7 @@ theorem IsSound.bound_terminalProb
                     ((tr : Spec.Transcript (Spec.node X rest)) × OutputP tr × PUnit) :=
                 fun z => ⟨⟨x, z.1⟩, z.2.1, z.2.2⟩
               addPrefix <$>
-                Spec.TwoParty.run (rest x) (rRest x) nextProver
+                TwoParty.run (rest x) (rRest x) nextProver
                   (randomChallenger sample (rest x) (rRest x))
           prover x >>= childRun
       have h₁ : Pr[fun x => ¬ p x | sample _] ≤ error := by
@@ -257,7 +257,7 @@ theorem IsSound.bound_terminalProb
                   ((tr : Spec.Transcript (Spec.node X rest)) × OutputP tr × PUnit) :=
               fun z => ⟨⟨x, z.1⟩, z.2.1, z.2.2⟩
             addPrefix <$>
-              Spec.TwoParty.run (rest x) (rRest x) nextProver
+              TwoParty.run (rest x) (rRest x) nextProver
                 (randomChallenger sample (rest x) (rRest x))
         have hChildRun :
             ∀ nextProver ∈ support (prover x), Pr[event | childRun nextProver] ≤
@@ -300,9 +300,9 @@ theorem IsSound.bound_terminalProb
             (p := p) (q := fun z => ¬ event z) h₁
             (fun x hx hp => by simpa using h₂ x hx hp))
       have hrun :
-          Spec.TwoParty.run _ _ prover (randomChallenger sample _ _) =
+          TwoParty.run _ _ prover (randomChallenger sample _ _) =
             sample _ >>= my := by
-        simp [my, randomChallenger, Spec.TwoParty.run_receiver]
+        simp [my, randomChallenger, TwoParty.run_receiver]
       simpa [ClaimTree.maxPathError, hrun] using hbind
 -/
 

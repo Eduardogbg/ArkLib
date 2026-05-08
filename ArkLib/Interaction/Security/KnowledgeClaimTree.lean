@@ -6,7 +6,7 @@ Authors: Quang Dao
 import ArkLib.Interaction.Security.KnowledgeSoundness
 import ArkLib.Interaction.Security.RoundByRound
 
-open Interaction.Spec.TwoParty
+open Interaction.TwoParty
 
 /-!
 # Knowledge Claim Trees
@@ -218,7 +218,7 @@ theorem IsKnowledgeSound.bound_terminalProb
       Interaction.TwoParty.Participant.focal spec roles OutputP)
     {claim : Claim} (hBad : ¬ tree.good claim) :
     Pr[fun z => tree.terminalGood z.1 (tree.follow z.1 claim)
-      | Spec.TwoParty.run spec roles prover
+      | TwoParty.run spec roles prover
           (randomChallenger sample spec roles)] ≤ tree.maxPathError := by
   have hBad' : ¬ tree.toClaimTree.good claim := by
     simpa using hBad

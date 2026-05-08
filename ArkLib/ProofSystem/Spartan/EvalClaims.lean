@@ -5,7 +5,7 @@ Authors: Quang Dao
 -/
 import ArkLib.ProofSystem.Spartan.FirstSumcheck
 
-open Interaction.Spec.TwoParty
+open Interaction.TwoParty
 
 open MvPolynomial Matrix
 open Interaction OracleComp OracleSpec
@@ -97,7 +97,7 @@ def evalClaimReduction {ι : Type} {oSpec : OracleSpec.{0, 0} ι} :
           ⟨⟨⟨claims, sWithOracles.stmt⟩, sWithOracles.oracleStmt⟩,
             PUnit.unit⟩⟩
     pure <|
-      Interaction.Spec.TwoParty.Focal.toConstantMonads
+      Interaction.TwoParty.Focal.toConstantMonads
         (evalClaimSpec R).toInteractionSpec
         ((evalClaimSpec R).toSpecRoles (evalClaimRoles R))
         proverStep
@@ -175,7 +175,7 @@ def linearCombinationReduction {ι : Type} {oSpec : OracleSpec.{0, 0} ι}
           ⟨⟨⟨ρ, sWithOracles.stmt⟩, sWithOracles.oracleStmt⟩,
             PUnit.unit⟩
     pure <|
-      Interaction.Spec.TwoParty.Focal.toConstantMonads
+      Interaction.TwoParty.Focal.toConstantMonads
         (linearCombinationSpec R).toInteractionSpec
         ((linearCombinationSpec R).toSpecRoles (linearCombinationRoles R))
         proverStep

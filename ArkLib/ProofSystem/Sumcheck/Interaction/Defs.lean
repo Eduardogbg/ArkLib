@@ -9,7 +9,7 @@ import ArkLib.Interaction.Reduction
 import ArkLib.Interaction.RoleChain
 import ArkLib.ProofSystem.Sumcheck.Interaction.CompPoly
 
-open Interaction.Spec.TwoParty
+open Interaction.TwoParty
 
 /-!
 # Sum-Check Interaction: Shared Definitions

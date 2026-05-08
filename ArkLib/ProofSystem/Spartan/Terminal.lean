@@ -5,7 +5,7 @@ Authors: Quang Dao
 -/
 import ArkLib.ProofSystem.Spartan.SecondSumcheck
 
-open Interaction.Spec.TwoParty
+open Interaction.TwoParty
 
 open MvPolynomial Matrix
 open Interaction OracleComp OracleSpec
@@ -157,7 +157,7 @@ def terminalCheckReduction {ι : Type} {oSpec : OracleSpec.{0, 0} ι} :
           terminalCheckFromOracleStmt R pp sWithOracles.stmt sWithOracles.oracleStmt
         pure ⟨⟨out, sWithOracles.oracleStmt⟩, PUnit.unit⟩
     pure <|
-      Interaction.Spec.TwoParty.Focal.toConstantMonads
+      Interaction.TwoParty.Focal.toConstantMonads
         (terminalCheckSpec R pp).toInteractionSpec
         ((terminalCheckSpec R pp).toSpecRoles (terminalCheckRoles R pp))
         proverStep

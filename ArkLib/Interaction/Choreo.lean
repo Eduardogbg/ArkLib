@@ -18,7 +18,7 @@ reduction surface extends the same authoring style to
 `Interaction.Oracle.Spec.Protocol`.
 -/
 
-open Interaction.Spec.TwoParty
+open Interaction.TwoParty
 
 namespace Interaction
 namespace Choreo
@@ -413,11 +413,11 @@ def toReduction
         (reductionProgram.program shared).prover
           (reductionProgram.proverInit shared sWithOracles witness)
       pure <|
-        Interaction.Spec.TwoParty.Focal.toConstantMonads
+        Interaction.TwoParty.Focal.toConstantMonads
           ((reductionProgram.program shared).protocol.spec).toInteractionSpec
           (((reductionProgram.program shared).protocol.spec).toSpecRoles
             ((reductionProgram.program shared).protocol.roles))
-          (Interaction.Spec.TwoParty.Focal.mapOutput
+          (Interaction.TwoParty.Focal.mapOutput
             (fun tr out =>
               reductionProgram.proverOutput shared
                 (((reductionProgram.program shared).protocol.spec).projectPublic tr)

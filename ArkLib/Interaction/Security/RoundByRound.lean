@@ -5,7 +5,7 @@ Authors: Quang Dao
 -/
 import ArkLib.Interaction.Security.ClaimTree
 
-open Interaction.Spec.TwoParty
+open Interaction.TwoParty
 
 /-!
 # Round-by-Round Soundness
@@ -129,18 +129,18 @@ theorem soundness_of_rbrSoundness
         Interaction.TwoParty.Participant.focal (pSpec shared) (roles shared) OutputP)
       (stmt : StatementIn shared), stmt ∉ langIn shared →
       Pr[fun z => langOut shared z.1
-        | Spec.TwoParty.run (pSpec shared) (roles shared) prover
+        | TwoParty.run (pSpec shared) (roles shared) prover
             (randomChallenger sample (pSpec shared) (roles shared))] ≤ ε shared stmt := by
   rcases h with ⟨Claim, tree, root, hSound, hRootBad, hErr, hTerm⟩
   intro shared OutputP prover stmt hs
   have hmono :
       Pr[fun z => langOut shared z.1
-        | Spec.TwoParty.run (pSpec shared) (roles shared) prover
+        | TwoParty.run (pSpec shared) (roles shared) prover
             (randomChallenger sample (pSpec shared) (roles shared))] ≤
         Pr[fun z =>
             (tree shared stmt).terminalGood z.1
               ((tree shared stmt).follow z.1 (root shared stmt))
-          | Spec.TwoParty.run (pSpec shared) (roles shared) prover
+          | TwoParty.run (pSpec shared) (roles shared) prover
               (randomChallenger sample (pSpec shared) (roles shared))] := by
     refine probEvent_mono ?_
     intro z _ hz

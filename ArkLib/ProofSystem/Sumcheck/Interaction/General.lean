@@ -20,7 +20,7 @@ to `PolyStmt ... n` at each round.
 
 namespace Sumcheck
 
-open Interaction.Spec.TwoParty
+open Interaction.TwoParty
 open Interaction CompPoly OracleComp OracleSpec
 
 section

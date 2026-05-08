@@ -7,7 +7,7 @@ import ArkLib.OracleReduction.Basic
 import ArkLib.Interaction.Reduction
 import ArkLib.Interaction.Choreo
 
-open Interaction.Spec.TwoParty
+open Interaction.TwoParty
 
 /-!
 # Schnorr's Σ-Protocol — Two Views
@@ -163,7 +163,7 @@ def prover :
       (fun _ _ => Option Unit) (fun _ _ => PUnit) :=
   fun _pk _ sk => pure (do
     let r ← $ᵗ F
-    pure ⟨r • g, fun c => pure (pure ⟨r + c * sk, (some (), PUnit.unit)⟩)⟩)
+    pure ⟨r • g, fun (c : F) => pure (pure ⟨r + c * sk, (some (), PUnit.unit)⟩)⟩)
 
 /-- The honest Schnorr verifier as an `Interaction.Verifier` over `OracleComp unifSpec`.
 
@@ -175,7 +175,7 @@ def verifier :
     Verifier (OracleComp unifSpec) G
       (fun _ => spec F G) (fun _ => proverRoles F G)
       (fun _ => PUnit) (fun _ _ => Option Unit) :=
-  fun pk _ R => pure (do
+  fun pk _ (R : G) => pure (do
     let c ← $ᵗ F
     pure ⟨c, fun (z : F) =>
       pure (if z • g = R + c • pk then some () else none)⟩)
@@ -248,7 +248,7 @@ def reduction :
       (fun _ => PUnit) (fun _ => F)
       (fun _ _ => Option Unit) (fun _ _ => PUnit) where
   prover := prover F G g
-  verifier := verifier F G g
+  verifier := fun pk stmt => verifier F G g pk stmt
 
 /-- The projected prover is propositionally the same as the hand-written prover. -/
 theorem proverFromChoreo_eq_prover : proverFromChoreo F G g = prover F G g := by

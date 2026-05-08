@@ -5,7 +5,7 @@ Authors: Quang Dao
 -/
 import VCVio.Interaction.TwoParty.Strategy
 
-open Interaction.Spec.TwoParty
+open Interaction.TwoParty
 
 /-!
 # Fiat-Shamir Basics: Replay Oracles and Messages-Only Proofs

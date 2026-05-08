@@ -6,7 +6,7 @@ Authors: Quang Dao
 import ArkLib.Interaction.Oracle.Spec
 import ArkLib.Interaction.Oracle.VerifierAccess
 
-open Interaction.Spec.TwoParty
+open Interaction.TwoParty
 
 /-!
 # Programmatic oracle spec helpers

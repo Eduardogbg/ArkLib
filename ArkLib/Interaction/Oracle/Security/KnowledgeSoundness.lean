@@ -5,7 +5,7 @@ Authors: Quang Dao
 -/
 import ArkLib.Interaction.Oracle.Security.Soundness
 
-open Interaction.Spec.TwoParty
+open Interaction.TwoParty
 
 /-!
 # Oracle Knowledge Soundness
@@ -238,7 +238,7 @@ The caller supplies:
 
 The proof constructs a KS adversary from the soundness adversary by mapping
 its output through `acceptWitness`. Since `acceptWitness` depends only on the
-full transcript, this is a valid `Spec.TwoParty.Focal.mapOutput` map. The
+full transcript, this is a valid `TwoParty.Focal.mapOutput` map. The
 `Verifier.run_mapOutput` lemma guarantees this does
 not change the transcript or verifier-side output distribution. -/
 theorem knowledgeSoundness_implies_soundness
@@ -306,7 +306,7 @@ theorem knowledgeSoundness_implies_soundness
         (Context shared).toInteractionSpec
         ((Context shared).toSpecRoles (Roles shared))
         (fun tr => WitnessOut shared ((Context shared).projectPublic tr)) :=
-    Interaction.Spec.TwoParty.Focal.mapOutput
+    Interaction.TwoParty.Focal.mapOutput
       (fun tr _ => acceptWitness shared tr) prover
   have hrun :
       verifier.run shared stmt inputImpl proverKS =

@@ -9,7 +9,7 @@ import VCVio.Interaction.TwoParty.Strategy
 import ArkLib.Interaction.Reduction
 import ArkLib.OracleReduction.OracleInterface
 
-open Interaction.Spec.TwoParty
+open Interaction.TwoParty
 
 /-!
 # Oracle Protocol Specification
@@ -273,6 +273,19 @@ def toSpecRoles : (s : Spec) → RoleDeco s → RoleDecoration s.toInteractionSp
   | .«oracle» _ cont, roles =>
       ⟨.sender, fun _ => toSpecRoles (cont ⟨⟩) roles⟩
 
+/-- Lift role decoration to every node of the native oracle control tree.
+
+Public nodes use the stored role. Oracle-message nodes are sender nodes:
+the prover chooses the oracle message as a runtime direction, while the
+verifier observes it only through oracle queries. -/
+def toRuntimeRoles : (s : Spec) → RoleDeco s →
+    _root_.Interaction.Decoration (fun _ : Position => _root_.Interaction.TwoParty.Role) s
+  | .done, _ => ⟨⟩
+  | .«public» _ rest, ⟨role, rRest⟩ =>
+      ⟨role, fun x => toRuntimeRoles (rest x) (rRest x)⟩
+  | .«oracle» _ cont, roles =>
+      ⟨.sender, fun _ => toRuntimeRoles (cont ⟨⟩) roles⟩
+
 /-! ## Public transcript -/
 
 /-- The public/control transcript visible to the verifier. Public nodes record
@@ -297,6 +310,42 @@ def FullTranscript.toInteractionTranscript (s : Spec) :
 def FullTranscript.ofInteractionTranscript (s : Spec) :
     Interaction.Spec.Transcript s.toInteractionSpec → FullTranscript s :=
   PFunctor.FreeM.mapLensPathToPathAlong executionLens s
+
+/-- Lens-native paired syntax for oracle specs. -/
+abbrev pairedSyntaxOver (m : Type → Type) :
+    _root_.Interaction.SyntaxOver executionLens _root_.Interaction.TwoParty.Participant.{0}
+      (fun _ : Position => _root_.Interaction.TwoParty.Role) :=
+  _root_.Interaction.TwoParty.pairedSyntaxOver executionLens m
+
+/-- Functorial shape for lens-native paired syntax on oracle specs. -/
+abbrev pairedShapeOver (m : Type → Type) [Functor m] :
+    _root_.Interaction.ShapeOver executionLens _root_.Interaction.TwoParty.Participant.{0}
+      (fun _ : Position => _root_.Interaction.TwoParty.Role) :=
+  _root_.Interaction.TwoParty.pairedShapeOver executionLens m
+
+/-- Lens-native role-aware strategy over an oracle spec.
+
+Unlike the legacy surface using `toInteractionSpec`, the output is indexed by
+`FullTranscript s`, i.e. by runtime paths through `s` along `executionLens`. -/
+abbrev StrategyOver (m : Type → Type)
+    (agent : _root_.Interaction.TwoParty.Participant.{0})
+    (s : Spec) (roles : RoleDeco s)
+    (Output : FullTranscript s → Type) : Type :=
+  _root_.Interaction.StrategyOver (pairedSyntaxOver m) agent s (toRuntimeRoles s roles) Output
+
+/-- Lens-native focal strategy over an oracle spec. -/
+abbrev FocalStrategy (m : Type → Type)
+    (s : Spec) (roles : RoleDeco s)
+    (Output : FullTranscript s → Type) : Type :=
+  StrategyOver m (_root_.Interaction.TwoParty.Participant.focal :
+    _root_.Interaction.TwoParty.Participant.{0}) s roles Output
+
+/-- Lens-native counterpart strategy over an oracle spec. -/
+abbrev CounterpartStrategy (m : Type → Type)
+    (s : Spec) (roles : RoleDeco s)
+    (Output : FullTranscript s → Type) : Type :=
+  StrategyOver m (_root_.Interaction.TwoParty.Participant.counterpart :
+    _root_.Interaction.TwoParty.Participant.{0}) s roles Output
 
 /-- Project a full/runtime transcript to the verifier/control transcript. -/
 def projectPublicFull (s : Spec) : FullTranscript s → PublicTranscript s :=

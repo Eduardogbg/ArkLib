@@ -7,7 +7,7 @@ import ArkLib.Interaction.Oracle.Core
 import ArkLib.Interaction.Oracle.Composition
 import VCVio.OracleComp.SimSemantics.SimulateQ
 
-open Interaction.Spec.TwoParty
+open Interaction.TwoParty
 
 /-!
 # Oracle.Spec Execution
@@ -140,7 +140,7 @@ def Spec.runWithOracleCounterpartStaged
       contP, contC => do
       let strat₂ ← contP ⟨⟩ strat₁
       let strat₂' :=
-        Interaction.Spec.TwoParty.Focal.toConstantMonads
+        Interaction.TwoParty.Focal.toConstantMonads
           (s₂ ⟨⟩).toInteractionSpec
           ((s₂ ⟨⟩).toSpecRoles (r₂ ⟨⟩))
           strat₂
@@ -299,7 +299,7 @@ def Reduction.runConcrete
                 ((Context shared).projectPublic tr))))) :=
   let inputImpl := OracleInterface.simOracle0 (OStatementIn shared) s.oracleStmt
   let prover' :=
-    Interaction.Spec.TwoParty.Focal.toConstantMonads
+    Interaction.TwoParty.Focal.toConstantMonads
       (Context shared).toInteractionSpec
       ((Context shared).toSpecRoles (Roles shared))
       prover
@@ -731,7 +731,7 @@ def Verifier.run
               (Context shared).toOracleSpec (OracleDeco shared)
                 ((Context shared).projectPublic tr))))) := do
   let prover' :=
-    Interaction.Spec.TwoParty.Focal.toConstantMonads
+    Interaction.TwoParty.Focal.toConstantMonads
       (Context shared).toInteractionSpec
       ((Context shared).toSpecRoles (Roles shared))
       prover
@@ -1056,11 +1056,11 @@ theorem Verifier.run_mapOutput
       (Context shared).toInteractionSpec
       ((Context shared).toSpecRoles (Roles shared)) OutputP) :
     verifier.run shared stmt inputImpl
-      (Interaction.Spec.TwoParty.Focal.mapOutput fP prover) =
+      (Interaction.TwoParty.Focal.mapOutput fP prover) =
       (fun z => ⟨z.1, fP z.1 z.2.1, z.2.2⟩) <$>
         verifier.run shared stmt inputImpl prover := by
   simp only [Verifier.run]
-  rw [Interaction.Spec.TwoParty.Focal.toConstantMonads_mapOutput]
+  rw [Interaction.TwoParty.Focal.toConstantMonads_mapOutput]
   have hrun :
       Spec.runWithOracleCounterpart inputImpl
         (Context shared) (Roles shared) (OracleDeco shared) []ₒ (fun q => q.elim)
@@ -1073,7 +1073,7 @@ theorem Verifier.run_mapOutput
               ⟨OracleComp oSpec, inferInstance⟩
               (Context shared).toInteractionSpec))
           fP
-          (Interaction.Spec.TwoParty.Focal.toConstantMonads
+          (Interaction.TwoParty.Focal.toConstantMonads
             (Context shared).toInteractionSpec
             ((Context shared).toSpecRoles (Roles shared))
             prover))
@@ -1081,7 +1081,7 @@ theorem Verifier.run_mapOutput
         (fun z => ⟨z.1, fP z.1 z.2.1, z.2.2⟩) <$>
           Spec.runWithOracleCounterpart inputImpl
             (Context shared) (Roles shared) (OracleDeco shared) []ₒ (fun q => q.elim)
-            (Interaction.Spec.TwoParty.Focal.toConstantMonads
+            (Interaction.TwoParty.Focal.toConstantMonads
               (Context shared).toInteractionSpec
               ((Context shared).toSpecRoles (Roles shared))
               prover)
@@ -1090,7 +1090,7 @@ theorem Verifier.run_mapOutput
       (Spec.runWithOracleCounterpart_mapOutputWithMonads inputImpl
         (Context shared) (Roles shared) (OracleDeco shared) []ₒ (fun q => q.elim)
         fP
-        (Interaction.Spec.TwoParty.Focal.toConstantMonads
+        (Interaction.TwoParty.Focal.toConstantMonads
           (Context shared).toInteractionSpec
           ((Context shared).toSpecRoles (Roles shared))
           prover)

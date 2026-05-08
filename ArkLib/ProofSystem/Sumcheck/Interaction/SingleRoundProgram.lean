@@ -6,7 +6,7 @@ Authors: Quang Dao
 import ArkLib.ProofSystem.Sumcheck.Interaction.SingleRound
 import ArkLib.Interaction.Oracle.Program
 
-open Interaction.Spec.TwoParty
+open Interaction.TwoParty
 
 /-!
 # Sum-check single-round programmatic verifier

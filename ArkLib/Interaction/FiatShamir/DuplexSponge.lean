@@ -6,7 +6,7 @@ Authors: Quang Dao
 import ArkLib.Data.Hash.DuplexSponge
 import ArkLib.Interaction.FiatShamir.Transform
 
-open Interaction.Spec.TwoParty
+open Interaction.TwoParty
 
 /-!
 # Duplex Sponge Fiat-Shamir

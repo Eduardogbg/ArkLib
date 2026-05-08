@@ -5,7 +5,7 @@ Authors: Quang Dao
 -/
 import ArkLib.Interaction.Security.Basic
 
-open Interaction.Spec.TwoParty
+open Interaction.TwoParty
 
 /-!
 # Completeness for Interactive Reductions
@@ -134,7 +134,7 @@ theorem Reduction.completeness_relOut_mono
 the second stage is complete up to `ε₂` whenever the first stage succeeds, then
 the composed reduction is complete up to `ε₁ + ε₂`. -/
 theorem Reduction.completeness_comp
-    {m : Type u → Type u} [Monad m] [Spec.TwoParty.LawfulCommMonad m] [HasEvalSPMF m]
+    {m : Type u → Type u} [Monad m] [TwoParty.LawfulCommMonad m] [HasEvalSPMF m]
     {SharedIn : Type v}
     {StatementIn : SharedIn → Type w}
     {WitnessIn : SharedIn → Type w}
@@ -189,7 +189,7 @@ theorem Reduction.completeness_comp
     fun z₁ => do
       let strat₂ ← reduction2.prover ⟨shared, stmt, z₁.1⟩ z₁.2.1.stmt z₁.2.1.wit
       let ⟨tr₂, out, sOut⟩ ←
-        Spec.TwoParty.run (ctx₂ shared z₁.1) (roles₂ shared z₁.1) strat₂
+        TwoParty.run (ctx₂ shared z₁.1) (roles₂ shared z₁.1) strat₂
           (reduction2.verifier ⟨shared, stmt, z₁.1⟩ z₁.2.2)
       pure ⟨Spec.Transcript.append (ctx₁ shared) (ctx₂ shared) z₁.1 tr₂,
         ⟨Spec.Transcript.packAppend (ctx₁ shared) (ctx₂ shared) (StmtOut shared) z₁.1 tr₂ out.stmt,
@@ -356,7 +356,7 @@ theorem Reduction.completeness_comp
 
 /-- Perfect completeness composes. -/
 theorem Reduction.perfectCompleteness_comp
-    {m : Type u → Type u} [Monad m] [Spec.TwoParty.LawfulCommMonad m] [HasEvalSPMF m]
+    {m : Type u → Type u} [Monad m] [TwoParty.LawfulCommMonad m] [HasEvalSPMF m]
     {SharedIn : Type v}
     {StatementIn : SharedIn → Type w}
     {WitnessIn : SharedIn → Type w}

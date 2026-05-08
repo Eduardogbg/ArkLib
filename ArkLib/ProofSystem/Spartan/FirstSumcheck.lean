@@ -8,7 +8,7 @@ import ArkLib.Data.Fin.Basic
 import ArkLib.Data.MvPolynomial.Multilinear
 import ArkLib.Interaction.Boundary.Reification
 
-open Interaction.Spec.TwoParty
+open Interaction.TwoParty
 
 open MvPolynomial Matrix
 open Interaction OracleComp OracleSpec

@@ -1,6 +1,6 @@
 import ArkLib.Interaction.Boundary.Oracle
 
-open Interaction.Spec.TwoParty
+open Interaction.TwoParty
 
 /-!
 # Boundary Reification for `Interaction.Oracle`

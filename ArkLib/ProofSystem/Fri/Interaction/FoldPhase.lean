@@ -6,7 +6,7 @@ Authors: Quang Dao
 import ArkLib.ProofSystem.Fri.Interaction.Core
 import ArkLib.Interaction.Oracle.Chain
 
-open Interaction.Spec.TwoParty
+open Interaction.TwoParty
 
 /-!
 # FRI Interaction: Fold Phase

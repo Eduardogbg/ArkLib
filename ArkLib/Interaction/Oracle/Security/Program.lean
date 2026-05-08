@@ -7,7 +7,7 @@ import ArkLib.Interaction.Oracle.Program
 import ArkLib.Interaction.Oracle.Security.Completeness
 import ArkLib.Interaction.Oracle.Security.KnowledgeSoundness
 
-open Interaction.Spec.TwoParty
+open Interaction.TwoParty
 
 /-!
 # Security notions for programmatic oracle verifiers

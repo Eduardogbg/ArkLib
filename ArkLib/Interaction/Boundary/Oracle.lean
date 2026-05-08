@@ -1,7 +1,7 @@
 import ArkLib.Interaction.Boundary.Core
 import ArkLib.Interaction.Oracle.Execution
 
-open Interaction.Spec.TwoParty
+open Interaction.TwoParty
 
 /-!
 # Boundaries for `Interaction.Oracle`

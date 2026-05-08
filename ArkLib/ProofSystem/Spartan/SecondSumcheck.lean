@@ -5,7 +5,7 @@ Authors: Quang Dao
 -/
 import ArkLib.ProofSystem.Spartan.EvalClaims
 
-open Interaction.Spec.TwoParty
+open Interaction.TwoParty
 
 open MvPolynomial Matrix
 open Interaction OracleComp OracleSpec

@@ -8,7 +8,7 @@ import VCVio
 import ArkLib.OracleReduction.Security.Basic
 import ArkLib.Interaction.Reduction
 
-open Interaction.Spec.TwoParty
+open Interaction.TwoParty
 
 /-!
 # Commitment Schemes with Oracle Openings
