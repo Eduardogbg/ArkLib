@@ -159,6 +159,14 @@ When translating theorem statements into names, we use standard mappings for sym
 * **Definitions**: Prefer term-style definitions over tactic-style definitions. Avoid
   starting a `def` with a `by` block unless there is a strong reason; if a definition
   seems to require tactics, first reconsider the helper API or surrounding design.
+* **Definitional transports**: Core definitions should not contain proof-generated
+  transports such as `cast`, `Eq.mp`, `Eq.mpr`, `eq_mpr`, or transports produced by
+  `rw`, `simp`, `convert`, or similar tactics. This is especially important in
+  `ArkLib/Interaction/`, where protocols should compute by structural recursion and
+  pattern matching. If such a transport appears, first revisit the indexing/API design
+  instead of hiding the mismatch in the term. Intrinsic typed reindexing operations such
+  as `Fin.castLE`, `Fin.succ`, and established mathlib combinators are fine when they
+  are the actual transformation being modeled.
 * **Library Combinators**: Prefer existing standard-library or repo combinators over bespoke
   helper definitions for simple tuple/index plumbing. If a definition is just
   snoc/append/update/projection/reindexing and a clear combinator already exists, use it

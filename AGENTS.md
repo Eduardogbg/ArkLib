@@ -37,6 +37,13 @@ Start with [`README.md`](README.md) for project overview.
 - Prefer term-style definitions over tactic-style definitions. Do not start a definition
   with a `by` block unless there is a strong reason; if a definition seems to require
   tactics, first reconsider the surrounding API, helper definitions, or expected normal form.
+- Keep core definitions, especially in `ArkLib/Interaction/`, free of proof-generated
+  transports such as `cast`, `Eq.mp`, `Eq.mpr`, `eq_mpr`, or casts introduced by `rw`,
+  `simp`, `convert`, or similar tactics. These usually indicate that the dependent
+  indexing or recursion principle is not definitionally aligned. Prefer redesigning the
+  type/API so branches compute by pattern matching. Intrinsic typed reindexing operations
+  such as `Fin.castLE`, `Fin.succ`, or established mathlib combinators are acceptable
+  when they are the intended data transformation.
 - Prefer existing library and repo combinators over bespoke helper definitions for simple
   tuple/index plumbing. If a definition is just snoc/append/update/projection/reindexing and a
   clear standard combinator already expresses it, use that directly instead of writing or keeping
