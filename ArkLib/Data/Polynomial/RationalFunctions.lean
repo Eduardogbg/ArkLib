@@ -970,6 +970,39 @@ lemma weight_Λ_H_tilde'_le {H : F[X][Y]} {D : ℕ}
       ring
     omega
 
+omit [IsDomain F] in
+/-- One reduction step in `modByMonic` does not increase `Λ`-weight: subtracting
+`C(p.leadingCoeff) · Y^(p.natDegree - d_H) · H_tilde' H` from `p` keeps the weight bounded by
+`Λ(p)`. -/
+lemma weight_Λ_sub_leadingCoeff_mul_H_tilde'_le {p H : F[X][Y]} {D : ℕ}
+    (hD : Bivariate.totalDegree H ≤ D) (hH : 0 < H.natDegree)
+    (hp_deg : H.natDegree ≤ p.natDegree) :
+    weight_Λ (p - Polynomial.C p.leadingCoeff *
+        Polynomial.X ^ (p.natDegree - H.natDegree) * H_tilde' H) H D ≤
+      weight_Λ p H D := by
+  classical
+  refine (weight_Λ_sub_le _ _ _ _).trans ?_
+  refine max_le le_rfl ?_
+  refine (weight_Λ_C_mul_X_pow_mul_le (weight_Λ_H_tilde'_le hD hH)).trans ?_
+  by_cases hp : p = 0
+  · subst hp
+    simp at hp_deg
+    omega
+  · have hp_lead_ne : p.leadingCoeff ≠ 0 := Polynomial.leadingCoeff_ne_zero.mpr hp
+    have hp_in : p.natDegree ∈ p.support := Polynomial.mem_support_iff.mpr hp_lead_ne
+    refine le_trans ?_ (le_weight_Λ_of_mem_support hp_in)
+    rw [WithBot.coe_le_coe]
+    change (p.natDegree - H.natDegree) * (D + 1 - Bivariate.natDegreeY H) +
+        (p.coeff p.natDegree).natDegree + H.natDegree * (D + 1 - Bivariate.natDegreeY H) ≤
+        p.natDegree * (D + 1 - Bivariate.natDegreeY H) + (p.coeff p.natDegree).natDegree
+    have hsum : (p.natDegree - H.natDegree) + H.natDegree = p.natDegree := by omega
+    have hadd_mul :
+        (p.natDegree - H.natDegree) * (D + 1 - Bivariate.natDegreeY H) +
+            H.natDegree * (D + 1 - Bivariate.natDegreeY H) =
+          p.natDegree * (D + 1 - Bivariate.natDegreeY H) := by
+      rw [← Nat.add_mul, hsum]
+    linarith [hadd_mul]
+
 /-- The set `S_β` from the statement of Lemma A.1 in Appendix A of [BCIKS20].
 Note: Here `F[X][Y]` is `F[Z][T]`. -/
 noncomputable def S_β {H : F[X][Y]} (β : 𝒪 H) : Set F :=
