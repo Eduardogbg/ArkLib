@@ -6,6 +6,7 @@ Authors: Katerina Hristova
 
 import ArkLib.Data.CodingTheory.Basic.LinearCode
 import ArkLib.Data.MvPolynomial.SchwartzZippelCounting
+import ArkLib.Data.MvPolynomial.Degrees
 
 /-!
 # Proximity Generators fundamental definitions
@@ -30,7 +31,7 @@ respectively, we can define their tensor product componentwise. This is a genera
 
 * [Guruswami, V., Rudra, A., Sudan M., *Essential Coding Theory*, online copy][GRS25]
 * [Bordage, S., Chiesa, A., Guan, Z., Manzur, I., *All Polynomial Generators Preserve Distance
-with Mutual Correlated Agreement*][BSGM25]. Full paper : https://eprint.iacr.org/2025/2051}
+with Mutual Correlated Agreement*][BCGM25]. Full paper : https://eprint.iacr.org/2025/2051}
 -/
 
 section
@@ -147,20 +148,20 @@ lemma minSeedCard_le {F : Type} {s : ℕ} (S : Fin s → Set F)
 
 noncomputable local instance {F : Type} [Fintype F] {S : Set F} : Fintype S := Fintype.ofFinite ↑S
 
-set_option linter.unusedDecidableInType false in
 /-- If `G` is a polynomial generator, then `G` is zero-evading with error the maximum of the total
 degrees of the individual polynomials divided by the size of the smallest evaluation sets `S i`.
 Remark 3.20 [BCGM25]. -/
 theorem remark_3_20
-  {F : Type} [Field F] [Fintype F] [DecidableEq F]
-  {ℓ : Type} [Fintype ℓ] [DecidableEq ℓ]
+  {F : Type} [Field F] [Fintype F]
+  {ℓ : Type} [Fintype ℓ]
   {s : ℕ}
   {S : Fin s → Set F} [∀ i, Nonempty ↥(S i)]
   {P : ℓ → MvPolynomial (Fin s) F}
   {G : Generator (∀ i, ↥(S i)) ℓ F} (hG : IsPolynomialGeneratorOf S G P)
-  (hdm : maxTotalDegree P ≤ minSeedCard S)
+  (hdm : MvPolynomial.maxTotalDegree P ≤ minSeedCard S)
   : IsZeroEvadingGenerator G ⟨(maxTotalDegree P : ℝ) / minSeedCard S,
     error_in_unit_interval (maxTotalDegree P) (minSeedCard S) (minSeedCard_pos S) hdm⟩ := by
+  classical
   unfold IsZeroEvadingGenerator
   simp only [ne_eq, bind_pure_comp, sSup_le_iff, Set.mem_setOf_eq, forall_exists_index,
     and_imp]
