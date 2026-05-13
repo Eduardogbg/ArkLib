@@ -46,12 +46,12 @@ variable {ι : Type} [Fintype ι]
 
 /-- The type of generators, where a generator `G` over a field `F` with output size `ℓ` is a
 function that maps a seed `x` in a set `S` to a coefficient vector in `F^ℓ`.
-Definition 3.10 [BSGM25]. -/
+Definition 3.10 [BCGM25]. -/
 abbrev Generator (S ℓ F : Type) : Type := S → (ℓ → F)
 
 /-- A generator `G` is zero-evading with a zero-evading error `ε_ze` if the probability of obtaining
 a zero output from a non-zero vector is bounded above by `ε_ze`.
-Definition 3.11 [BSGM25]. -/
+Definition 3.11 [BCGM25]. -/
 def IsZeroEvadingGenerator {S : Type} [Nonempty S] [Fintype S] (G : Generator S ℓ F) (ε_ze : I) :
   Prop :=
   (sSup {y | ∃ v : ℓ → F, v ≠ 0 ∧ y = Pr_{let x ←$ᵖ S}[dotProduct (G x) v = 0]})
@@ -60,7 +60,7 @@ def IsZeroEvadingGenerator {S : Type} [Nonempty S] [Fintype S] (G : Generator S 
 /-- Let the set `S` be a product of `ℓ` subsets of `F`. A polynomial generator is a generator if
 there exist `ℓ` linearly independent multivariate polynomials, such that the output is an evaluation
 of the seed at each of these polynomials.
-Definition 3.19 [BSGM25]. -/
+Definition 3.19 [BCGM25]. -/
 def IsPolynomialGenerator {s : ℕ} (S : Fin s → Set F) (G : Generator (∀ i, S i) ℓ F) : Prop :=
   ∃ P : ℓ → MvPolynomial (Fin s) F, LinearIndependent F P ∧
   ∀ x : (∀ i, S i), G x = MvPolynomial.eval (fun i ↦ (x i : F)) ∘ P
@@ -70,7 +70,7 @@ def IsPolynomialGeneratorOf {s : ℕ} (S : Fin s → Set F) (G : Generator (∀ 
   LinearIndependent F P ∧ ∀ x : (∀ i, S i), G x = MvPolynomial.eval (fun i ↦ (x i : F)) ∘ P
 
 /-- A matrix whose rows are the outputs of the generator function.
-Defined inside Definition 3.12 [BSGM25]. -/
+Defined inside Definition 3.12 [BCGM25]. -/
 def M_G {S : Type} [Nonempty S] [Fintype S] (G : Generator S ℓ F) : Matrix S ℓ F :=
   Matrix.of G
 
@@ -79,7 +79,7 @@ noncomputable example {S : Type} [Nonempty S] [Fintype S] [DecidableEq F] (G : G
 
 /-- A generator `G` is MDS if the matrix `M_G` whose rows are the outputs of the generator
 function is a generator matrix for an MDS code.
-Definition 3.12 [BSGM25]. -/
+Definition 3.12 [BCGM25]. -/
 def IsMDSGenerator {S : Type} [Nonempty S] [Fintype S] [DecidableEq F] (G : Generator S ℓ F) :
   Prop := LinearCode.IsMDS (LinearCode.fromColGenMat (M_G G))
 
@@ -93,7 +93,7 @@ def IsMCA {S : Type} [Nonempty S] [Fintype S] (G : Generator S ℓ F) (LC : Line
 
 /-- A generator has mutual correlated agreement (MCA) with error `ε_mca` if the probability that the
 generator satisfies the MCA condition is bounded above by `ε_mca`.
-Definition 3.14 [BSGM25]. -/
+Definition 3.14 [BCGM25]. -/
 def IsMCAGenerator {S : Type} [Nonempty S] [Fintype S] (G : Generator S ℓ F) (ε_mca : I → I)
   (LC : LinearCode ι F) : Prop :=
   ∀ U : ℓ → (ι → F), ∀ γ : I,
@@ -101,7 +101,7 @@ def IsMCAGenerator {S : Type} [Nonempty S] [Fintype S] (G : Generator S ℓ F) (
 
 /-- Let `G : S →F^ℓ` and `G′: S′→F^ℓ` be two generators. Their tensor product is the generator
 `G ⊗ G′: S × S′→ F^ℓ ⊗F^ℓ′` defined by `(x,x′) ↦ G(x) ⊗ G′(x′)`.
-Definition 4.3 [BSGM25]. -/
+Definition 4.3 [BCGM25]. -/
 def TensorGenerator {ℓ' : Type} [Fintype ℓ'] (S S' : Type)
   (G : Generator S ℓ F) (G' : Generator S' ℓ' F) : (S × S') → TensorProduct F (ℓ → F) (ℓ' → F)
 | (x, x') => TensorProduct.tmul F (G x) (G' x')
@@ -122,10 +122,10 @@ lemma error_in_unit_interval (d : ℕ) (m : ℕ) (hm_pos : 0 < m) (hdm : d ≤ m
 
 /-- The minimum of the cardinality of a family of sets nonempty sets, indexed by a possibly empty
 set. Returns 1 if the indexing set is empty. -/
-noncomputable def minSeedCard {F : Type} {s : ℕ} (S : Fin s → Set F) [∀ i, Fintype ↥(S i)] : ℕ :=
+def minSeedCard {F : Type} {s : ℕ} (S : Fin s → Set F) [∀ i, Fintype ↥(S i)] : ℕ :=
   if h : 0 < s then
     Finset.inf' Finset.univ (Finset.univ_nonempty_iff.mpr (Fin.pos_iff_nonempty.mp h))
-      (fun i => (S i).toFinset.card)
+      (fun i => Fintype.card ↥(S i))
   else 1
 
 /-- The minimum of the cardinality of a family of nonempty sets indexed by a posibly empty set is
@@ -133,23 +133,24 @@ greater than zero. -/
 lemma minSeedCard_pos {F : Type} {s : ℕ} (S : Fin s → Set F)
     [∀ i, Fintype ↥(S i)] [∀ i, Nonempty ↥(S i)] :
     0 < minSeedCard S := by
-  unfold minSeedCard;
-  split_ifs <;> simp_all;
+  unfold minSeedCard
+  split_ifs <;> simp_all
 
 /-- The minimum of the cardinality of a family of nonempty sets is smaller than the cardinality of
 each set in the family. -/
 lemma minSeedCard_le {F : Type} {s : ℕ} (S : Fin s → Set F)
     [∀ i, Fintype ↥(S i)] (hs : 0 < s) (i : Fin s) :
     minSeedCard S ≤ (S i).toFinset.card := by
-  unfold minSeedCard;
-  split_ifs ; aesop
+  unfold minSeedCard
+  split_ifs
+  aesop
 
-noncomputable instance {F : Type} [Fintype F] {S : Set F} : Fintype S := Fintype.ofFinite ↑S
+noncomputable local instance {F : Type} [Fintype F] {S : Set F} : Fintype S := Fintype.ofFinite ↑S
 
 set_option linter.unusedDecidableInType false in
 /-- If `G` is a polynomial generator, then `G` is zero-evading with error the maximum of the total
 degrees of the individual polynomials divided by the size of the smallest evaluation sets `S i`.
-Remark 3.20 [BSGM25]. -/
+Remark 3.20 [BCGM25]. -/
 theorem remark_3_20
   {F : Type} [Field F] [Fintype F] [DecidableEq F]
   {ℓ : Type} [Fintype ℓ] [DecidableEq ℓ]
@@ -160,17 +161,17 @@ theorem remark_3_20
   (hdm : maxTotalDegree P ≤ minSeedCard S)
   : IsZeroEvadingGenerator G ⟨(maxTotalDegree P : ℝ) / minSeedCard S,
     error_in_unit_interval (maxTotalDegree P) (minSeedCard S) (minSeedCard_pos S) hdm⟩ := by
-  unfold IsZeroEvadingGenerator;
-  simp +zetaDelta only [ne_eq, bind_pure_comp, sSup_le_iff, Set.mem_setOf_eq, forall_exists_index,
-    and_imp];
+  unfold IsZeroEvadingGenerator
+  simp only [ne_eq, bind_pure_comp, sSup_le_iff, Set.mem_setOf_eq, forall_exists_index,
+    and_imp]
   intros b x hx hb
-  rw [hb];
-  convert prob_eval_zero_le_div (∑ j, x j • P j) _ (maxTotalDegree P) (minSeedCard S) _ _ _ using 1;
-  any_goals intro i; exact minSeedCard_le S (Fin.pos_iff_nonempty.mpr ⟨i⟩) i;
-  any_goals assumption;
-  · convert rfl;
-    ext; simp +decide [MvPolynomial.dotProduct_eq_eval_linearCombination, hG.2] ;
-  · rw [ENNReal.ofReal_div_of_pos] <;> norm_cast;
+  rw [hb]
+  convert prob_eval_zero_le_div (∑ j, x j • P j) _ (maxTotalDegree P) (minSeedCard S) _ _ _ using 1
+  any_goals intro i; exact minSeedCard_le S (Fin.pos_iff_nonempty.mpr ⟨i⟩) i
+  any_goals assumption
+  · convert rfl
+    ext; simp +decide [MvPolynomial.dotProduct_eq_eval_linearCombination, hG.2]
+  · rw [ENNReal.ofReal_div_of_pos] <;> norm_cast
     exact minSeedCard_pos S
   · exact LinearCombination.linearCombination_ne_zero hG.1 hx
   · exact MvPolynomial.totalDegree_linearCombination_le _ _ _ fun j =>
