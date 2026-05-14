@@ -62,7 +62,7 @@ trusted blindly.
 | D2.15 | `ReedSolomon.Folded.frsCode` | ⚠ | Uses `p.degree < k` directly; existing ArkLib `ReedSolomon.code` uses `Polynomial.degreeLT F k`. Align. Verify the encoding `f x j = p.eval (domain x * ω ^ j)` matches paper's `f̂(x · ω^j)` exactly (multiplication side / parenthesisation). |
 | D2.16 | `CodingTheory.IsSubspaceDesign` | ⚠ | `LinearMap.proj` formulation for `A_i` is technical; paper uses comprehension `{a ∈ A : a_i = 0^s}`. Add an equivalence lemma; pick one formulation as canonical. Also: paper requires `dim A ≤ r`, but `r ∈ ℕ` while `dim` lives in `ℕ∞` (here truncated to `Module.finrank` returning `ℕ`). Confirm infinite-dim ruled out. |
 | L2.17 | `CodingTheory.subspaceDesign_tau_lower` | ⏳ | "rate `ρ`" in paper is implicit from `C`; my version uses `Module.finrank F C / Fintype.card ι` directly. Check this matches `LinearCode.rate` definition. |
-| T2.18 | `CodingTheory.frs_is_subspaceDesign_gk16` | ❌ | **Off-by-one in τ profile.** `if r ∈ Finset.range s` gives `r ∈ {0, …, s−1}`, but paper says `r ∈ [s] = {1, …, s}`. Fix to `Finset.Icc 1 s` or `Finset.Ioc 0 s`. |
+| T2.18 | `CodingTheory.frs_is_subspaceDesign_gk16` | 🔧 | **Off-by-one in τ profile fixed.** Changed `Finset.range s` → `Finset.Icc 1 s` so `r ∈ {1, …, s}` matches paper's `[s]`. Docstring updated to call out the one-based convention. |
 
 #### [ExtensionCodes.lean](ArkLib/Data/CodingTheory/ExtensionCodes.lean)
 
@@ -198,7 +198,7 @@ Execute in this order — earlier passes affect statement meaning, so they're lo
 
 Resolve every `⚠` and `❌` in §1. One commit per concern, smallest reversible unit:
 
-1. **A1.** Fix T2.18 off-by-one in τ profile (`Finset.range s` → `Finset.Icc 1 s`).
+1. **A1.** ✅ Fix T2.18 off-by-one in τ profile (`Finset.range s` → `Finset.Icc 1 s`).
 2. **A2.** Fix Nat-subtraction in L3.7 and T3.9 exponents (real-valued exponent or add hypothesis).
 3. **A3.** Add `2 ≤ q` precondition to D2.2 `qEntropy` or document boundary.
 4. **A4.** Add `s ∣ k` hypothesis to `irsCode` (D2.13), or rename to capture rounding.

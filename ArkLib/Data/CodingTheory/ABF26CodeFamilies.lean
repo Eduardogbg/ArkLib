@@ -146,7 +146,11 @@ theorem subspaceDesign_tau_lower
 /-- **ABF26 Theorem 2.18 [GK16].** Both folded Reed-Solomon codes and univariate
 multiplicity codes are τ-subspace-design for an explicit τ:
 
-  `τ(r) := s · ρ / (s - r + 1)` for `r ∈ [s]`, and `τ(r) := 1` otherwise
+  `τ(r) := s · ρ / (s - r + 1)` for `r ∈ [s] = {1, …, s}`, and `τ(r) := 1` otherwise.
+
+Note: `[s]` in the paper denotes `{1, …, s}` (one-based), which we encode in Lean as
+`Finset.Icc 1 s`. With this convention `τ(1) = ρ` and `τ(s) = s · ρ`, matching the paper's
+boundary values.
 
 The FRS case requires `(L, s)`-admissibility of `ω`; the multiplicity case requires
 `|F| > n` and `char(F) > ρ·s·n > s`. We state only the FRS half here; the multiplicity
@@ -159,7 +163,7 @@ theorem frs_is_subspaceDesign_gk16
     (L : Finset F) (_hL_dom : ∀ i : ι, domain i ∈ L)
     (_hω : ReedSolomon.Folded.Admissible L s ω) :
     let τ : ℕ → ℝ := fun r =>
-      if r ∈ Finset.range s then
+      if r ∈ Finset.Icc 1 s then
         (s : ℝ) * (k : ℝ) / Fintype.card ι / (s - r + 1)
       else 1
     ∃ C : Submodule F (ι → Fin s → F),
