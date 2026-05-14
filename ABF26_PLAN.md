@@ -105,7 +105,7 @@ source of truth for *when*.
 | 6 | §4 capacity regime + line-decoding | Phases 1, 3, 5 | D4.20, T4.21, T4.11, T4.12, T4.13, T4.14, T4.15, T4.16, T4.17, T4.18, L4.19 |
 | 7 | §5 connections | Phases 4, 5, 6 | T5.1, T5.2, T5.3, T5.4 |
 | 8 (deferred) | §6 toy problem | OracleReduction security sorries cleared | D6.1, C6.2, D6.3, D6.4, L6.5, L6.6, R6.7, L6.8, C6.9, L6.10, D6.11, L6.12, L6.13, R6.14, B.1 |
-| 9 | Misc preliminaries | Phase 0 | L2.1, D2.2, D2.3, D2.4, D2.5, D2.7, D2.8, D2.9, plus appendix notation aliases DA.1, RA.2, DA.3, DA.4, DA.5 |
+| 9 | Misc preliminaries | Phase 0 | L2.1, D2.2, D2.3, D2.4, D2.5, D2.7, D2.9, plus appendix notation aliases DA.1, RA.2, DA.3, DA.5. (D2.8 is owned by Phase 1 and DA.4 is already `present`, so neither is in Phase 9.) |
 
 ---
 
@@ -1240,9 +1240,10 @@ convenience.
 - **Phase 0 PR 1**: audit refresh. No item closures; updates audit rows.
   Findings landed: `AHIV22.lean`, `BCIKS20/ReedSolomonGap.lean`, and
   `BCIKS20/AffineSpaces.lean` are now sorry-free (closed by PRs #385, #463,
-  #6389c0ee). New residual `sorry`s discovered in `BCIKS20/ListDecoding/*`,
-  `BCIKS20/WeightedAgreement.lean`, and `DG25/MainResults.lean`. Phase 2 PR
-  list below is re-scoped accordingly.
+  and commit `6389c0e` respectively; the third was pushed directly to main
+  without an associated PR number). New residual `sorry`s discovered in
+  `BCIKS20/ListDecoding/*`, `BCIKS20/WeightedAgreement.lean`, and
+  `DG25/MainResults.lean`. Phase 2 PR list below is re-scoped accordingly.
 - **Phase 1 PR 1**: D2.8 (Lambda), D4.1, D4.3, R4.2, R4.4, F4.5.
 - **Phase 1 PR 2**: L4.6, L4.7.
 - **Phase 1 PR 3**: bridging lemmas + WHIR re-expression (does not touch the
@@ -1280,7 +1281,7 @@ convenience.
 - **Phase 7 PR 2**: T5.4.
 - **Phase 8** (deferred): D6.1, C6.2, D6.3, D6.4, L6.5, L6.6, R6.7, L6.8, C6.9, L6.10, D6.11, L6.12, L6.13, R6.14, B.1.
 - **Phase 9 PR 1**: L2.1, D2.2, D2.4 (entropy / volume / poly identity wrapping).
-- **Phase 9 PR 2**: D2.3, D2.5, D2.7, D2.11 notation, DA.1, RA.2, DA.3, DA.5 aliases.
+- **Phase 9 PR 2**: D2.3, D2.5, D2.7, D2.9, D2.11 notation aliases, DA.1, RA.2, DA.3, DA.5 aliases.
 
 Total: 28 PRs across 9 phases (Phase 8 deferred = 0 PRs in initial plan).
 

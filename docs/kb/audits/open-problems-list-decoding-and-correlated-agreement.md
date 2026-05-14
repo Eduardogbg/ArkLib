@@ -50,20 +50,22 @@ short name `ABF26`.
 ## Drift since last audit
 
 Three rows the previous audit flagged as `present-but-incomplete` are now
-fully sorry-free, thanks to PR #385 (AHIV22), PR #463 (BCIKS20
-`ReedSolomonGap`), and PR #6389c0ee (BCIKS20 `AffineSpaces`). Those rows
-are re-tagged `present` below. One file
+fully sorry-free, thanks to PR #385 (AHIV22, 2026-04-24), PR #463 (BCIKS20
+`ReedSolomonGap`, 2026-04-30), and commit `6389c0e` (BCIKS20
+`AffineSpaces`, 2026-05-05; pushed directly with no associated PR
+number). Those rows are re-tagged `present` below. One file
 ([`ArkLib/Data/CodingTheory/ProximityGap/BCIKS20/AffineLines/Main.lean`](../../../ArkLib/Data/CodingTheory/ProximityGap/BCIKS20/AffineLines/Main.lean))
 still has the single `sorry` the previous audit identified at line 40 of
 `RS_correlatedAgreement_affineLines`. Several files under
 `BCIKS20/ListDecoding/`, `BCIKS20/WeightedAgreement.lean`,
 `DG25/MainResults.lean`, and `Whir/MutualCorrAgreement.lean` retain
 pre-existing `sorry`s and are surfaced in the **Existing Inconsistencies**
-section below. New supporting files added since the previous audit:
+section below. Two supporting files relevant to the Phase 1 ε-error
+migration and the still-open non-unique-decoding branch:
 [`ArkLib/Data/CodingTheory/ReedSolomon/FftDomain.lean`](../../../ArkLib/Data/CodingTheory/ReedSolomon/FftDomain.lean)
-(smooth-domain FFT infrastructure) and
+(smooth-domain FFT infrastructure, added 2026-04-17 in PR #448) and
 [`ArkLib/Data/CodingTheory/ProximityGap/BCIKS20/AffineLines/JointAgreement.lean`](../../../ArkLib/Data/CodingTheory/ProximityGap/BCIKS20/AffineLines/JointAgreement.lean)
-(bivariate-existence lemmas for the still-open non-unique-decoding branch).
+(bivariate-existence lemmas, added 2026-03-11 by `b333f6ba`).
 
 ## Section 2 — Preliminaries
 
@@ -235,7 +237,8 @@ than mathematical. These drive Phase 1 of `ABF26_PLAN.md`.
    [BCIKS20/ReedSolomonGap.lean](../../../ArkLib/Data/CodingTheory/ProximityGap/BCIKS20/ReedSolomonGap.lean),
    and
    [BCIKS20/AffineSpaces.lean](../../../ArkLib/Data/CodingTheory/ProximityGap/BCIKS20/AffineSpaces.lean)
-   are now sorry-free thanks to PRs #385, #463, and #6389c0ee respectively.
+   are now sorry-free thanks to PRs #385, #463, and commit `6389c0e`
+   (the last was pushed directly to `main` with no associated PR number).
 
 5. **Several code families used centrally by the paper are absent.**
    Folded Reed-Solomon (D2.14, D2.15), univariate multiplicity codes (A.7),
