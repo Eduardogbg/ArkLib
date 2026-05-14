@@ -112,8 +112,8 @@ trusted blindly.
 
 | ID | Lean name | Status | Known issues / things to check |
 | --- | --- | --- | --- |
-| T4.11.1 | `CodingTheory.linear_epsMCA_1_5_johnson_gkl24` | ⚠ | RHS contains `∛(1 − δ_min + η) − √(1 − δ_min + η)`. For `1 − δ_min + η < 1` this is positive; for `≥ 1` it can be ≤ 0, making the bound infinite or negative. Hypothesis `δ ≤ 1 − ∛(1 − δ_min + η)` implicitly restricts but doesn't enforce positivity of denominator. Tighten or document. |
-| T4.11.2 | `CodingTheory.linear_epsCA_1_5_johnson_bgks20` | ⏳ | `(η : ENNReal) ^ 2` — confirm ENNReal exponentiation behaves correctly when η = 0. Hypothesis `0 < η` covers it. |
+| T4.11.1 | `CodingTheory.linear_epsMCA_1_5_johnson_gkl24` | 🔧 | **Added `η < δ_min` hypothesis** so `1 − δ_min + η < 1` and the denominator `∛x − √x` is strictly positive (since for `x < 1`, `∛x > √x`). Docstring spells out the implicit regime. |
+| T4.11.2 | `CodingTheory.linear_epsCA_1_5_johnson_bgks20` | 🔧 | **Added `η < δ_min` for hypothesis-parity with Item 1** (paper presents both under one regime statement). The RHS `2 / (η²|F|)` doesn't need it but matching keeps the API symmetric. |
 | T4.9.2 | `CodingTheory.rs_epsCA_bchks25_item2` | ⏳ | Hypothesis `δ_fld ≥ δ_min/3` written as `... / 3 ≤ δ_fld`; confirm precedence. Also: `1 - ρ - 2·δ_fld` can be negative; max-of-two-bounds means negative one is dominated, but `ENNReal.ofReal` of negative truncates to 0 — verify the max still works through the wrap. |
 | R4.10 | `CodingTheory.rs_epsCA_small_loss_r4_10` | ⏳ | Same precedence concerns as T4.9.2. Also: paper's `γ ∈ (0, 1)` is on `γ` as the slack `δ_int − δ_fld = γ/n`. Confirm I'm using `γ` not `γ/n` as the bound parameter. |
 | T4.12 | `CodingTheory.rs_epsMCA_johnson_range_bchks25` | ⏳ | Heavy formula with ⌈⌉, √, ^{3/2}. Verify all `Real.rpow` vs `HPow.hPow` are correct. `m := max ⌈...⌉ 3` uses `Int.ceil`-returning-ℤ; my code does `max ⌈...⌉ 3` with `3 : ℝ` — types may mismatch. |
@@ -203,7 +203,7 @@ Resolve every `⚠` and `❌` in §1. One commit per concern, smallest reversibl
 3. **A3.** ✅ Document `qEntropy` boundary at `q ≤ 1` (no precondition; downstream already guards).
 4. **A4.** ✅ Document `irsCode` rounding convention (Nat truncated division; downstream guards with `s ∣ k`).
 5. **A5.** ✅ Tighten T5.1 hypotheses with `η ≤ δ`.
-6. **A6.** Tighten T4.11.1 denominator positivity assumptions.
+6. **A6.** ✅ Tighten T4.11.1 / T4.11.2 with `η < δ_min` (shared regime hypothesis).
 7. **A7.** Align `frsCode` (D2.15) to `Polynomial.degreeLT` style.
 
 After each fix: `./scripts/validate.sh` must pass.

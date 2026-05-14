@@ -109,11 +109,17 @@ variable {A : Type} [Fintype A] [DecidableEq A] [AddCommGroup A] [Module F A]
 
 The "1.5-Johnson regime" refers to the fact that `1 - ∛(1 - δ_min)` lies strictly above
 the classical Johnson bound `1 - √(1 - δ_min)` and strictly below capacity. The bound is
-admitted from the cited paper. -/
+admitted from the cited paper.
+
+**Implicit hypothesis `η < δ_min`.** For the bound's denominator `∛x − √x` (with
+`x := 1 - δ_min + η`) to be strictly positive we need `x < 1`, i.e. `η < δ_min`. The
+paper's 1.5-Johnson regime is exactly this `η`-as-slack-below-δ_min picture; without it
+the bound becomes vacuous (or numerically infinite) and `δ ≤ 1 − ∛x` may not even
+restrict the parameter range. Added as an explicit hypothesis. -/
 theorem linear_epsMCA_1_5_johnson_gkl24
     (C : Submodule F (ι → A)) (δ_min η δ : ℝ≥0)
     (_h_δ_min : (δ_min : ℝ) = (Code.minDist (C : Set (ι → A)) : ℝ) / Fintype.card ι)
-    (_hη : 0 < η)
+    (_hη : 0 < η) (_hη_lt_δ_min : η < δ_min)
     (_hδ : (δ : ℝ) ≤ 1 - ((1 - (δ_min : ℝ) + (η : ℝ)) ^ ((1 : ℝ) / 3))) :
     epsMCA (F := F) (A := A) ((C : Set (ι → A))) δ ≤
       ENNReal.ofReal
@@ -130,11 +136,15 @@ theorem linear_epsMCA_1_5_johnson_gkl24
   `ε_ca(C, δ_fld := δ, δ_int := δ + η) ≤ 2 / (η² · |F|)`
 
 Same regime as the GKL24 form but stated in CA-with-proximity-loss shape. Tighter when the
-GKL24 bound is dominated by its second term. Admitted from the cited paper. -/
+GKL24 bound is dominated by its second term. Admitted from the cited paper.
+
+The regime hypothesis `η < δ_min` is shared with Item 1 (the paper presents both bounds
+under one regime statement); included here for hypothesis-parity even though Item 2's
+RHS `2 / (η² |F|)` is well-defined for any `η > 0`. -/
 theorem linear_epsCA_1_5_johnson_bgks20
     (C : Submodule F (ι → A)) (δ_min η δ : ℝ≥0)
     (_h_δ_min : (δ_min : ℝ) = (Code.minDist (C : Set (ι → A)) : ℝ) / Fintype.card ι)
-    (_hη : 0 < η)
+    (_hη : 0 < η) (_hη_lt_δ_min : η < δ_min)
     (_hδ : (δ : ℝ) ≤ 1 - ((1 - (δ_min : ℝ) + (η : ℝ)) ^ ((1 : ℝ) / 3))) :
     epsCA (F := F) (A := A) ((C : Set (ι → A))) δ (δ + η) ≤
       ((2 : ENNReal) / ((η : ENNReal) ^ 2 * (Fintype.card F : ENNReal))) := by
