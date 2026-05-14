@@ -32,6 +32,18 @@ The RHS of each upper bound is a real-valued numeric expression. To match the
 the bounds well-defined even when the bracketing real expression is negative or
 exceeds 1 (in which case `ENNReal.ofReal` either truncates to `0` or stays in `[0, ∞]`).
 
+## Proximity-radius coercion (`ℝ → ℝ≥0`)
+
+Several theorems take a real-valued proximity radius like `1 − √x` or `1 − ρ − η` and
+pass it to `ε_mca` / `ε_ca` (which require `ℝ≥0`). We use `x.toNNReal`. Each occurrence
+is either:
+
+- Provably non-negative under the theorem's hypotheses (the standard case — e.g.
+  T4.18 has `(1 - (1 - 15/16)^{1/2}) = 3/4 ≥ 0` by direct computation).
+- Or aligned with the paper's stated regime so that the truncation to `0` matches
+  the trivial / vacuous case of the bound (e.g. T4.13's `1 - τ(t+1) - 3/(2t)`
+  truncates outside the regime where the bound is meaningfully informative).
+
 ## Main statements (external admits)
 
 ### General linear codes

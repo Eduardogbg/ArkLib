@@ -34,6 +34,20 @@ implication "list-decoding ⇒ CA" cannot be tight in general.
   codes with rate `1/8` have `ε_ca(C, 1 - ρ^{1/3}) ≥ 1 - 1/|F|`, separating list
   decoding from CA.
 
+## Coercion conventions
+
+Each statement bounds an `ENNReal`-valued `ε_ca` or `ε_mca` (or `Lambda`) in terms of a
+real-valued numeric expression. To wire real expressions into the `ENNReal` and `ℝ≥0`
+worlds we use:
+
+- `ENNReal.ofReal x` when `x : ℝ` is the RHS of a `≤` / `<` / `=`. This truncates
+  negative `x` to `0`, which only matters in degenerate parameter regimes where the
+  paper's bound is vacuous anyway.
+- `x.toNNReal` when `x : ℝ` is the proximity radius (argument to `ε_mca` / `ε_ca`).
+  Each occurrence is either provably non-negative under the theorem's hypotheses (most
+  cases), or the truncation aligns with the paper-stated regime (e.g. T5.1 uses
+  `η ≤ δ` to keep `1 − √(1−δ+η)` in `[0, 1]`).
+
 ## References
 
 - [ABF26] Arnon, Boneh, Fenzi. *Open Problems in List Decoding and Correlated Agreement*.

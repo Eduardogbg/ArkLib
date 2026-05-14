@@ -148,7 +148,7 @@ Each axis below is a sweep across all files committed in this session.
 | `ENNReal.ofReal` vs `(x : ENNReal)` direct cast | ⏳ | `CapacityBounds.lean`, `ListDecodingBounds.lean`, `Connections.lean`. | Use `ENNReal.ofReal` only when the source is genuinely `ℝ` (possibly negative); use cast when source is `ℝ≥0` or `ℕ`. |
 | Nat subtraction silently truncating | ⚠ | `linear_lambda_ge_elias_volume_eli57` (L3.7), `linear_C_le_generalized_singleton_st20` (T3.9), possibly T4.11.x denominators. | Cast to ℤ or ℝ before subtracting; or add positivity hypothesis. |
 | `Real.rpow` vs `HPow.hPow` for non-integer exponents | ⏳ | Anywhere `^ ((1 : ℝ) / 2)` or `^ ((1 : ℝ) / 3)` appears. | `Real.rpow` is what `^ : ℝ → ℝ → ℝ` desugars to via the `Monoid.npow`/`HPow` chain. Verify Lean isn't picking up `^ : ℝ → ℕ → ℝ` accidentally. |
-| `.toNNReal` truncation of negative reals | ⚠ | T5.1, T4.16, T4.17, T4.18 bound expressions. | Each occurrence: confirm hypotheses ensure non-negativity, or document the truncation as intentional. |
+| `.toNNReal` truncation of negative reals | 🔧 | T5.1, T4.16, T4.17, T4.18 bound expressions. | **Documented file-by-file.** `Connections.lean` and `CapacityBounds.lean` each have a "Proximity-radius coercion" docstring section explaining: each `.toNNReal` is either provably non-negative under hypotheses (standard) or aligned with the paper's stated regime so truncation matches the vacuous case (e.g. T4.13). |
 
 ### 2b. Existing-vs-new definitions
 
@@ -222,7 +222,7 @@ Apply 2b actions in dependency order:
 
 Apply 2a actions:
 
-1. **C1.** Standardise `.toNNReal` usage: every occurrence either provably non-negative or commented.
+1. **C1.** ✅ Standardise `.toNNReal` usage via file-level "Proximity-radius coercion" docstrings in `Connections.lean` and `CapacityBounds.lean`.
 2. **C2.** Sweep `^ : ℝ → ℝ` usages for `Real.rpow` consistency.
 3. **C3.** Standardise `ENNReal.ofReal` vs ENNReal cast choice (document rule in file headers).
 
