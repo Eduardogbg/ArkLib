@@ -67,6 +67,13 @@ migration and the still-open non-unique-decoding branch:
 [`ArkLib/Data/CodingTheory/ProximityGap/BCIKS20/AffineLines/JointAgreement.lean`](../../../ArkLib/Data/CodingTheory/ProximityGap/BCIKS20/AffineLines/JointAgreement.lean)
 (bivariate-existence lemmas, added 2026-03-11 by `b333f6ba`).
 
+## Section 1 — Grand Challenges (introduction)
+
+| ABF26 ID | Paper item | Status | Lean refs | Lean target | Notes |
+| --- | --- | --- | --- | --- | --- |
+| `GC1` | Grand MCA Challenge (page 5): "determine the largest `δ*_C ∈ [0, 1]` such that `ε_mca(C, δ*_C) ≤ ε*`" | present (as predicate) | `ProximityGap.grandMCAChallenge` in [GrandChallenges.lean](../../../ArkLib/Data/CodingTheory/ProximityGap/GrandChallenges.lean) | existing | Stated as a generic `Prop`-valued predicate over a code `C : Submodule F (ι → F)` and a threshold `ε* : ℝ≥0`. Specialisation to the paper's RS parameter regime (ρ ∈ {1/2, 1/4, 1/8, 1/16}, ε* = 2^(-128)) is a call-site instantiation. Resolution is open. |
+| `GC2` | Grand List Decoding Challenge (page 5): "determine the largest `δ*_C ∈ [0, 1]` such that `\|Λ(C^≡m, δ*_C)\| ≤ ε* · \|F\|`" | present (as predicate) | `ProximityGap.grandListDecodingChallenge` in [GrandChallenges.lean](../../../ArkLib/Data/CodingTheory/ProximityGap/GrandChallenges.lean) | existing | Stated as a generic `Prop`-valued predicate. Uses `ListDecodable.Lambda` for `\|Λ(C^≡m, ·)\|` (ABF26 D2.8). Resolution is open. |
+
 ## Section 2 — Preliminaries
 
 | ABF26 ID | Paper item | Status | Lean refs | Lean target | Notes |

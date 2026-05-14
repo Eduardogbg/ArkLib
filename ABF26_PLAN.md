@@ -202,6 +202,37 @@ ArkLib's scope. These are the only `sorry`s the plan permits.
 
 ## 7. Per-item ledger
 
+### Section 1 — Grand Challenges (introduction)
+
+The paper's centerpiece. Stated as `Prop`-valued predicates over generic codes; resolution
+requires per-RS-parameter-regime upper or lower bounds on `ε_mca` / `|Λ(C^≡m, ·)|`.
+
+#### ABF26-GC1 — Grand MCA Challenge
+
+- **Paper location**: §1 page 5.
+- **Statement**: For `C := RS[F, L, k]` over a smooth `L`, constant `ρ ∈ {1/2, 1/4, 1/8, 1/16}`,
+  `ε* := 2^(-128)`, determine the largest `δ*_C ∈ [0, 1]` with `ε_mca(C, δ*_C) ≤ ε*`.
+- **Status**: ✅ stated as `Prop`-valued predicate (the call-site instantiates at the paper's
+  RS parameter regime). **Resolution is open** — the paper's centerpiece.
+- **Target Lean name**: `ProximityGap.grandMCAChallenge`.
+- **Target file**: new `ArkLib/Data/CodingTheory/ProximityGap/GrandChallenges.lean`.
+- **Direct dependencies (paper)**: D2.11 (RS code), D2.12 (smooth domain), D4.3 (ε_mca).
+- **Reverse dependencies**: all §4 results that bound `ε_mca` from above or below feed into
+  the resolution.
+- **Sub-tasks**: ✅ State; resolution is by definition open.
+
+#### ABF26-GC2 — Grand List Decoding Challenge
+
+- **Paper location**: §1 page 5.
+- **Statement**: For `C` as in GC1, constant `m`, `ε* := 2^(-128)`, determine the largest
+  `δ*_C ∈ [0, 1]` with `|Λ(C^≡m, δ*_C)| ≤ ε* · |F|`.
+- **Status**: ✅ stated as `Prop`-valued predicate. **Resolution is open**.
+- **Target Lean name**: `ProximityGap.grandListDecodingChallenge`.
+- **Target file**: same as GC1.
+- **Direct dependencies (paper)**: D2.11 (RS code), D2.8 (`Lambda`), D2.9 (interleaved code).
+- **Reverse dependencies**: all §3 list-decoding bounds feed into the resolution.
+- **Sub-tasks**: ✅ State; resolution is by definition open.
+
 The remainder of this file is the per-item ledger. One subsection per paper
 item. Status legend:
 
