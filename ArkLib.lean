@@ -18,6 +18,7 @@ import ArkLib.Data.CodingTheory.BerlekampWelch.Condition
 import ArkLib.Data.CodingTheory.BerlekampWelch.ElocPoly
 import ArkLib.Data.CodingTheory.BerlekampWelch.Existence
 import ArkLib.Data.CodingTheory.BerlekampWelch.Sorries
+import ArkLib.Data.CodingTheory.Connections
 import ArkLib.Data.CodingTheory.DivergenceOfSets
 import ArkLib.Data.CodingTheory.GuruswamiSudan
 import ArkLib.Data.CodingTheory.GuruswamiSudan.Basic

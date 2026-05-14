@@ -1090,40 +1090,32 @@ diff.
 #### ABF26-T5.1 — List decoding implies MCA
 
 - **Paper location**: §5 page 23, Theorem 5.1 [GCXK25 Thm 3].
-- **Status**: missing. Ledger: external.
-- **Target Lean name**: `ABF26.listDecoding_implies_mca`.
-- **Target file**: new `ArkLib/Data/CodingTheory/Connections.lean`.
+- **Status**: ✅ stated; admitted as external.
+- **Existing in ArkLib**: `CodingTheory.linear_listSize_to_epsMCA_gcxk25` in `ArkLib/Data/CodingTheory/Connections.lean`.
 - **Direct dependencies (paper)**: D2.8, D4.3.
 - **Reverse dependencies**: §6.
-- **Target PR**: Phase 7 PR 1.
-- **Sub-tasks**:
-  1. State.
-  2. Admit.
-  3. Update audit doc.
+- **Target PR**: Phase 7 PR 1 ✅ statement committed.
 
 #### ABF26-T5.2 — Small ε_ca implies list < |F|
 
 - **Paper location**: §5 page 23, Theorem 5.2 [BCHKS25 Thm 1.9].
-- **Status**: missing. Ledger: external.
-- **Target Lean name**: `ABF26.smallEpsCA_implies_listSmall`.
-- **Target file**: same.
-- **Target PR**: Phase 7 PR 1.
+- **Status**: ✅ stated; admitted as external.
+- **Existing in ArkLib**: `CodingTheory.rs_epsCA_small_implies_lambda_lt_F_bchks25` in `Connections.lean`.
+- **Target PR**: Phase 7 PR 1 ✅ statement committed.
 
 #### ABF26-T5.3 — CA implies list decoding for related RS
 
 - **Paper location**: §5 page 24, Theorem 5.3 [CS25 Thm 2].
-- **Status**: missing. Ledger: external.
-- **Target Lean name**: `ABF26.epsCA_implies_listDec`.
-- **Target file**: same.
-- **Target PR**: Phase 7 PR 1.
+- **Status**: ✅ stated; admitted as external.
+- **Existing in ArkLib**: `CodingTheory.rs_epsCA_implies_lambda_extended_cs25` in `Connections.lean`.
+- **Target PR**: Phase 7 PR 1 ✅ statement committed.
 
 #### ABF26-T5.4 — Separation: list-decoding does not tightly imply CA
 
 - **Paper location**: §5 page 24, Theorem 5.4 [BGKS20 Lem 3.3].
-- **Status**: missing. Ledger: external.
-- **Target Lean name**: `ABF26.list_vs_ca_separation`.
-- **Target file**: same.
-- **Target PR**: Phase 7 PR 2.
+- **Status**: ✅ stated; admitted as external. Includes both the no-loss form and the proximity-loss form (`δ_fld = 1 - ρ^{1/3}, δ_int = 1 - ρ^{2/3}`).
+- **Existing in ArkLib**: `CodingTheory.rs_epsCA_separation_bgks20` in `Connections.lean`.
+- **Target PR**: Phase 7 PR 2 ✅ statement committed.
 
 ### Section 6 — Toy problem (deferred)
 

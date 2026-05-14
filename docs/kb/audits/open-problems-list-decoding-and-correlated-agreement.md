@@ -151,10 +151,10 @@ migration and the still-open non-unique-decoding branch:
 
 | ABF26 ID | Paper item | Status | Lean refs | Lean target | Notes |
 | --- | --- | --- | --- | --- | --- |
-| `T5.1` | List decoding implies MCA | missing | WHIR-specific `mca_list_decoding` in [Whir/MutualCorrAgreement.lean](../../../ArkLib/ProofSystem/Whir/MutualCorrAgreement.lean) (contains `sorry`) | `ABF26.listDecoding_implies_mca` (external) | GCXK25 Thm 3. WHIR variant is at different abstraction layer. |
-| `T5.2` | Small ε_ca implies list size < `\|F\|` | missing | none | `ABF26.smallEpsCA_implies_listSmall` (external) | BCHKS25 Thm 1.9. |
-| `T5.3` | CA implies list decoding for related RS | missing | none | `ABF26.epsCA_implies_listDec` (external) | CS25 Thm 2. |
-| `T5.4` | Separation: list-decoding does not tightly imply CA | missing | none | `ABF26.list_vs_ca_separation` (external) | BGKS20 Lem 3.3. |
+| `T5.1` | List decoding implies MCA | stated (external admit) | [Connections.lean](../../../ArkLib/Data/CodingTheory/Connections.lean); WHIR-specific `mca_list_decoding` in [Whir/MutualCorrAgreement.lean](../../../ArkLib/ProofSystem/Whir/MutualCorrAgreement.lean) (contains `sorry`) | `CodingTheory.linear_listSize_to_epsMCA_gcxk25` | GCXK25 Thm 3; tagged sorry. WHIR variant is at different abstraction layer. |
+| `T5.2` | Small ε_ca implies list size < `\|F\|` | stated (external admit) | [Connections.lean](../../../ArkLib/Data/CodingTheory/Connections.lean) | `CodingTheory.rs_epsCA_small_implies_lambda_lt_F_bchks25` | BCHKS25 Thm 1.9; tagged sorry. |
+| `T5.3` | CA implies list decoding for related RS | stated (external admit) | [Connections.lean](../../../ArkLib/Data/CodingTheory/Connections.lean) | `CodingTheory.rs_epsCA_implies_lambda_extended_cs25` | CS25 Thm 2; tagged sorry. |
+| `T5.4` | Separation: list-decoding does not tightly imply CA | stated (external admit) | [Connections.lean](../../../ArkLib/Data/CodingTheory/Connections.lean) | `CodingTheory.rs_epsCA_separation_bgks20` | BGKS20 Lem 3.3; tagged sorry. Includes both no-loss and proximity-loss forms. |
 
 ## Section 6 — Toy Problem (deferred)
 
