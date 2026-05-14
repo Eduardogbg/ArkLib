@@ -49,7 +49,7 @@ trusted blindly.
 
 | ID | Lean name | Status | Known issues / things to check |
 | --- | --- | --- | --- |
-| D2.2 | `CodingTheory.qEntropy` | ⚠ | `q : ℕ` allows `q ≤ 1`; `Real.logb q (q − 1)` silently returns 0 there. Add a `2 ≤ q` precondition or document boundary behaviour. Also: paper uses `H_S(x) := H_{|S|}(x)` for set-entropy — wrapper not present, only mentioned in docstring. |
+| D2.2 | `CodingTheory.qEntropy` | 🔧 | **Boundary documented.** Decision: keep `q : ℕ` (no precondition) since consumers already guard (T4.17 `10 ≤ |F|`, T3.11 `Prime q`). Docstring now spells out `qEntropy 0 _ = qEntropy 1 _ = 0` so future readers aren't surprised. Set-entropy wrapper still call-site-only. |
 | D2.3 | `CodingTheory.restrictedRelHammingDist` | ⏳ | `NNReal`'s `0 / 0 = 0` matches the empty-T case; confirm paper accepts that convention rather than leaving `Δ_∅` undefined. |
 | D2.4 | `CodingTheory.hammingBallVolume` | ⏳ | `⌊δ * n⌋₊` rounds down; matches paper. Verify `(q - 1)^i` when `q = 0` doesn't blow up — Nat subtraction gives 0, then `0^0 = 1` (the `i = 0` term), so the i = 0 sum element is `n choose 0 = 1`. Boundary OK but worth documenting. |
 
@@ -200,7 +200,7 @@ Resolve every `⚠` and `❌` in §1. One commit per concern, smallest reversibl
 
 1. **A1.** ✅ Fix T2.18 off-by-one in τ profile (`Finset.range s` → `Finset.Icc 1 s`).
 2. **A2.** ✅ Fix Nat-subtraction in L3.7 and T3.9 exponents (cast to ℝ before subtracting; preserves paper's floor in T3.9).
-3. **A3.** Add `2 ≤ q` precondition to D2.2 `qEntropy` or document boundary.
+3. **A3.** ✅ Document `qEntropy` boundary at `q ≤ 1` (no precondition; downstream already guards).
 4. **A4.** Add `s ∣ k` hypothesis to `irsCode` (D2.13), or rename to capture rounding.
 5. **A5.** Tighten T5.1 hypotheses to ensure `1 − δ + η ≤ 1` (or document `.toNNReal` truncation).
 6. **A6.** Tighten T4.11.1 denominator positivity assumptions.

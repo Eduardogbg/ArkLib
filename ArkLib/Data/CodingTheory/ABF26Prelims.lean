@@ -43,6 +43,13 @@ For `q = 2` this reduces to the standard binary entropy function. Mathlib's conv
 `qEntropy q 1 = log_q (q-1)` well-defined (treating `0 · log 0 = 0` and
 `log_q 1 = 0` automatically).
 
+**Boundary behaviour for `q ≤ 1`.** The paper assumes `q ≥ 2` (alphabet size of an
+error-correcting code). For `q ∈ {0, 1}`, `Real.logb q _` is identically `0` (since
+`Real.log q = 0` there), so `qEntropy 0 x = qEntropy 1 x = 0` regardless of `x`. This
+is mathematically uninformative but well-defined; downstream consumers that need a
+meaningful q-ary entropy should guard with `2 ≤ q` themselves (as T4.17 does with
+`10 ≤ Fintype.card F`, and T3.11 does via `Nat.Prime q`).
+
 The paper's `H_S(x) := H_{|S|}(x)` set-entropy overload is provided as a wrapper at the
 call site (a one-line `qEntropy (Fintype.card S) x`). -/
 noncomputable def qEntropy (q : ℕ) (x : ℝ) : ℝ :=
