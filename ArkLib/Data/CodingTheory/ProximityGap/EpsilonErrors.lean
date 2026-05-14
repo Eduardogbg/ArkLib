@@ -150,6 +150,44 @@ noncomputable def epsMCA (C : Set (ι → A)) (δ : ℝ≥0) : ENNReal :=
   ⨆ u : WordStack A (Fin 2) ι,
     Pr_{let γ ← $ᵖ F}[mcaEvent C δ (u 0) (u 1) γ]
 
+/-! ## Helpers toward ABF26 Fact 4.5
+
+Fact 4.5 says `ε_pg ≤ ε_ca ≤ ε_mca`. The first inequality requires the underlying code to
+be closed under linear combination, so we state the helper lemmas with a `Submodule F (ι → A)`
+hypothesis. -/
+
+/-- **Helper for ABF26 Fact 4.5.** If the pair `(u 0, u 1)` is jointly `δ`-close to the
+interleaved code from a `Submodule` `MC`, then for *every* scalar `γ`, the line
+`u 0 + γ • u 1` is `δ`-close to `MC`. The proof uses the witness codeword pair
+`(v 0, v 1)` to build a single line of codewords `v 0 + γ • v 1 ∈ MC`. -/
+theorem jointProximity_imp_line_close
+    (MC : Submodule F (ι → A)) (u : WordStack A (Fin 2) ι) (δ : ℝ≥0)
+    (h : jointProximity (C := (MC : Set (ι → A))) (u := u) δ) :
+    ∀ γ : F, δᵣ(u 0 + γ • u 1, (MC : Set (ι → A))) ≤ δ := by
+  rw [← jointAgreement_iff_jointProximity] at h
+  obtain ⟨S, hS_card, v, hv⟩ := h
+  -- Common: pointwise agreement of `v i` and `u i` on `S`.
+  have h_agree : ∀ j ∈ S, v 0 j = u 0 j ∧ v 1 j = u 1 j := by
+    intro j hj
+    refine ⟨?_, ?_⟩
+    · have : j ∈ Finset.filter (fun k => v 0 k = u 0 k) Finset.univ := (hv 0).2 hj
+      exact (Finset.mem_filter.mp this).2
+    · have : j ∈ Finset.filter (fun k => v 1 k = u 1 k) Finset.univ := (hv 1).2 hj
+      exact (Finset.mem_filter.mp this).2
+  intro γ
+  have hv_γ_mem : (v 0 + γ • v 1) ∈ (MC : Set (ι → A)) :=
+    MC.add_mem (hv 0).1 (MC.smul_mem γ (hv 1).1)
+  rw [relCloseToCode_iff_relCloseToCodeword_of_minDist]
+  refine ⟨v 0 + γ • v 1, hv_γ_mem, ?_⟩
+  rw [relCloseToWord_iff_exists_agreementCols]
+  refine ⟨S, (relDist_floor_bound_iff_complement_bound _ _ _).mpr hS_card, ?_⟩
+  intro j
+  refine ⟨fun hj_in => ?_, fun hne hj_in => ?_⟩
+  · obtain ⟨h0, h1⟩ := h_agree j hj_in
+    simp [Pi.add_apply, Pi.smul_apply, h0, h1]
+  · obtain ⟨h0, h1⟩ := h_agree j hj_in
+    exact hne (by simp [Pi.add_apply, Pi.smul_apply, h0, h1])
+
 end
 
 end ProximityGap
