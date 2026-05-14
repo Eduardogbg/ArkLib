@@ -59,7 +59,7 @@ trusted blindly.
 | --- | --- | --- | --- |
 | D2.13 | `ReedSolomon.Interleaved.irsCode` | 🔧 | **Rounding documented.** Decision: keep unguarded `k / s` (Nat truncated division) in the definition so degenerate regimes type-check; downstream paper-quoting theorems (e.g. `dim(IRS) = k`) must add `s ∣ k` themselves. Docstring spells out the convention. |
 | D2.14 | `ReedSolomon.Folded.Admissible` | ⏳ | Paper uses unordered pairs `binom(L, 2)`; my version uses ordered `∀ α β ∈ L, α ≠ β`. The asymmetric formula `α · ω^i ≠ β` means ordered is *stronger* than what the paper said but presumably equivalent. Confirm. |
-| D2.15 | `ReedSolomon.Folded.frsCode` | ⚠ | Uses `p.degree < k` directly; existing ArkLib `ReedSolomon.code` uses `Polynomial.degreeLT F k`. Align. Verify the encoding `f x j = p.eval (domain x * ω ^ j)` matches paper's `f̂(x · ω^j)` exactly (multiplication side / parenthesisation). |
+| D2.15 | `ReedSolomon.Folded.frsCode` | 🔧 | **Aligned to `Polynomial.degreeLT`.** Changed `∃ p, p.degree < k ∧ …` to `∃ p ∈ Polynomial.degreeLT F k, …` matching `ReedSolomon.code`'s convention. The encoding `domain x * ω ^ j` matches the paper's `x · ω^j` (left-multiplication). |
 | D2.16 | `CodingTheory.IsSubspaceDesign` | ⚠ | `LinearMap.proj` formulation for `A_i` is technical; paper uses comprehension `{a ∈ A : a_i = 0^s}`. Add an equivalence lemma; pick one formulation as canonical. Also: paper requires `dim A ≤ r`, but `r ∈ ℕ` while `dim` lives in `ℕ∞` (here truncated to `Module.finrank` returning `ℕ`). Confirm infinite-dim ruled out. |
 | L2.17 | `CodingTheory.subspaceDesign_tau_lower` | ⏳ | "rate `ρ`" in paper is implicit from `C`; my version uses `Module.finrank F C / Fintype.card ι` directly. Check this matches `LinearCode.rate` definition. |
 | T2.18 | `CodingTheory.frs_is_subspaceDesign_gk16` | 🔧 | **Off-by-one in τ profile fixed.** Changed `Finset.range s` → `Finset.Icc 1 s` so `r ∈ {1, …, s}` matches paper's `[s]`. Docstring updated to call out the one-based convention. |
@@ -204,7 +204,7 @@ Resolve every `⚠` and `❌` in §1. One commit per concern, smallest reversibl
 4. **A4.** ✅ Document `irsCode` rounding convention (Nat truncated division; downstream guards with `s ∣ k`).
 5. **A5.** ✅ Tighten T5.1 hypotheses with `η ≤ δ`.
 6. **A6.** ✅ Tighten T4.11.1 / T4.11.2 with `η < δ_min` (shared regime hypothesis).
-7. **A7.** Align `frsCode` (D2.15) to `Polynomial.degreeLT` style.
+7. **A7.** ✅ Align `frsCode` (D2.15) to `Polynomial.degreeLT` style.
 
 After each fix: `./scripts/validate.sh` must pass.
 

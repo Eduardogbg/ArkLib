@@ -99,11 +99,15 @@ The fold packages `s` consecutive evaluations of a single underlying polynomial 
 length-`s` vector at each evaluation point. We do not bake the `Admissible` hypothesis
 into the definition itself — admissibility is left as a side condition for downstream
 statements about distance / list decoding. Note that `FRS[F, L, k, 1, ω] = RS[F, L, k]`
-for any `ω`. -/
+for any `ω`.
+
+The "polynomial of degree < `k`" condition is expressed via Mathlib's
+`Polynomial.degreeLT F k` (an `R`-submodule of `R[X]`), matching the convention used by
+`ReedSolomon.code` in `ArkLib/Data/CodingTheory/ReedSolomon.lean`. -/
 noncomputable def frsCode {ι : Type} [Fintype ι] [DecidableEq ι]
     {F : Type} [Field F] [DecidableEq F]
     (domain : ι ↪ F) (k s : ℕ) (ω : F) : Set (ι → Fin s → F) :=
-  { f | ∃ p : Polynomial F, p.degree < k ∧
+  { f | ∃ p ∈ Polynomial.degreeLT F k,
         ∀ x : ι, ∀ j : Fin s, f x j = p.eval (domain x * ω ^ (j : ℕ)) }
 
 end Folded
