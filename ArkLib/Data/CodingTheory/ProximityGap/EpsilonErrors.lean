@@ -58,6 +58,16 @@ added on top of this file's definitions. Each is in scope for Phase 1 of the pla
 
 ## Design notes worth flagging
 
+- **`epsCA` / `epsMCA` take `C : Set (ι → A)` and not `Submodule F (ι → A)`** by design.
+  The definitions are pure predicates over a set of codewords — neither uses the linear
+  structure. Theorems that *need* `C` to be a `ModuleCode` add the `Submodule` hypothesis
+  separately (e.g. F4.5 takes `C : Submodule F (ι → A)`). Linear callers pass their
+  `Submodule` via the implicit coercion `(C : Set _)`. We keep the definitions
+  Set-based to:
+  1. Avoid narrowing the API — `epsCA` is meaningful for non-linear codes too.
+  2. Match the paper's `C ⊆ Σ^n` shape, which is also Set-based.
+  3. Avoid a deep refactor of every `epsCA` / `epsMCA` call site for a one-character
+     win at each one.
 - **`F` is implicit in `epsCA` but does not appear in its return type**, so callers that
   invoke `epsCA` without an explicit pair `(f₁, f₂)` (e.g. inside `epsCA'`) need
   `epsCA (F := F) C δ δ` to thread `F` through. If this becomes painful in proofs,

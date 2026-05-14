@@ -149,6 +149,41 @@ lemma mem_frsCode_iff {ι : Type} [Fintype ι] [DecidableEq ι]
     ext x j
     exact (hf x j).symm
 
+/-- Mirror of `mem_frsCode_iff` with the equation oriented `encoder = f` rather than
+`f = encoder` — useful for `rw` / `simp` from the encoder side. -/
+lemma mem_frsCode_iff_flipped {ι : Type} [Fintype ι] [DecidableEq ι]
+    {F : Type} [Field F] [DecidableEq F]
+    (domain : ι ↪ F) (k s : ℕ) (ω : F) (f : ι → Fin s → F) :
+    f ∈ frsCode domain k s ω ↔
+      ∃ p ∈ Polynomial.degreeLT F k,
+        ∀ x : ι, ∀ j : Fin s, p.eval (domain x * ω ^ (j : ℕ)) = f x j := by
+  rw [mem_frsCode_iff]
+  refine exists_congr fun p => and_congr_right fun _ => ?_
+  exact ⟨fun h x j => (h x j).symm, fun h x j => (h x j).symm⟩
+
+/-- **Sanity check: `FRS[F, L, k, 1, ω] ≃ RS[F, L, k]`.** With `s = 1` there is exactly
+one fold and `Fin 1 → F ≃ F`, so the folded RS code collapses to the standard
+Reed-Solomon code. Stated as an iff between memberships to avoid the cross-type
+equality issue (the LHS lives in `ι → Fin 1 → F`, the RHS in `ι → F`). -/
+lemma mem_frsCode_one_iff_mem_rsCode {ι : Type} [Fintype ι] [DecidableEq ι]
+    {F : Type} [Field F] [DecidableEq F]
+    (domain : ι ↪ F) (k : ℕ) (ω : F) (f : ι → Fin 1 → F) :
+    f ∈ frsCode domain k 1 ω ↔
+      (fun i => f i 0) ∈ ReedSolomon.code domain k := by
+  simp only [mem_frsCode_iff, ReedSolomon.code, Submodule.mem_map, ReedSolomon.evalOnPoints]
+  constructor
+  · rintro ⟨p, hp, hf⟩
+    refine ⟨p, hp, ?_⟩
+    ext i
+    simpa using (hf i 0).symm
+  · rintro ⟨p, hp, hp_eval⟩
+    refine ⟨p, hp, ?_⟩
+    intro i j
+    have hj : j = 0 := Subsingleton.elim _ _
+    subst hj
+    have := congrFun hp_eval i
+    simpa using this.symm
+
 end Folded
 
 end ReedSolomon

@@ -69,9 +69,9 @@ trusted blindly.
 
 | ID | Lean name | Status | Known issues / things to check |
 | --- | --- | --- | --- |
-| D2.19 | `CodingTheory.ExtensionFieldPresentation` | ⚠ | Structure stores invertibility only, not B-linearity of `P.φ` / `P.coord`. Sufficient for current D2.20 / L2.21 use (set-level definitions); insufficient if we later want `extensionCode` as a `Submodule`. Caveat now documented in D2.20 docstring; B-linearity certification gated as a polish follow-up. |
+| D2.19 | `CodingTheory.ExtensionFieldPresentation` | 🔧 | **B-linearity certified.** Added `φ_add` and `φ_smul_psi` fields to the structure; derived `coord_add` and `coord_psi_smul` lemmas. The structure now witnesses `B`-linearity of `φ` and (componentwise) of `P.coord`. Full `[Algebra B F]`-based Mathlib refactor still possible but no longer blocking — see B5. |
 | D2.19 | `CodingTheory.ExtensionFieldPresentation.IsSystematic` | ✅ | `i.val = 0` is equivalent to `i = ⟨0, _⟩` modulo `Fin.val` injectivity. For `P.e = 0`, `Fin 0` is empty so `IsSystematic` is vacuously true — degenerate but consistent. Downstream theorems implicitly assume `P.e ≥ 1`. |
-| D2.20 | `CodingTheory.extensionCode` | 🔧 | Added `extensionCode_iff_coord_in_base` definitional iff lemma. Full encoder-image equivalence is a downstream corollary of `φ`-bijectivity; current bridge suffices for paper-faithful statements. **B-linearity caveat documented** in the docstring: `C_F` being F-linear requires B-linearity of `P.coord j`, which `P` does not yet certify; gated as a polish-plan follow-up. |
+| D2.20 | `CodingTheory.extensionCode` | 🔧 | Added `extensionCode_iff_coord_in_base` (iff). **Added closure lemmas** `extensionCode_add_mem` and `extensionCode_psi_smul_mem` certifying closure under addition and the `ψ`-induced B-scalar action (assuming `C_B` is correspondingly closed). Both proved, not admitted. Full F-Submodule promotion (closure under arbitrary F-scalar mult, requiring basis expansion) still gated on `[Algebra B F] + [Module.Finite B F] + Basis` — explicitly documented in the docstring. |
 | L2.21 | `CodingTheory.lambda_extensionCode_eq_lambda_interleaved` | ✅ | `Code.interleavedCodeSet (κ := Fin P.e) C_B` matches paper's `C_B^≡e` exactly (`κ = Fin e` is the interleaving-factor type, and `e := P.e` is the extension dimension). |
 
 ### §3 — List Decoding
@@ -146,6 +146,7 @@ Each axis below is a sweep across all files committed in this session.
 | --- | --- | --- | --- |
 | Distance return type: `ℚ≥0` vs `ℝ≥0` vs `ℝ` | ✅ | `ABF26Prelims.lean` (`restrictedRelHammingDist : ℝ≥0`); `Basic/RelativeDistance.lean` (`relHammingDist : ℚ≥0`). | **Bridged via B1** (`restrictedRelHammingDist_univ`). Mixed return types are acceptable because the bridge lemma lets callers convert freely; forcing one type system-wide would be a bigger refactor than the benefit warrants. |
 | Probability bounds: `ENNReal` vs `ℝ≥0` | ✅ | All ε-bounds files. | Spot-checked: `EpsilonErrors.lean` uses `ENNReal` for `epsCA` / `epsMCA` / `epsPG`; new files consume them at the same type. No mixed conventions. |
+| `epsCA` / `epsMCA` argument: `Set` vs `Submodule` | ✅ | `EpsilonErrors.lean`. | **Decision documented in file header.** Definitions stay `Set`-based — they're pure predicates over a codeword set, neither uses linearity. Theorems that need linearity add a `Submodule F (ι → A)` hypothesis separately. Avoids narrowing the API for a one-character win at each call site. |
 | `ENNReal.ofReal` vs `(x : ENNReal)` direct cast | ✅ | `CapacityBounds.lean`, `ListDecodingBounds.lean`, `Connections.lean`. | **Verified.** Convention now documented in the file docstrings of `CapacityBounds.lean` and `Connections.lean`; `ListDecodingBounds.lean` uses `ENNReal.ofReal` exclusively (no `.toNNReal`). Rule held throughout: `ENNReal.ofReal` for ℝ-valued sources, direct cast for `ℝ≥0` / `ℕ` sources. |
 | Nat subtraction silently truncating | ⚠ | `linear_lambda_ge_elias_volume_eli57` (L3.7), `linear_C_le_generalized_singleton_st20` (T3.9), possibly T4.11.x denominators. | Cast to ℤ or ℝ before subtracting; or add positivity hypothesis. |
 | `Real.rpow` vs `HPow.hPow` for non-integer exponents | ✅ | Anywhere `^ ((1 : ℝ) / 2)` or `^ ((1 : ℝ) / 3)` appears. | **Verified.** Every `^` whose exponent has type `ℝ` elaborates to `Real.rpow` (build clean). Small-integer powers like `β ^ 2` use `Monoid.npow` (mathematically identical to `Real.rpow β 2`). No accidental Nat exponent picks. |
@@ -155,15 +156,19 @@ Each axis below is a sweep across all files committed in this session.
 
 **ModuleCode unification.** ArkLib's canonical F-linear-code abstraction is
 `ModuleCode ι F A := Submodule F (ι → A)`. Three new defs were initially set-typed:
-`irsCode`, `frsCode`, `extensionCode`. Of these:
+`irsCode`, `frsCode`, `extensionCode`. After polish:
 
 - 🔧 **`frsCode`** refactored to `Submodule F (ι → Fin s → F)` via a new linear encoder
   map `frsEvalOnPoints : F[X] →ₗ[F] (ι → Fin s → F)` and `(degreeLT F k).map`, exactly
-  mirroring `ReedSolomon.code`. Added paper-style membership iff lemma `mem_frsCode_iff`.
+  mirroring `ReedSolomon.code`. Plus three sanity lemmas: `mem_frsCode_iff`,
+  `mem_frsCode_iff_flipped`, `mem_frsCode_one_iff_mem_rsCode` (s=1 collapse to RS).
 - 🔧 **`irsCode`** refactored to `Submodule F (ι → Fin s → F)` with explicit closure
   proofs `(rs.add_mem (hU j) (hV j))` style — short, no machinery.
-- ⏸ **`extensionCode`** stays as `Set` pending D2.19 B-linearity certification (gated
-  follow-up). Promoting requires a B-linear witness for `P.coord j`.
+- 🔧 **`extensionCode`** stays a `Set`, but `ExtensionFieldPresentation` now certifies
+  `B`-linearity via `φ_add` + `φ_smul_psi` fields. Added `coord_add`,
+  `coord_psi_smul`, `extensionCode_add_mem`, `extensionCode_psi_smul_mem` lemmas —
+  all proved. Full F-Submodule promotion requires `[Algebra B F]` + basis expansion;
+  deliberately deferred (it's a Mathlib-structural refactor, not a correctness fix).
 
 The refactor lets T2.18, T4.14, C3.5 consume `frsCode` / `irsCode` directly without
 existential `∃ C, C = … ∧ …` wraps. T2.18 in particular collapses from a 3-conjunct
@@ -175,7 +180,7 @@ existential to a single `IsSubspaceDesign s τ (frsCode …)`.
 | `CodingTheory.hammingBallVolume` | `ListDecodable.hammingBall` in `ListDecodability.lean` | 🔧 | Added `hammingBallVolume_eq_ncard_hammingBall`: bridge to `.ncard` of `hammingBall y ⌊δ·n⌋`. Tagged-sorry — standard combinatorial identity, will be discharged alongside L3.7. |
 | `CodingTheory.qEntropy` | `Real.negMulLog`, Mathlib's binary-entropy lemmas | ✅ | Mathlib has `Real.binEntropy` (binary entropy) but no q-ary variant. Keep ours; revisit if Mathlib adds one. |
 | `JohnsonBound.Jcap` vs existing `J` (= paper's `J_q`) | `JohnsonBound.J` | ✅ | **Decision: keep both** with prominent docstring (Option A). Renaming existing `J → Jq` would break callers throughout `JohnsonBound/Basic.lean` and downstream — not worth the paper-name alignment given the docstring already disambiguates. |
-| `CodingTheory.ExtensionFieldPresentation` | `Algebra B F`, `Module.Finite`, `Basis` (Mathlib) | ⚠ | **Refactor candidate (B5).** Could derive `(ψ, e, φ)` from `Algebra B F + FiniteDimensional B F + Basis B F`. Deferred — significant structural change, useful but not blocking. Tracked here as a follow-up. |
+| `CodingTheory.ExtensionFieldPresentation` | `Algebra B F`, `Module.Finite`, `Basis` (Mathlib) | ⚠ | **B-linearity now certified (this commit)** via `φ_add` + `φ_smul_psi` fields. Full Mathlib refactor (replace `ψ, e, φ, φ_inv, …` with `[Algebra B F] + [Module.Finite B F] + Basis B F`) still possible — a structural simplification rather than a correctness fix. Defer until a downstream proof actually pulls on it. |
 | `CodingTheory.IsSubspaceDesign` formulation | `LinearMap.proj` vs comprehension | 🔧 | Added `ker_proj_eq_vanish_at`: a `Set`-level equality showing `(ker (LinearMap.proj i) : Set _) = {a | a i = 0}`. Proves the paper's comprehension form is exactly the kernel used in the definition. Lemma proved (one-line `ext` + `simp`). |
 | `ReedSolomon.Interleaved.irsCode` | `interleavedCodeSet`, `^⋈` notation | 🔧 | **Refactored to `Submodule F (ι → Fin s → F)`** with explicit closure proofs delegating to the underlying RS code's `.add_mem` / `.zero_mem` / `.smul_mem`. Now first-class ModuleCode. |
 | `ReedSolomon.Folded.frsCode` | `ReedSolomon.code` using `Polynomial.degreeLT` | 🔧 | **Refactored to `Submodule F (ι → Fin s → F)`** via `(degreeLT F k).map frsEvalOnPoints`. Membership equivalence preserved by `mem_frsCode_iff`. Now first-class ModuleCode. |

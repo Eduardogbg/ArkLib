@@ -57,7 +57,13 @@ open ListDecodable
 
 We package these as a structure rather than a tuple for ergonomic access at use
 sites. The "systematic" predicate (paper: `φ(ψ(x)) = (x, 0, …, 0)`) is the
-optional `systematic` field. -/
+optional `systematic` field.
+
+**B-linearity certification.** In addition to invertibility, the structure carries
+explicit witnesses `φ_add` and `φ_smul_psi` certifying that `φ` is additive and
+compatible with the `B`-action induced by `ψ` (i.e. `φ (ψ b * x) = b • φ x`).
+These witnesses are what makes `extensionCode P C_B` an additive- and B-scalar-
+closed subset of `ι → F`. -/
 structure ExtensionFieldPresentation (B F : Type) [Field B] [Field F] where
   /-- The dimension `e := dim_B F`. -/
   e : ℕ
@@ -75,6 +81,11 @@ structure ExtensionFieldPresentation (B F : Type) [Field B] [Field F] where
   φ_left_inv : Function.LeftInverse φ_inv φ
   /-- Right inverse. -/
   φ_right_inv : Function.RightInverse φ_inv φ
+  /-- `φ` is additive. -/
+  φ_add : ∀ x y : F, φ (x + y) = φ x + φ y
+  /-- `φ` respects the `B`-action induced by `ψ`: `φ (ψ b * x) = b • φ x`,
+      equivalently `φ ((ψ b) · x) j = b · φ x j` for every coordinate `j`. -/
+  φ_smul_psi : ∀ (b : B) (x : F), φ (ψ b * x) = fun j => b * φ x j
 
 namespace ExtensionFieldPresentation
 
@@ -92,6 +103,19 @@ componentwise to vectors in the paper. -/
 def coord (P : ExtensionFieldPresentation B F) (i : Fin P.e) : F → B :=
   fun x => P.φ x i
 
+/-- Each coordinate `P.coord j` is additive. -/
+lemma coord_add (P : ExtensionFieldPresentation B F) (j : Fin P.e) (x y : F) :
+    P.coord j (x + y) = P.coord j x + P.coord j y := by
+  simp only [coord, P.φ_add]
+  rfl
+
+/-- Each coordinate `P.coord j` respects the `ψ`-induced `B`-action:
+`P.coord j (ψ b · x) = b · P.coord j x`. -/
+lemma coord_psi_smul (P : ExtensionFieldPresentation B F)
+    (j : Fin P.e) (b : B) (x : F) :
+    P.coord j (P.ψ b * x) = b * P.coord j x := by
+  simp only [coord, P.φ_smul_psi]
+
 end ExtensionFieldPresentation
 
 /-- **ABF26 Definition 2.20.** The *extension code* `C_F : F^k → F^n` associated to a
@@ -106,14 +130,20 @@ codeword set; the underlying `Submodule F (ι → F)` structure follows by closu
 `C_B` under linear combinations, but we keep the `Set`-level definition for direct
 comparison with the paper's encoder shape.
 
-**Linearity caveat.** The paper states `C_F` is an `F`-linear code, which means
-`extensionCode P C_B` is `F`-closed under addition and scalar multiplication. This
-requires `C_B` to be `B`-closed (assumed by the paper) plus the `B`-linearity of each
-coordinate-projection `P.coord j`. The structure `P` does **not** yet certify
-`B`-linearity of `P.coord j` — only invertibility of `φ`. A separate
-`extensionCode_isSubmodule` lemma (gated on a `[Module B F]` instance and a
-`B`-linearity witness for `P.φ`) would promote `extensionCode P C_B` to
-`Submodule F (ι → F)`; tracked as a polish-plan follow-up. -/
+**Closure properties.** With `B`-linearity certified by `ExtensionFieldPresentation`'s
+`φ_add` / `φ_smul_psi` fields, we get:
+
+- `extensionCode_add_mem` — closure under addition (provided `C_B` is closed under
+  addition).
+- `extensionCode_psi_smul_mem` — closure under the `ψ`-induced `B`-scalar action
+  (provided `C_B` is closed under `B`-scalar multiplication).
+
+These together make `extensionCode P C_B` a `B`-submodule-style subset of `ι → F` when
+`C_B` is `B`-linear. **Full F-Submodule promotion** (i.e. closure under arbitrary
+F-scalar multiplication, not just the `ψ(b)·x` action) requires a basis expansion of
+F-multiplication over the `φ`-basis — gated on `[Algebra B F] + [Module.Finite B F] +
+Basis B F` from Mathlib. Deferred as a polish follow-up; the bridge lemmas below
+provide the structural skeleton. -/
 def extensionCode {ι : Type} [Fintype ι]
     {B F : Type} [Field B] [Field F]
     (P : ExtensionFieldPresentation B F)
@@ -141,6 +171,44 @@ lemma extensionCode_iff_coord_in_base
     v ∈ extensionCode P C_B ↔
       ∀ j : Fin P.e, (fun i => P.coord j (v i)) ∈ C_B := by
   rfl
+
+/-- **`extensionCode` is closed under addition** when `C_B` is. Uses the additivity
+field `P.φ_add` (equivalently `P.coord_add` componentwise). -/
+lemma extensionCode_add_mem
+    {ι : Type} [Fintype ι]
+    {B F : Type} [Field B] [Field F]
+    (P : ExtensionFieldPresentation B F)
+    {C_B : Set (ι → B)}
+    (hadd : ∀ {a b : ι → B}, a ∈ C_B → b ∈ C_B → a + b ∈ C_B)
+    {u v : ι → F} (hu : u ∈ extensionCode P C_B) (hv : v ∈ extensionCode P C_B) :
+    u + v ∈ extensionCode P C_B := by
+  intro j
+  have h := hadd (hu j) (hv j)
+  have hpt : (fun i => P.coord j ((u + v) i)) =
+      (fun i => P.coord j (u i)) + fun i => P.coord j (v i) := by
+    ext i
+    exact P.coord_add j (u i) (v i)
+  rw [hpt]
+  exact h
+
+/-- **`extensionCode` is closed under the `ψ`-induced `B`-scalar action** when `C_B`
+is `B`-scalar closed. Uses `P.φ_smul_psi` (equivalently `P.coord_psi_smul`
+componentwise). -/
+lemma extensionCode_psi_smul_mem
+    {ι : Type} [Fintype ι]
+    {B F : Type} [Field B] [Field F]
+    (P : ExtensionFieldPresentation B F)
+    {C_B : Set (ι → B)}
+    (hsmul : ∀ (b : B) {a : ι → B}, a ∈ C_B → b • a ∈ C_B)
+    (b : B) {v : ι → F} (hv : v ∈ extensionCode P C_B) :
+    (fun i => P.ψ b * v i) ∈ extensionCode P C_B := by
+  intro j
+  have h := hsmul b (hv j)
+  have hpt : (fun i => P.coord j (P.ψ b * v i)) = b • fun i => P.coord j (v i) := by
+    ext i
+    simpa [Pi.smul_apply, smul_eq_mul] using P.coord_psi_smul j b (v i)
+  rw [hpt]
+  exact h
 
 /-- **ABF26 Lemma 2.21 [BCFW25 Lemma D.3].** List size of an extension code equals the
 list size of the corresponding interleaved base code. Let `C_B : B^k → B^n` be a
