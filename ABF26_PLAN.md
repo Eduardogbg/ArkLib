@@ -788,9 +788,9 @@ diff.
   3. ✅ Special-case alias `epsCA' C δ := epsCA C δ δ`.
   4. ✅ `epsCA_antitone_δ_int`: `δ_int ≤ δ_int' → epsCA C δ_fld δ_int' ≤ epsCA C δ_fld δ_int`.
   5. ✅ `epsCA_mono_δ_fld`: `δ_fld ≤ δ_fld' → epsCA C δ_fld δ_int ≤ epsCA C δ_fld' δ_int`.
-  6. ✅ Bridge `δ_ε_correlatedAgreementAffineLines_iff_epsCA_le`. **Pending**: same-shape bridges to `Curves` and `AffineSpaces` predicates.
+  6. ✅ Bridges `δ_ε_correlatedAgreementAffineLines_iff_epsCA_le` and `δ_ε_correlatedAgreementCurves_iff_epsCA_curves_le`. **Pending**: same-shape bridge to `AffineSpaces` predicate.
   7. ✅ Update audit doc.
-- **Acceptance**: definition + monotonicity + bridge. **Met**: every sub-task closed except the `Curves` / `AffineSpaces` bridge variants.
+- **Acceptance**: definition + monotonicity + bridge. **Met**: every sub-task closed except the `AffineSpaces` bridge variant.
 - **Open questions**: F-additive vs F-linear case — paper handles F-additive, ArkLib has both. Used `Module F A` (which subsumes both via choice of `A`).
 
 #### ABF26-R4.2 — ε_ca discretization
