@@ -836,17 +836,22 @@ diff.
 #### ABF26-F4.5 — `ε_pg ≤ ε_ca ≤ ε_mca`
 
 - **Paper location**: §4.1 page 18, Fact 4.5.
-- **Status**: missing.
-- **Target Lean name**: `ProximityGap.epsPG_le_epsCA`, `ProximityGap.epsCA_le_epsMCA`.
+- **Status**: ✅ present (closed by commits `c053b38d`, `71084417`, `bddcec81`, and the
+  final F4.5 commit; proved for `Submodule F (ι → A)`).
+- **Target Lean name**: `ProximityGap.epsPG_le_epsCA`, `ProximityGap.epsCA_le_epsMCA`,
+  `ProximityGap.epsPG_le_epsCA_le_epsMCA`.
 - **Target file**: same as D4.1.
-- **Direct dependencies (paper)**: D4.1, D4.3, plus `ε_pg` (which the paper defines pre-D4.1; in ArkLib this is `ProximityGap.epsPG`).
+- **Direct dependencies (paper)**: D4.1, D4.3, plus `ε_pg` (in ArkLib `ProximityGap.epsPG`).
 - **Reverse dependencies**: pervasive sanity-check use.
 - **Target PR**: Phase 1 PR 1.
 - **Sub-tasks**:
-  1. Define `epsPG` (count of γ's where line is δ-close but line is not entirely δ-close).
-  2. Prove both inequalities.
-  3. Update audit doc.
-- **Acceptance**: both inequalities proved.
+  1. ✅ Define `epsPG` (commit `c053b38d`).
+  2. ✅ Prove both inequalities (`epsPG_le_epsCA` in `bddcec81`; `epsCA_le_epsMCA` in the F4.5 finish commit). The proof relies on the helper `jointProximity_imp_line_close` (commit `71084417`) plus the existing `Pr_le_Pr_of_implies` in `Probability/Instances.lean`.
+  3. ✅ Update audit doc.
+- **Acceptance**: both inequalities proved. ✅ Met.
+- **Open follow-ups**: factor out a `not_jointProximity_imp_no_pair_agreement` helper if it
+  is reused by L4.6 or the bridging lemmas; right now the joint-agreement contradiction
+  is inlined inside `epsCA_le_epsMCA`.
 
 #### ABF26-L4.6 — ε_mca = ε_ca below `δ_min/2`
 

@@ -5,6 +5,7 @@ Authors: Alexander Hicks
 -/
 
 import ArkLib.Data.CodingTheory.ProximityGap.Basic
+import ArkLib.Data.Probability.Instances
 
 /-!
 # Numeric ε-error functions: ε_ca and ε_mca
@@ -210,6 +211,61 @@ theorem epsPG_le_epsCA (MC : Submodule F (ι → A)) (δ : ℝ≥0) :
     · rw [if_pos h_all, if_neg hjp]
       exact zero_le _
     · rw [if_neg h_all, if_neg hjp]
+
+/-- **ABF26 Fact 4.5, second inequality.** `ε_ca ≤ ε_mca` for a `Submodule F (ι → A)`.
+
+Pointwise on `u`:
+
+- If `jointProximity`, `epsCA`'s contribution is 0, ≤ anything.
+- Otherwise we apply `Pr_le_Pr_of_implies` with the fact that "line δ-close to `MC`" implies
+  `mcaEvent MC δ (u 0) (u 1) γ` (in the `¬jointProximity` regime): the witness set `S` for
+  the line-close fact has size `≥ (1-δ)·n` and is automatically *not* a joint-agreement
+  set (because if it were, `jointProximity` would hold via the equivalence
+  `jointAgreement_iff_jointProximity`). -/
+theorem epsCA_le_epsMCA (MC : Submodule F (ι → A)) (δ : ℝ≥0) :
+    epsCA (F := F) (MC : Set (ι → A)) δ δ ≤ epsMCA (F := F) (MC : Set (ι → A)) δ := by
+  unfold epsCA epsMCA
+  apply iSup_mono
+  intro u
+  by_cases hjp : jointProximity (C := (MC : Set (ι → A))) (u := u) δ
+  · rw [if_pos hjp]; exact zero_le _
+  · rw [if_neg hjp]
+    apply Pr_le_Pr_of_implies
+    intro γ h_line
+    -- Unfold the line-close witness to get S and the pointwise agreement of line with w.
+    rw [relCloseToCode_iff_relCloseToCodeword_of_minDist] at h_line
+    obtain ⟨w, hw_mem, hw_close⟩ := h_line
+    rw [relCloseToWord_iff_exists_agreementCols] at hw_close
+    obtain ⟨S, hS_card_nat, h_word_agree⟩ := hw_close
+    have hS_card_real : (S.card : ℝ≥0) ≥ (1 - δ) * Fintype.card ι :=
+      (relDist_floor_bound_iff_complement_bound _ _ _).mp hS_card_nat
+    refine ⟨S, hS_card_real, ⟨w, hw_mem, fun i hi => ((h_word_agree i).1 hi).symm⟩, ?_⟩
+    -- ¬ pairJointAgreesOn MC S (u 0) (u 1). If it held, then by extending the witness pair
+    -- to a `Fin 2`-stack we would derive `jointAgreement` and hence `jointProximity`,
+    -- contradicting `hjp`.
+    intro h_pair
+    apply hjp
+    rw [← jointAgreement_iff_jointProximity]
+    obtain ⟨v₀, hv₀_mem, v₁, hv₁_mem, h_pair_agree⟩ := h_pair
+    refine ⟨S, hS_card_real, finMapTwoWords v₀ v₁, ?_⟩
+    intro i
+    refine ⟨?_, ?_⟩
+    · fin_cases i
+      · exact hv₀_mem
+      · exact hv₁_mem
+    · intro j hj
+      rw [Finset.mem_filter]
+      refine ⟨Finset.mem_univ _, ?_⟩
+      fin_cases i
+      · exact (h_pair_agree j hj).1
+      · exact (h_pair_agree j hj).2
+
+/-- **ABF26 Fact 4.5.** For an `F`-additive code (here: a `Submodule F (ι → A)`):
+`ε_pg(C, δ) ≤ ε_ca(C, δ, δ) ≤ ε_mca(C, δ)`. -/
+theorem epsPG_le_epsCA_le_epsMCA (MC : Submodule F (ι → A)) (δ : ℝ≥0) :
+    epsPG (F := F) (MC : Set (ι → A)) δ ≤ epsCA (F := F) (MC : Set (ι → A)) δ δ ∧
+    epsCA (F := F) (MC : Set (ι → A)) δ δ ≤ epsMCA (F := F) (MC : Set (ι → A)) δ :=
+  ⟨epsPG_le_epsCA MC δ, epsCA_le_epsMCA MC δ⟩
 
 end
 
