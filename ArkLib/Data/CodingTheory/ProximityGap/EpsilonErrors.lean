@@ -71,6 +71,33 @@ short-form notation when both fold-distance and interleaved-distance coincide. -
 noncomputable def epsCA' (C : Set (ι → A)) (δ : ℝ≥0) : ENNReal :=
   epsCA (F := F) C δ δ
 
+/-- The pair `(u₀, u₁)` jointly agrees with two codewords of `C` on every position in `S`.
+Equivalent in spirit to `Δ_S((u₀, u₁), C^≡2) = 0` from the paper. -/
+def pairJointAgreesOn (C : Set (ι → A)) (S : Finset ι) (u₀ u₁ : ι → A) : Prop :=
+  ∃ v₀ ∈ C, ∃ v₁ ∈ C, ∀ i ∈ S, v₀ i = u₀ i ∧ v₁ i = u₁ i
+
+/-- The "bad" event in ABF26 Definition 4.3: there is a witness set `S` of size at least
+`(1-δ)·n` on which the line `u₀ + γ • u₁` exactly equals some codeword of `C`, but no
+joint pair of codewords agrees with `(u₀, u₁)` on `S`. -/
+def mcaEvent (C : Set (ι → A)) (δ : ℝ≥0) (u₀ u₁ : ι → A) (γ : F) : Prop :=
+  ∃ S : Finset ι, (S.card : ℝ≥0) ≥ (1 - δ) * Fintype.card ι ∧
+    (∃ w ∈ C, ∀ i ∈ S, w i = u₀ i + γ • u₁ i) ∧
+    ¬ pairJointAgreesOn C S u₀ u₁
+
+open Classical in
+/-- **ABF26 Definition 4.3.** Mutual correlated agreement (MCA) error.
+
+The worst-case probability over pairs `(f₁, f₂)` and over `γ ← $ᵖ F` of the
+`mcaEvent`: a single set `S` of size `≥ (1-δ)·n` witnesses both that the line
+`f₁ + γ·f₂` exactly equals some codeword of `C` on `S` **and** that no joint pair
+of codewords agrees with `(f₁, f₂)` on `S`. MCA strengthens CA (Definition 4.1)
+by requiring the witness set for closeness and non-agreement to coincide.
+
+Per Remark 4.4, the paper intentionally does not define a proximity-loss variant. -/
+noncomputable def epsMCA (C : Set (ι → A)) (δ : ℝ≥0) : ENNReal :=
+  ⨆ u : WordStack A (Fin 2) ι,
+    Pr_{let γ ← $ᵖ F}[mcaEvent C δ (u 0) (u 1) γ]
+
 end
 
 end ProximityGap
