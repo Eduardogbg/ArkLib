@@ -65,7 +65,6 @@ lemma minWt_ge_of_MDS [Field F] [DecidableEq F] {G : Matrix (Fin k) (Fin n) F}
   convert h_hamming_norm.le using 1
   simp [hammingNorm, Finset.filter_not, Finset.card_sdiff]
 
-
 /-- If `G` has full row rank, then every nonzero vector maps to a nonzero codeword. -/
 lemma vecMul_injective_of_rank_eq [Field F] {G : Matrix (Fin k) (Fin n) F} (hrank : G.rank = k) :
     Function.Injective (G.vecMulLinear) := by
@@ -94,7 +93,7 @@ lemma IsMDS_of_matrix_IsMDS [Field F] [DecidableEq F] {G : Matrix (Fin k) (Fin n
   have h_dist_ge : Code.dist (fromRowGenMat G).carrier ≥ n - k + 1 := by
     have h_dist_ge : ∀ (c : Fin n → F), c ∈ fromRowGenMat G → c ≠ 0 → hammingNorm c ≥ n - k + 1 :=
     by
-      apply_rules [minWt_ge_of_MDS];
+      apply_rules [minWt_ge_of_MDS]
     refine le_csInf ?_ ?_;
     · obtain ⟨u, hu⟩ : ∃ u : Fin n → F, u ∈ fromRowGenMat G ∧ u ≠ 0 := by
         contrapose! h_rank_eq_k;
@@ -147,7 +146,7 @@ lemma matrix_IsMDS_of_IsMDS [Field F] [DecidableEq F] {G : Matrix (Fin k) (Fin n
     have hc_norm :
     Finset.card (Finset.univ.filter (fun i => c i ≠ 0)) ≤
     Finset.card (Finset.univ \ Finset.image σ Finset.univ) :=
-      Finset.card_le_card fun i hi => by aesop;
+      Finset.card_le_card fun i hi => by aesop
     simp_all only [ne_eq, Finset.card_sdiff, Finset.card_univ, Fintype.card_fin,
       Finset.inter_univ, Finset.card_image_of_injective _ σ.injective, ge_iff_le]
     exact hc_norm
@@ -185,6 +184,5 @@ lemma colRank_genMatrix_eq_dim_of_MDS [Field F] [DecidableEq F]
   · intro hMDS
     rw [hLC]
     exact IsMDS_of_matrix_IsMDS hMDS hkn h_pos
-
 
 end CoreResults

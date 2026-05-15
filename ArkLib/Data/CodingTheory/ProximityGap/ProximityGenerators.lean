@@ -5,8 +5,8 @@ Authors: Katerina Hristova
 -/
 
 import ArkLib.Data.CodingTheory.Basic.LinearCode
-import ArkLib.Data.MvPolynomial.SchwartzZippelCounting
 import ArkLib.Data.MvPolynomial.Degrees
+import ArkLib.Data.MvPolynomial.SchwartzZippelCounting
 
 /-!
 # Proximity Generators fundamental definitions
@@ -150,8 +150,12 @@ noncomputable local instance {F : Type} [Fintype F] {S : Set F} : Fintype S := F
 
 /-- If `G` is a polynomial generator, then `G` is zero-evading with error the maximum of the total
 degrees of the individual polynomials divided by the size of the smallest evaluation sets `S i`.
-Remark 3.20 [BCGM25]. -/
-theorem remark_3_20
+Remark 3.20, the version of the statement in the brackets [BCGM25].
+Note: Remark 3.20 provides two ways of viewing a polynomial generator as a zero-evading generator.
+one in terms of individual degrees, and one in terms of total degrees. We choose the total degree
+approach. Ultimately, the reasoning is the same. The difference is the version of Schwartz-Zippel
+used to obtain the upper bound. -/
+theorem poly_gen_is_zero_evading
   {F : Type} [Field F] [Fintype F]
   {ℓ : Type} [Fintype ℓ]
   {s : ℕ}
