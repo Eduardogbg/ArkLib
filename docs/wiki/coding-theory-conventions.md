@@ -2,10 +2,11 @@
 
 Local conventions used in `ArkLib/Data/CodingTheory/` and its subdirectories.
 These are not enforced by tooling but they are followed consistently across the
-ABF26 statement layer (`ProximityGap/Errors.lean`,
-`ProximityGap/CapacityBounds.lean`, `ListDecoding/Bounds.lean`,
-`Connections/*`, `JohnsonBound/Family.lean`, etc.) and reviewers should look
-for them.
+ABF26 statement layer (`ProximityGap/EpsilonErrors.lean`,
+`ProximityGap/CapacityBounds.lean`, `ListDecodingBounds.lean`,
+`Connections.lean`, `JohnsonBound/ABF26.lean`, etc.) and reviewers should look
+for them. Some of these file names may move during the Phase 2 refactor
+described in [`../../ABF26_INTEGRATION_PLAN.md`](../../ABF26_INTEGRATION_PLAN.md) §3.1.
 
 ## Theorem naming
 
@@ -52,21 +53,58 @@ disambiguates the same quantity bounded under different regimes (e.g.
 
 ## Notation
 
-Globally declared (inside `namespace Code`, visible everywhere):
+The notation declared inside `Basic/Distance.lean`, `Basic/RelativeDistance.lean`,
+`Basic/LinearCode.lean`, and `InterleavedCode.lean` becomes globally available
+once imported (most declarations live inside `namespace Code` for name-resolution
+purposes but the notation itself is global).
 
-- `Δ₀(u, v)` — `hammingDist u v` (absolute Hamming distance).
-- `Δ₀(u, C)` — `distFromCode u C` (absolute distance to a code).
-- `‖C‖₀` — `Code.minDist C` (absolute minimum distance).
-- `δᵣ(u, v)` — `relHammingDist u v` (relative Hamming distance, `ℚ≥0`-valued).
-- `δᵣ(u, C)` — `relDistFromCode u C` (relative distance to a code, `ENNReal`-valued).
-- `Λ(C, δ, f)` — `Lambda_at C δ f` (codewords within radius `δ` of `f`).
-- `Λ(C, δ)` — `Lambda C δ` (block-maximised list size, `ℕ∞`-valued).
+### Distance and norm
 
-Scoped:
+- `Δ₀(u, v)` — `hammingDist u v` (absolute Hamming distance, `ℕ`).
+- `Δ₀(u, C)` — `distFromCode u C` (absolute distance to a code, `ℕ∞`).
+- `Δ₀'(u, C)` — `distFromCode' C u` (computable variant, `ℕ`).
+- `‖u‖₀` — `hammingNorm u` (Hamming norm of a word, `ℕ`).
+- `‖C‖₀` — `dist C` (the inf-of-pairwise-distance form, `ℕ∞`). Distinct from
+  `Code.minDist C : ℕ` which uses an existential rather than infimum.
+- `‖C‖₀'` — `dist' C` (computable variant of `dist C`).
 
-- `^⋈ κ` — `CodeInterleavable.interleaveCode _ κ` (interleaved code).
-- `ρ C` — `LinearCode.rate C` (rate, `ℚ≥0`-valued). Use the `&` form so `ρ` can
-  also be used as a local variable name.
+### Relative distance
+
+- `δᵣ(u, v)` — `relHammingDist u v` (relative Hamming distance, `ℚ≥0`).
+- `δᵣ(u, C)` — `relDistFromCode u C` (relative distance to a code, `ENNReal`).
+- `δᵣ'(w, C)` — `relDistFromCode' w C` (computable variant, `ℚ≥0`).
+- `δᵣ C` — `minRelHammingDistCode C` (minimum relative Hamming distance of a
+  code; no parens distinguishes from `δᵣ(u, C)`).
+
+### Interleaved code operators
+
+- `C ^⋈ κ` — `CodeInterleavable.interleaveCode C κ` (interleaved code; instances
+  for both `Set`-based codes and `ModuleCode`).
+- `⋈| u` — `Interleavable.interleave u` (concrete interleave of a `WordStack`).
+- `u ⋈₂ v` — `Interleavable₂.interleave₂ u v` (pairwise interleave).
+- `⋈⁻¹| u` — `Stackifiable.stackify u` (reverse).
+- `Λᵢ(u, C, δ)` — `relHammingBallInterleavedCode C u δ` (relative Hamming ball
+  for an interleaved code).
+
+### Scoped notation (require `open` of the namespace)
+
+- `LinearCode.ρ C` — `LinearCode.rate C` (`ℚ≥0`-valued rate; declared as
+  `scoped syntax &"ρ" term`, so `ρ` can still be used as a local variable
+  name in other scopes).
+- `CodingTheory.restrictedRelHammingDist T f g` is also available as the scoped
+  notation `Δ[T]` with explicit `(f, g)` arguments (declared in
+  `ABF26Prelims.lean`; the paper-style is `Δ_T(f, g)`).
+
+### Conspicuously absent (only in docstring comments, not actual notation)
+
+- `Λ(C, δ, f)` and `Λ(C, δ)` — appear in `ListDecodability.lean` docstrings as
+  paper-aliases for `Lambda_at C δ f` and `Lambda C δ` respectively, but **no
+  notation declaration**. Use the function names directly. If a future PR wants
+  to add the notation, it should mirror the `Δ₀(...)` style declared at top
+  level in `ListDecodability.lean`.
+- `δ_min(C)` — appears in many docstrings (especially ABF26 statements), but
+  not as Lean notation. The raw form `Code.minDist C / Fintype.card ι` or
+  the existing `δᵣ C` (relative min distance) covers the same quantity.
 
 The paper's `RS[F, L, k]`, `IRS[F, L, k, s]`, `FRS[F, L, k, s, ω]`,
 `UM[F, L, k, s]` shortcuts are *not* introduced as Lean notation. Per design
@@ -78,17 +116,19 @@ downstream proof becomes hard to read because of this choice.
 
 | Quantity | Type | Where it shows up |
 |---|---|---|
-| Hamming distance (absolute) | `ℕ` | `Code.minDist`, `hammingDist` |
-| Distance to code (absolute, may be `⊤`) | `ℕ∞` | `Code.distFromCode` |
+| Hamming distance (pairwise, absolute) | `ℕ` | `hammingDist`, `Δ₀(u, v)`, `hammingNorm`, `‖u‖₀` |
+| Min distance of a code (absolute) | `ℕ` (`Code.minDist`) / `ℕ∞` (`dist`, `‖C‖₀`) | two forms coexist; see `Basic/Distance.lean` for the bridge |
+| Distance to a code (absolute, may be `⊤`) | `ℕ∞` | `distFromCode`, `Δ₀(u, C)` |
 | Relative Hamming distance | `ℚ≥0` | `relHammingDist`, `δᵣ(u, v)` |
-| Relative distance to code | `ENNReal` | `relDistFromCode`, `δᵣ(u, C)` |
-| Restricted relative Hamming distance | `ℝ≥0` | `restrictedRelHammingDist` |
-| Code rate | `ℚ≥0` | `LinearCode.rate` |
+| Relative distance to a code | `ENNReal` | `relDistFromCode`, `δᵣ(u, C)` |
+| Min relative distance of a code | `ℚ≥0` | `minRelHammingDistCode`, `δᵣ C` |
+| Restricted relative Hamming distance | `ℝ≥0` | `restrictedRelHammingDist` (paper `Δ_T(f,g)`) |
+| Code rate | `ℚ≥0` | `LinearCode.rate`, `ρ C` |
 | Proximity radius `δ` argument | `ℝ≥0` (preferred) or `ℝ` | `epsCA`, `epsMCA`, `Lambda` |
 | Paper-style real-valued bounds | `ℝ` (then wrapped) | RHS of capacity-bound theorems |
 | ε-errors (`ε_pg`, `ε_ca`, `ε_mca`) | `ENNReal` | `epsCA`, `epsMCA`, `epsPG` |
 | Probabilities | `ENNReal` | `Pr_{...}[...]` notation |
-| List sizes | `ℕ∞` (then cast to `ENNReal` for bounds) | `Lambda` |
+| List sizes | `ℕ∞` (then cast to `ENNReal` for bounds) | `Lambda`, `Lambda_at`'s `.ncard` |
 | Polynomial degree-bound | `Polynomial.degreeLT F k : Submodule F F[X]` | `ReedSolomon.code`, `Folded.frsCode` |
 | Linear code carrier | `Submodule F (ι → A) = ModuleCode ι F A` | `ReedSolomon.code`, `Interleaved.irsCode`, `Folded.frsCode` |
 | Non-linear code carrier | `Set (ι → A) = Code ι A` | `extensionCode`, theorems over arbitrary alphabets |
@@ -117,8 +157,13 @@ sorry -- ABF26-X.Y; <classification> [Citation].
   `[BCHKS25 Thm 1.3]`, etc.). For derived items, the antecedent IDs
   (`derived from R4.2 + T4.9.2`).
 
-Every tagged sorry maps 1-to-1 to a row in
-[`../kb/audits/open-problems-list-decoding-and-correlated-agreement.md`](../kb/audits/open-problems-list-decoding-and-correlated-agreement.md).
+Most tagged sorries map 1-to-1 to a row in
+[`../kb/audits/open-problems-list-decoding-and-correlated-agreement.md`](../kb/audits/open-problems-list-decoding-and-correlated-agreement.md);
+exceptions are sub-sorries inside bridge lemmas (e.g. the partial proof of
+`hammingBallVolume_eq_ncard_hammingBall` decomposes into
+`card_filter_hammingDist_eq` and a small Set/Finset conversion). These are
+tracked in `ABF26_POLISH_PLAN.md` instead.
+
 Reviewers should expect the `ABF26-X.Y` tag in the comment to match an audit-doc
 row.
 
