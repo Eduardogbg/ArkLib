@@ -21,7 +21,8 @@ codewords, arranged column-wise.
 ## Main lemmas
 
 - `ReedSolomon.Interleaved.dim_irsCode` — `Module.finrank F (irsCode domain k s) = s · (k/s)`
-  (admitted; needs a `LinearEquiv` to `Fin s → (RS code)` + `Module.finrank_pi`).
+  (proved via an injective F-linear `(Fin s → ↥RS) → (ι → Fin s → F)` with range
+  exactly `irsCode`, plus `Module.finrank_pi_fintype` and `dim_eq_deg_of_le'`).
 
 ## References
 
@@ -69,22 +70,48 @@ regime. -/
 lemma dim_irsCode {ι : Type} [Fintype ι] [Nonempty ι] [DecidableEq ι]
     {F : Type} [Field F] [DecidableEq F]
     (domain : ι ↪ F) (k s : ℕ)
-    (_h_rs_full : k / s ≤ Fintype.card ι) :
+    (h_rs_full : k / s ≤ Fintype.card ι) :
     Module.finrank F (irsCode domain k s) = s * (k / s) := by
-  -- `irsCode domain k s = (RS code) ^⋈ (Fin s)`, an F-submodule of `ι → Fin s → F`.
-  -- The carrier is `{V : Matrix ι (Fin s) F | ∀ j, V.transpose j ∈ RS}`. As an
-  -- F-module, this is isomorphic to `Fin s → (RS code)` (each column independent).
-  -- Hence `finrank = Fintype.card (Fin s) · finrank (RS code) = s · (k/s)`.
-  --
-  -- The proof needs:
-  -- 1. A LinearEquiv `irsCode ≃ₗ[F] (Fin s → RS code)`.
-  -- 2. `Module.finrank_pi` + `Fintype.card_fin`.
-  -- 3. `LinearCode.dim` of RS = `k/s` (Mathlib/ArkLib has this when `k/s ≤ |ι|`).
-  --
-  -- Constructing (1) requires picking the right `LinearEquiv` between the
-  -- interleavedCodeSet Submodule and the Pi-of-Submodule. This is mechanical
-  -- but tedious. Admitted with sketch.
-  sorry -- in-tree; LinearEquiv `irsCode ≃ₗ[F] (Fin s → RS code)` + `Module.finrank_pi`.
+  -- Construct an injective F-linear map `(Fin s → ↥RS) → (ι → Fin s → F)` whose
+  -- range is exactly `irsCode`, then chain finrank-equalities.
+  let RS : Submodule F (ι → F) := ReedSolomon.code domain (k / s)
+  let encoder : (Fin s → ↥RS) →ₗ[F] (ι → Fin s → F) :=
+    { toFun := fun g i j => ((g j : ι → F) i)
+      map_add' := by intros; ext i j; simp
+      map_smul' := by intros; ext i j; simp }
+  -- Encoder values: `encoder g i j = (g j).val i`.
+  have h_encoder_apply : ∀ (g : Fin s → ↥RS) (i : ι) (j : Fin s),
+      encoder g i j = (g j : ι → F) i := fun _ _ _ => rfl
+  have h_inj : Function.Injective encoder := by
+    intro g g' hgg'
+    funext j
+    apply Subtype.ext
+    funext i
+    have := congrFun (congrFun hgg' i) j
+    simpa [h_encoder_apply] using this
+  -- `encoder.range = irsCode`.
+  have h_range : LinearMap.range encoder = irsCode domain k s := by
+    unfold irsCode
+    ext V
+    simp only [LinearMap.mem_range]
+    constructor
+    · rintro ⟨g, rfl⟩
+      -- Show `(RS) ^⋈ (Fin s)` membership: every column is in RS.
+      intro j
+      change (Matrix.transpose (encoder g) j) ∈ RS
+      convert (g j).2 using 1
+    · intro hV
+      -- `V ∈ irsCode` means `∀ j, V.transpose j ∈ RS`. Construct `g j := ⟨V.transpose j, hV j⟩`.
+      refine ⟨fun j => ⟨Matrix.transpose V j, hV j⟩, ?_⟩
+      ext i j
+      rfl
+  -- Now: `finrank irsCode = finrank (Fin s → ↥RS) = s · finrank ↥RS = s · (k/s)`.
+  rw [← h_range, LinearMap.finrank_range_of_inj h_inj]
+  rw [Module.finrank_pi_fintype, Finset.sum_const, Finset.card_univ, Fintype.card_fin,
+    smul_eq_mul]
+  congr 1
+  -- `finrank F ↥RS = k / s` via `dim_eq_deg_of_le'`.
+  exact ReedSolomon.dim_eq_deg_of_le' (n := k / s) (α := domain) h_rs_full
 
 end Interleaved
 end ReedSolomon
