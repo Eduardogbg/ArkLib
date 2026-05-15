@@ -178,7 +178,7 @@ existential to a single `IsSubspaceDesign s τ (frsCode …)`.
 | New name | Existing peer | Status | Action |
 | --- | --- | --- | --- |
 | `CodingTheory.restrictedRelHammingDist` | `Code.relHammingDist`, `Code.relDistFromCode` in `Basic/RelativeDistance.lean` | 🔧 | Added `restrictedRelHammingDist_univ : restrictedRelHammingDist Finset.univ f g = (Code.relHammingDist f g : ℝ≥0)`. Lets downstream theorems convert freely between paper's `Δ_T` and existing `δᵣ(u, v)`. Bridge proved (not admitted). |
-| `CodingTheory.hammingBallVolume` | `ListDecodable.hammingBall` in `ListDecodability.lean` | 🔧 | Added `hammingBallVolume_eq_ncard_hammingBall`: bridge to `.ncard` of `hammingBall y ⌊δ·n⌋`. Tagged-sorry — standard combinatorial identity, will be discharged alongside L3.7. |
+| `CodingTheory.hammingBallVolume` | `ListDecodable.hammingBall` in `ListDecodability.lean` | 🔧 | Added `hammingBallVolume_eq_ncard_hammingBall`: bridge to `.ncard` of `hammingBall y ⌊δ·n⌋`. **Distance-partition step proved**; decomposed remaining work into `card_filter_hammingDist_eq` (combinatorial count, factored as a separate lemma) + a small Set/Finset conversion sub-sorry. Net: 1 sorry → 2 smaller sorries. |
 | `CodingTheory.qEntropy` | `Real.negMulLog`, Mathlib's binary-entropy lemmas | ✅ | Mathlib has `Real.binEntropy` (binary entropy) but no q-ary variant. Keep ours; revisit if Mathlib adds one. |
 | `JohnsonBound.Jcap` vs existing `J` (= paper's `J_q`) | `JohnsonBound.J` | ✅ | **Decision: keep both** with prominent docstring (Option A). Renaming existing `J → Jq` would break callers throughout `JohnsonBound/Basic.lean` and downstream — not worth the paper-name alignment given the docstring already disambiguates. |
 | `CodingTheory.ExtensionFieldPresentation` | `Algebra B F`, `Module.Finite`, `Basis` (Mathlib) | ⏸ | **B5 deferred.** B-linearity certified via `φ_add` / `φ_smul_psi`. Full Mathlib refactor (replace `ψ, e, φ, φ_inv, …` with `[Algebra B F] + [Module.Finite B F] + Basis B F`) would unlock `extensionCode_smul_mem`'s proof (the structure constants come from `Basis.equivFun` applied to multiplication). Significant invasive change touching `Connections.lean`, `IsSystematic`, `coord`, and all closure lemmas. Deferred until a downstream proof actually pulls on it. |
@@ -236,7 +236,9 @@ After each fix: `./scripts/validate.sh` must pass.
 Apply 2b actions in dependency order:
 
 1. **B1.** ✅ Add `restrictedRelHammingDist Finset.univ f g = (Code.relHammingDist f g : ℝ≥0)` bridge.
-2. **B2.** ✅ Add `hammingBallVolume_eq_ncard_hammingBall` bridge (tagged sorry).
+2. **B2.** 🔧 Add `hammingBallVolume_eq_ncard_hammingBall` bridge. Partition step
+   proved; combinatorial count and Set/Finset conversion split out as smaller
+   tagged sorries.
 3. **B3.** ✅ Add `ker_proj_eq_vanish_at` Set-level bridge (proved).
 4. **B4.** ✅ Add `extensionCode_iff_coord_in_base` definitional iff lemma.
 5. **B5.** ⏸ **Deferred.** Refactor `ExtensionFieldPresentation` to thin Mathlib wrapper (`[Algebra B F] + Basis`). Unlocks `extensionCode_smul_mem`'s proof but is a significant invasive change. Tracked as a known follow-up.
@@ -262,9 +264,12 @@ Apply 2c–2e actions. Lowest priority — leave until A–C stable.
 
 Items surfaced by the ModuleCode-unification review:
 
-1. **E1.** ✅ Dim lemmas `dim_frsCode` and `dim_irsCode` stated with tagged sorries
-   (proofs need `Submodule.finrank_map_of_injective` + `Polynomial.degreeLTEquiv`
-   for FRS; interleavedCodeSet-finrank API for IRS).
+1. **E1.** 🔧 Dim lemmas:
+   - `dim_frsCode` **proved** (no sorry) via `Submodule.equivMapOfInjective` chained
+     with `Polynomial.degreeLTEquiv`. Hypothesis: `Function.Injective` on the
+     encoder.
+   - `dim_irsCode` still tagged-sorry, but with a sharper proof sketch documenting
+     the `LinearEquiv` to `Fin s → (RS code)` + `Module.finrank_pi` path.
 2. **E2.** ✅ Strengthen `mem_frsCode_one_iff_mem_rsCode` to a Submodule-level
    `frsCode_one_map_eq_rsCode` (proved, not admitted).
 3. **E3.** ✅ T3.2 alphabet generality — broadened `[Field F]` to
