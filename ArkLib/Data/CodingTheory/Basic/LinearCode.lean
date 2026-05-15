@@ -500,9 +500,9 @@ by several MDS-conditional theorems (e.g. C3.3 MDS coarse Johnson). Lives in
 `Basic/LinearCode.lean` rather than `JohnsonBound/` because it's a property
 of any linear code, not specifically a Johnson-bound concept.
 
-The relation to `LinearCode.singleton_bound_linear` (which proves `≤`) and a
-Singleton-tight predicate could be made via a bridging lemma
-`IsMDS_iff_singleton_bound_tight` (not yet provided). -/
+The bridge `IsMDS_iff_singleton_bound_tight` (below) connects this rate-distance
+form to the additive Nat form `dim C + Code.minDist C = n + 1`, which is the
+Singleton bound (`singleton_bound_linear` gives `≤`) attained as equality. -/
 def IsMDS {ι : Type} [Fintype ι] {F : Type} [Field F] [DecidableEq F]
     (C : Submodule F (ι → F)) (ρ : ℝ) : Prop :=
   (Code.minDist ((C : Set (ι → F))) : ℝ) / Fintype.card ι

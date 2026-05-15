@@ -643,6 +643,10 @@ lemma minDist_div_card_eq_minRelHammingDistCode
     ((Code.minDist C : ℚ) / (Fintype.card ι : ℚ))
       = ((minRelHammingDistCode C : ℚ≥0) : ℚ) := by
   sorry -- in-tree; commute `min` with `· / n` on `possibleRelHammingDists C`.
+        -- Fintype-instance diamond between `Set.toFinset` and the local
+        -- `Fintype.ofFinite` in `minRelHammingDistCode` makes the direct
+        -- `Finset.min'` route fiddly; needs a wrapper lemma about
+        -- `minRelHammingDistCode` to bypass.
 
 /-- The range set of possible relative Hamming distances from a vector to a code is a subset
   of the range of the relative Hamming distance function.
