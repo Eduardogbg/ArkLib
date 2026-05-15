@@ -82,15 +82,22 @@ theorem hammingBallVolume_eq_ncard_hammingBall
       = (ListDecodable.hammingBall (F := F) y (⌊δ * Fintype.card ι⌋₊)).ncard := by
   set r : ℕ := ⌊δ * Fintype.card ι⌋₊
   -- Step 1: convert RHS ncard → Finset.card with explicit filter.
-  -- Set→Finset cardinality conversion. The two `hammingDist y x ≤ r` propositions
-  -- below are propositionally equal but use different `Decidable` instances at the
-  -- syntactic level (Set.Finite.toFinset uses one; my Finset.filter another). The
-  -- bridge is purely a Mathlib-API/instance-elim exercise; admitted as a tagged
-  -- sub-sorry while the substantive partition + counting steps proceed below.
   have h_rhs :
       (ListDecodable.hammingBall (F := F) y r).ncard
         = (Finset.univ.filter (fun x : ι → F => hammingDist y x ≤ r)).card := by
-    sorry -- Set/Finset card conversion; Decidable-instance mismatch.
+    have h_finite : (ListDecodable.hammingBall (F := F) y r).Finite := Set.toFinite _
+    rw [Set.ncard_eq_toFinset_card _ h_finite]
+    apply Finset.card_bij (fun x _ => x)
+    · intro x hx
+      simp only [Finset.mem_filter, Finset.mem_univ, true_and]
+      rw [Set.Finite.mem_toFinset, ListDecodable.hammingBall, Set.mem_setOf_eq] at hx
+      convert hx using 2
+    · intros; assumption
+    · intro x hx
+      refine ⟨x, ?_, rfl⟩
+      simp only [Finset.mem_filter, Finset.mem_univ, true_and] at hx
+      rw [Set.Finite.mem_toFinset, ListDecodable.hammingBall, Set.mem_setOf_eq]
+      convert hx using 2
   -- Step 2: partition by exact distance.
   have h_partition :
       (Finset.univ.filter (fun x : ι → F => hammingDist y x ≤ r)).card
