@@ -606,11 +606,16 @@ lemma finite_possibleRelHammingDists : (possibleRelHammingDists C).Finite :=
 
 open Classical in
 /-- The minimum relative Hamming distance of a code.
+
+Uses `Set.Finite.toFinset` directly (via `finite_possibleRelHammingDists`) rather
+than a local `haveI : Fintype …`, so the underlying Finset doesn't depend on a
+typeclass-synthesised Fintype instance. This avoids a `Fintype.ofFinite` diamond
+with downstream proofs that need to manipulate `Finset.min'` of this set.
 -/
 def minRelHammingDistCode (C : Set (ι → F)) : ℚ≥0 :=
-  haveI : Fintype (possibleRelHammingDists C) := @Fintype.ofFinite _ finite_possibleRelHammingDists
   if h : (possibleRelHammingDists C).Nonempty
-  then (possibleRelHammingDists C).toFinset.min' (Set.toFinset_nonempty.2 h)
+  then finite_possibleRelHammingDists.toFinset.min'
+        ((Set.Finite.toFinset_nonempty (hs := finite_possibleRelHammingDists)).mpr h)
   else 0
 
 end
@@ -618,6 +623,36 @@ end
 /-- `δᵣ C` denotes the minimum relative Hamming distance of a code `C`.
 -/
 notation "δᵣ" C => minRelHammingDistCode C
+
+/-! ## Characterisation lemmas for `minRelHammingDistCode`
+
+Universal-property characterisation of `minRelHammingDistCode`'s value (membership
++ lower-bound) without exposing the underlying Finset machinery. -/
+
+lemma minRelHammingDistCode_of_empty
+    {ι : Type*} [Fintype ι] [Nonempty ι] {F : Type*} [DecidableEq F] {C : Set (ι → F)}
+    (h : ¬ (possibleRelHammingDists C).Nonempty) :
+    minRelHammingDistCode C = 0 := by
+  unfold minRelHammingDistCode
+  rw [dif_neg h]
+
+lemma minRelHammingDistCode_mem
+    {ι : Type*} [Fintype ι] [Nonempty ι] {F : Type*} [DecidableEq F] {C : Set (ι → F)}
+    (h : (possibleRelHammingDists C).Nonempty) :
+    minRelHammingDistCode C ∈ possibleRelHammingDists C := by
+  unfold minRelHammingDistCode
+  rw [dif_pos h]
+  have := Finset.min'_mem finite_possibleRelHammingDists.toFinset
+    ((Set.Finite.toFinset_nonempty (hs := finite_possibleRelHammingDists)).mpr h)
+  rwa [Set.Finite.mem_toFinset] at this
+
+lemma minRelHammingDistCode_le
+    {ι : Type*} [Fintype ι] [Nonempty ι] {F : Type*} [DecidableEq F] {C : Set (ι → F)}
+    {q : ℚ≥0} (hq : q ∈ possibleRelHammingDists C) : minRelHammingDistCode C ≤ q := by
+  have h_ne : (possibleRelHammingDists C).Nonempty := ⟨q, hq⟩
+  unfold minRelHammingDistCode
+  rw [dif_pos h_ne]
+  exact Finset.min'_le _ _ ((Set.Finite.mem_toFinset (hs := finite_possibleRelHammingDists)).mpr hq)
 
 /-- **Bridge: `Code.minDist C / n = δᵣ C` (cast to `ℚ`).**
 
@@ -634,13 +669,51 @@ lemma minDist_div_card_eq_minRelHammingDistCode
     (C : Set (ι → F)) :
     ((Code.minDist C : ℚ) / (Fintype.card ι : ℚ))
       = ((minRelHammingDistCode C : ℚ≥0) : ℚ) := by
-  sorry -- in-tree; commute `min` with `· / n` on `possibleRelHammingDists C`.
-        -- Fintype-instance diamond between `Set.toFinset` (Decidable-via-Classical for
-        -- the toFinset coercion) and the local `Fintype.ofFinite` in
-        -- `minRelHammingDistCode`'s body resists straightforward `unfold` + tactic
-        -- proof. A clean route would be to expose three `@[simp]` characterization
-        -- lemmas about `minRelHammingDistCode` (`*_of_empty`, `*_mem`, `*_le`) using
-        -- `Subsingleton.elim` on the Fintypes — left for a focused proof pass.
+  set n : ℕ := Fintype.card ι with hn_def
+  have hn_pos : 0 < n := Fintype.card_pos
+  -- Integer-valued "distinct pairs" set.
+  set S_nat : Set ℕ :=
+    {d | ∃ u ∈ C, ∃ v ∈ C, u ≠ v ∧ hammingDist u v = d} with hS_nat_def
+  -- Image identification: `possibleRelHammingDists C = (·/n) '' S_nat`.
+  have h_image : possibleRelHammingDists C = (fun d : ℕ => (d : ℚ≥0) / n) '' S_nat := by
+    ext q
+    simp only [possibleRelHammingDists, Code.possibleDists, Set.mem_setOf_eq,
+      Set.mem_offDiag, Set.mem_image, hS_nat_def]
+    constructor
+    · rintro ⟨⟨u, v⟩, ⟨hu, hv, huv⟩, hq⟩
+      refine ⟨hammingDist u v, ⟨u, hu, v, hv, huv, rfl⟩, ?_⟩
+      rw [← hq]; simp [relHammingDist, hn_def]
+    · rintro ⟨d, ⟨u, hu, v, hv, huv, hd⟩, hq⟩
+      refine ⟨(u, v), ⟨hu, hv, huv⟩, ?_⟩
+      rw [← hq, ← hd]; simp [relHammingDist, hn_def]
+  by_cases h_nonempty : S_nat.Nonempty
+  · -- Nonempty case.
+    have h_minDist_mem : Code.minDist C ∈ S_nat := Nat.sInf_mem h_nonempty
+    have h_rel_ne : (possibleRelHammingDists C).Nonempty := by
+      rw [h_image]; exact h_nonempty.image _
+    have h_min_mem := minRelHammingDistCode_mem h_rel_ne
+    rw [h_image] at h_min_mem
+    obtain ⟨d, hd_mem, hd_eq⟩ := h_min_mem
+    have h_minDist_in_rel : ((Code.minDist C : ℚ≥0) / n) ∈ possibleRelHammingDists C := by
+      rw [h_image]; exact ⟨Code.minDist C, h_minDist_mem, rfl⟩
+    have h_le : minRelHammingDistCode C ≤ (Code.minDist C : ℚ≥0) / n :=
+      minRelHammingDistCode_le h_minDist_in_rel
+    have h_ge : (Code.minDist C : ℚ≥0) / n ≤ minRelHammingDistCode C := by
+      rw [← hd_eq, div_le_div_iff_of_pos_right (by exact_mod_cast hn_pos)]
+      exact_mod_cast Nat.sInf_le hd_mem
+    have h_eq : minRelHammingDistCode C = (Code.minDist C : ℚ≥0) / n :=
+      le_antisymm h_le h_ge
+    rw [h_eq]; push_cast; rfl
+  · -- Empty case.
+    have h_minDist_zero : Code.minDist C = 0 := by
+      unfold Code.minDist
+      rw [Set.not_nonempty_iff_eq_empty] at h_nonempty
+      simp [hS_nat_def] at h_nonempty
+      simp [h_nonempty, Nat.sInf_empty]
+    have h_rel_empty : ¬ (possibleRelHammingDists C).Nonempty := by
+      rw [h_image, Set.not_nonempty_iff_eq_empty.mp h_nonempty]; simp
+    rw [h_minDist_zero, minRelHammingDistCode_of_empty h_rel_empty]
+    simp
 
 /-- The range set of possible relative Hamming distances from a vector to a code is a subset
   of the range of the relative Hamming distance function.
