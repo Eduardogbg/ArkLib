@@ -91,7 +91,7 @@ statement would collapse. We add `η ≤ δ` explicitly to match the paper's int
 
 Admitted as an external result. -/
 theorem linear_listSize_to_epsMCA_gcxk25
-    (C : Submodule F (ι → F)) (L : ℕ) (δ η : ℝ)
+    (C : LinearCode ι F) (L : ℕ) (δ η : ℝ)
     (_hδ_pos : 0 < δ) (_hδ_lt : δ < 1)
     (_hη_pos : 0 < η) (_hη_lt : η < 1) (_hη_le_δ : η ≤ δ)
     (_hΛ : Lambda ((C : Set (ι → F))) δ ≤ (L : ℕ∞)) :

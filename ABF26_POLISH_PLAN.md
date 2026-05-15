@@ -178,7 +178,7 @@ existential to a single `IsSubspaceDesign s τ (frsCode …)`.
 | New name | Existing peer | Status | Action |
 | --- | --- | --- | --- |
 | `CodingTheory.restrictedRelHammingDist` | `Code.relHammingDist`, `Code.relDistFromCode` in `Basic/RelativeDistance.lean` | 🔧 | Added `restrictedRelHammingDist_univ : restrictedRelHammingDist Finset.univ f g = (Code.relHammingDist f g : ℝ≥0)`. Lets downstream theorems convert freely between paper's `Δ_T` and existing `δᵣ(u, v)`. Bridge proved (not admitted). |
-| `CodingTheory.hammingBallVolume` | `ListDecodable.hammingBall` in `ListDecodability.lean` | 🔧 | Added `hammingBallVolume_eq_ncard_hammingBall`: bridge to `.ncard` of `hammingBall y ⌊δ·n⌋`. **Distance-partition step proved**; **Set/Finset conversion sub-sorry discharged** (commit `13f02444`, `Finset.card_bij` + `convert ... using 2` to absorb the Decidable-instance diamond). Net: 1 sorry → 1 remaining (`card_filter_hammingDist_eq`, the combinatorial count). |
+| `CodingTheory.hammingBallVolume` | `ListDecodable.hammingBall` in `ListDecodability.lean` | ✅ | Added `hammingBallVolume_eq_ncard_hammingBall`: bridge to `.ncard` of `hammingBall y ⌊δ·n⌋`. **Fully proved.** Both sub-sorries discharged: Set/Finset conversion via `Finset.card_bij` + `convert ... using 2` (`13f02444`); combinatorial count `card_filter_hammingDist_eq` via fiberwise split + `Finset.pi` bijection (`c01232f3`). |
 | `CodingTheory.qEntropy` | `Real.negMulLog`, Mathlib's binary-entropy lemmas | ✅ | Mathlib has `Real.binEntropy` (binary entropy) but no q-ary variant. Keep ours; revisit if Mathlib adds one. |
 | `JohnsonBound.Jcap` vs existing `J` (= paper's `J_q`) | `JohnsonBound.J` | ✅ | **Decision: keep both** with prominent docstring (Option A). Renaming existing `J → Jq` would break callers throughout `JohnsonBound/Basic.lean` and downstream — not worth the paper-name alignment given the docstring already disambiguates. |
 | `CodingTheory.ExtensionFieldPresentation` | `Algebra B F`, `Module.Finite`, `Basis` (Mathlib) | ⏸ | **B5 deferred.** B-linearity certified via `φ_add` / `φ_smul_psi`. Full Mathlib refactor (replace `ψ, e, φ, φ_inv, …` with `[Algebra B F] + [Module.Finite B F] + Basis B F`) would unlock `extensionCode_smul_mem`'s proof (the structure constants come from `Basis.equivFun` applied to multiplication). Significant invasive change touching `Connections.lean`, `IsSystematic`, `coord`, and all closure lemmas. Deferred until a downstream proof actually pulls on it. |
@@ -236,9 +236,11 @@ After each fix: `./scripts/validate.sh` must pass.
 Apply 2b actions in dependency order:
 
 1. **B1.** ✅ Add `restrictedRelHammingDist Finset.univ f g = (Code.relHammingDist f g : ℝ≥0)` bridge.
-2. **B2.** 🔧 Add `hammingBallVolume_eq_ncard_hammingBall` bridge. Partition step
-   proved; Set/Finset conversion discharged (commit `13f02444`); combinatorial
-   count `card_filter_hammingDist_eq` remains tagged sorry (~80-line bijection).
+2. **B2.** ✅ Add `hammingBallVolume_eq_ncard_hammingBall` bridge. Partition step
+   proved; Set/Finset conversion discharged (`13f02444`); combinatorial count
+   `card_filter_hammingDist_eq` proved (`c01232f3`, fiberwise split by
+   disagreement set + `Finset.pi` bijection). `HammingBallVolume.lean` is now
+   sorry-free end-to-end.
 3. **B3.** ✅ Add `ker_proj_eq_vanish_at` Set-level bridge (proved).
 4. **B4.** ✅ Add `extensionCode_iff_coord_in_base` definitional iff lemma.
 5. **B5.** ⏸ **Deferred.** Refactor `ExtensionFieldPresentation` to thin Mathlib wrapper (`[Algebra B F] + Basis`). Unlocks `extensionCode_smul_mem`'s proof but is a significant invasive change. Tracked as a known follow-up.

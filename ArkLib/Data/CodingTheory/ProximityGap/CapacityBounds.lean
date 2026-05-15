@@ -130,7 +130,7 @@ paper's 1.5-Johnson regime is exactly this `η`-as-slack-below-δ_min picture; w
 the bound becomes vacuous (or numerically infinite) and `δ ≤ 1 − ∛x` may not even
 restrict the parameter range. Added as an explicit hypothesis. -/
 theorem linear_epsMCA_1_5_johnson_gkl24
-    (C : Submodule F (ι → A)) (δ_min η δ : ℝ≥0)
+    (C : ModuleCode ι F A) (δ_min η δ : ℝ≥0)
     (_h_δ_min : (δ_min : ℝ) = (Code.minDist (C : Set (ι → A)) : ℝ) / Fintype.card ι)
     (_hη : 0 < η) (_hη_lt_δ_min : η < δ_min)
     (_hδ : (δ : ℝ) ≤ 1 - ((1 - (δ_min : ℝ) + (η : ℝ)) ^ ((1 : ℝ) / 3))) :
@@ -155,7 +155,7 @@ The regime hypothesis `η < δ_min` is shared with Item 1 (the paper presents bo
 under one regime statement); included here for hypothesis-parity even though Item 2's
 RHS `2 / (η² |F|)` is well-defined for any `η > 0`. -/
 theorem linear_epsCA_1_5_johnson_bgks20
-    (C : Submodule F (ι → A)) (δ_min η δ : ℝ≥0)
+    (C : ModuleCode ι F A) (δ_min η δ : ℝ≥0)
     (_h_δ_min : (δ_min : ℝ) = (Code.minDist (C : Set (ι → A)) : ℝ) / Fintype.card ι)
     (_hη : 0 < η) (_hη_lt_δ_min : η < δ_min)
     (_hδ : (δ : ℝ) ≤ 1 - ((1 - (δ_min : ℝ) + (η : ℝ)) ^ ((1 : ℝ) / 3))) :
@@ -347,7 +347,7 @@ variable {F : Type} [Field F] [Fintype F] [DecidableEq F]
 The probability is over a uniform word in `F^n`, expressed via the `Pr_{...}[...]`
 notation. Admitted as an external result. -/
 theorem linear_epsCA_ge_sampling_dg25
-    (C : Submodule F (ι → F)) (δ δ' : ℝ≥0)
+    (C : LinearCode ι F) (δ δ' : ℝ≥0)
     (_h_δ' : (δ' : ENNReal) = ⨆ u : ι → F, δᵣ(u, (C : Set (ι → F))))
     (_hδ_pos : 0 < δ) (_hδ_lt : δ < δ') :
     ((Fintype.card F - 1 : ℝ≥0) / Fintype.card F : ENNReal)

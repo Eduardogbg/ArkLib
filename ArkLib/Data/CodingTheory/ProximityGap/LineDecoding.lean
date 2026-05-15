@@ -88,7 +88,7 @@ fraction of γ-aligned points exceeds `n/|F|`.
 
 Admitted as an external result; formalising the GG25 argument is tracked separately. -/
 theorem lineDecodable_imp_epsMCA_le
-    (C : Submodule F (ι → A)) (δ : ℝ≥0) (a : ℝ≥0)
+    (C : ModuleCode ι F A) (δ : ℝ≥0) (a : ℝ≥0)
     (_h : LineDecodable (F := F) ((C : Set (ι → A))) δ a
             ((Fintype.card ι : ℝ≥0) + 1)) :
     epsMCA (F := F) (A := A) ((C : Set (ι → A))) δ

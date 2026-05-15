@@ -67,7 +67,7 @@ maximality, or proving no such `δ*_C` exists for some parameter regime. Both di
 are open at the time of the paper. -/
 def grandMCAChallenge {F ι : Type} [Field F] [Fintype F] [DecidableEq F]
     [Fintype ι] [Nonempty ι] [DecidableEq ι]
-    (C : Submodule F (ι → F)) (ε_star : ℝ≥0) : Prop :=
+    (C : LinearCode ι F) (ε_star : ℝ≥0) : Prop :=
   ∃ δ_C_star : ℝ≥0,
     δ_C_star ≤ 1 ∧
     epsMCA (F := F) (A := F) ((C : Set (ι → F))) δ_C_star ≤ (ε_star : ENNReal) ∧

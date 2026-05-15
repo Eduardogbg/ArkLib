@@ -416,9 +416,13 @@ should leave validation green at every step.
 - **Bonus: `dim_irsCode` proof discharge** (`3b0cfc99`) — closed one of the
   in-tree sorries previously tracked under Pass E1 of the polish plan.
 - **Phase 5 — deferred.** §6 toy problem; multi-session effort.
-- **Phase 6 — partial.** Two remaining in-tree sorries documented with proof
-  outlines: `card_filter_hammingDist_eq` (combinatorial) and the Fintype-diamond
-  one above. External admits (T3.2, C3.3, L2.17, T2.18, etc.) remain by design.
+- **Phase 6 — ✅ in-tree sorries closed.** All previously-pending in-tree sorries
+  in the ABF26 files are now discharged: `card_filter_hammingDist_eq`
+  (`c01232f3`, combinatorial fiberwise count) and
+  `minDist_div_card_eq_minRelHammingDistCode` (`3f344a00`, via the
+  `Set.Finite.toFinset` refactor of `minRelHammingDistCode`). The 30 external
+  admits (T3.2, C3.3, L2.17, T2.18, T3.4-T3.14, T4.11-T4.18, T5.1-T5.4, etc.)
+  remain by design — these are paper-cited results, not in scope to reprove.
 
 ### Phase 1 — Style & convention alignment (low risk)
 

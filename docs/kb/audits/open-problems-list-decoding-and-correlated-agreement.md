@@ -67,11 +67,26 @@ migration and the still-open non-unique-decoding branch:
 [`ArkLib/Data/CodingTheory/ProximityGap/BCIKS20/AffineLines/JointAgreement.lean`](../../../ArkLib/Data/CodingTheory/ProximityGap/BCIKS20/AffineLines/JointAgreement.lean)
 (bivariate-existence lemmas, added 2026-03-11 by `b333f6ba`).
 
+**This-PR additions** (`feat/abf26-plan` branch): three in-tree sorries
+discharged in proof-discharge passes after the statement layer landed:
+`dim_irsCode` (D2.13 dim formula, commit `3b0cfc99`),
+`hammingBallVolume_eq_ncard_hammingBall` and its sub-sorries
+`card_filter_hammingDist_eq` (`c01232f3`) and the Set/Finset card conversion
+(`13f02444`) for D2.4, and `minDist_div_card_eq_minRelHammingDistCode`
+(`3f344a00`, via a `Set.Finite.toFinset` refactor of `minRelHammingDistCode`
+to dodge a `Fintype.ofFinite` instance diamond). Several new bridge lemmas
+land in `Basic/LinearCode.lean` (`IsMDS_iff_singleton_bound_tight`),
+`Basic/RelativeDistance.lean` (the `minDist_div_card` bridge above plus
+characterisation lemmas for `minRelHammingDistCode`), and
+`Whir/MutualCorrAgreement.lean` (`proximityCondition_imp_mcaEvent_affineLine`
+and the probability-level `Pr_proximityCondition_le_epsMCA`, one-way bridges
+documenting the WHIR↔ABF26 MCA asymmetry recorded in commit `d01117c8`).
+
 ## Section 1 — Grand Challenges (introduction)
 
 | ABF26 ID | Paper item | Status | Lean refs | Lean target | Notes |
 | --- | --- | --- | --- | --- | --- |
-| `GC1` | Grand MCA Challenge (page 5): "determine the largest `δ*_C ∈ [0, 1]` such that `ε_mca(C, δ*_C) ≤ ε*`" | present (as predicate) | `ProximityGap.grandMCAChallenge` in [GrandChallenges.lean](../../../ArkLib/Data/CodingTheory/ProximityGap/GrandChallenges.lean) | existing | Stated as a generic `Prop`-valued predicate over a code `C : Submodule F (ι → F)` and a threshold `ε* : ℝ≥0`. Specialisation to the paper's RS parameter regime (ρ ∈ {1/2, 1/4, 1/8, 1/16}, ε* = 2^(-128)) is a call-site instantiation. Resolution is open. |
+| `GC1` | Grand MCA Challenge (page 5): "determine the largest `δ*_C ∈ [0, 1]` such that `ε_mca(C, δ*_C) ≤ ε*`" | present (as predicate) | `ProximityGap.grandMCAChallenge` in [GrandChallenges.lean](../../../ArkLib/Data/CodingTheory/ProximityGap/GrandChallenges.lean) | existing | Stated as a generic `Prop`-valued predicate over a `LinearCode ι F` and a threshold `ε* : ℝ≥0`. Specialisation to the paper's RS parameter regime (ρ ∈ {1/2, 1/4, 1/8, 1/16}, ε* = 2^(-128)) is a call-site instantiation. Resolution is open. |
 | `GC2` | Grand List Decoding Challenge (page 5): "determine the largest `δ*_C ∈ [0, 1]` such that `\|Λ(C^≡m, δ*_C)\| ≤ ε* · \|F\|`" | present (as predicate) | `ProximityGap.grandListDecodingChallenge` in [GrandChallenges.lean](../../../ArkLib/Data/CodingTheory/ProximityGap/GrandChallenges.lean) | existing | Stated as a generic `Prop`-valued predicate. Uses `ListDecodable.Lambda` for `\|Λ(C^≡m, ·)\|` (ABF26 D2.8). Resolution is open. |
 
 ## Section 2 — Preliminaries
@@ -82,7 +97,7 @@ migration and the still-open non-unique-decoding branch:
 | `D2.2` | q-entropy function `H_q` | present | `CodingTheory.qEntropy` in [Entropy.lean](../../../ArkLib/Data/CodingTheory/Basic/Entropy.lean) | existing | `noncomputable def`; uses Mathlib's `Real.logb`. Boundary case `qEntropy q 0 = 0` is a `@[simp]` lemma. |
 | `D2.3` | Restricted Hamming distance `Δ_T` | present | `CodingTheory.restrictedRelHammingDist` in [RelativeDistance.lean](../../../ArkLib/Data/CodingTheory/Basic/RelativeDistance.lean); existing full-domain `Δ₀`/`δᵣ` in [Distance.lean](../../../ArkLib/Data/CodingTheory/Basic/Distance.lean) and [RelativeDistance.lean](../../../ArkLib/Data/CodingTheory/Basic/RelativeDistance.lean) | existing | `ℝ≥0`-valued; `T = ∅` gives `0` via `NNReal`'s `0/0 = 0`. |
 | `D2.4` | Hamming-ball volume `Vol_q(δ,n)` | present | `CodingTheory.hammingBallVolume` in [HammingBallVolume.lean](../../../ArkLib/Data/CodingTheory/HammingBallVolume.lean); supporting `hammingBall`/`relHammingBall` sets in [ListDecodability.lean](../../../ArkLib/Data/CodingTheory/ListDecodability.lean) | existing | `noncomputable def` (depends on `Nat.floor` over `ℝ`). Boundary case `Vol_q(0, n) = 1` is a `@[simp]` lemma. |
-| `D2.5` | ECC, `δ_min`, rate | present-but-different | `Code.dist`, `Code.minDist` in [Distance.lean](../../../ArkLib/Data/CodingTheory/Basic/Distance.lean); `LinearCode.rate` in [LinearCode.lean](../../../ArkLib/Data/CodingTheory/Basic/LinearCode.lean) | existing + `scoped notation "δ_min"`, `scoped notation "ρ"` in `ABF26Notation.lean` (new) | Paper uses `C ⊆ Σ^n`; ArkLib uses function spaces. Mathematically equivalent. |
+| `D2.5` | ECC, `δ_min`, rate | present-but-different | `Code.dist`, `Code.minDist` in [Distance.lean](../../../ArkLib/Data/CodingTheory/Basic/Distance.lean); `LinearCode.rate` in [LinearCode.lean](../../../ArkLib/Data/CodingTheory/Basic/LinearCode.lean); bridge `Code.minDist_div_card_eq_minRelHammingDistCode` linking the raw `Code.minDist C / n` form to `δᵣ C` (proved, via `Set.Finite.toFinset` refactor of `minRelHammingDistCode`) | existing + `scoped notation "δ_min"`, `scoped notation "ρ"` in `ABF26Notation.lean` (new) | Paper uses `C ⊆ Σ^n`; ArkLib uses function spaces. Mathematically equivalent. |
 | `L2.6` | Singleton bound | present | `singleton_bound`, `singleton_bound_linear`, `IsMDS` predicate, and `IsMDS_iff_singleton_bound_tight` bridge in [LinearCode.lean](../../../ArkLib/Data/CodingTheory/Basic/LinearCode.lean) | existing | `IsMDS C ρ` encodes the rate-distance Singleton-tight condition `δ_min = 1 − ρ + 1/n`; bridge connects it to the additive Nat form `dim C + Code.minDist C = n + 1`. |
 | `D2.7` | F-additive code | present-but-different | `ModuleCode`, `LinearCode` in [LinearCode.lean](../../../ArkLib/Data/CodingTheory/Basic/LinearCode.lean) | `CodingTheory.IsFAdditive` | Same idea modulo `Σ ≃ₗ[F] (Fin s → F)`; no F-additive predicate yet. |
 | `D2.8` | `Λ(C,δ,f)` and `\|Λ(C,δ)\|` | present | `ListDecodable.Lambda_at`, `ListDecodable.Lambda`, `Lambda_at_subset_of_le`, `Lambda_mono`, `Lambda_le_ncard` in [ListDecodability.lean](../../../ArkLib/Data/CodingTheory/ListDecodability.lean) | existing | Closed by the first Phase 1 commit; `Lambda_at` is an `abbrev` over `closeCodewordsRel`, `Lambda` is the `ℕ∞`-valued maximised list size. |

@@ -130,7 +130,7 @@ machine-checked proof requires the asymptotic-Johnson form
 theorem mds_johnson_lambda_le
     {ι : Type} [Fintype ι] [Nonempty ι] [DecidableEq ι]
     {F : Type} [Field F] [Fintype F] [DecidableEq F]
-    (C : Submodule F (ι → F)) (ρ η : ℝ)
+    (C : LinearCode ι F) (ρ η : ℝ)
     (_hρ_pos : 0 < ρ) (_hρ_lt : ρ < 1) (_hη_pos : 0 < η)
     (_h_mds : LinearCode.IsMDS C ρ) :
     (Lambda ((C : Set (ι → F))) (1 - ρ ^ ((1 : ℝ) / 2) - η) : ENNReal) ≤
