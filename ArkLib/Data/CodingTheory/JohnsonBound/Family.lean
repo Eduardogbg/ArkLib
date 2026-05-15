@@ -108,7 +108,15 @@ theorem johnson_bound_lambda_le_ell
     let q : ℚ := Fintype.card α
     let δ_min : ℚ := Code.minDist C / Fintype.card ι
     Lambda C (Jqℓ q ℓ δ_min) ≤ (ℓ : ℕ∞) := by
-  sorry -- ABF26-T3.2; statement only. Port from JohnsonBound.johnson_bound.
+  sorry -- ABF26-T3.2; external admit. The earlier comment "port from
+        -- JohnsonBound.johnson_bound" understates the work: the existing
+        -- `johnson_bound` gives `B.card ≤ (frac·d/n) / Denom` where
+        -- `Denom = (1 - frac·e/n)² - (1 - frac·d/n)`. Plugging `e/n = Jqℓ q ℓ δ_min`,
+        -- the `(1 - frac·e/n)²` term simplifies to `1 - frac·(ℓ/(ℓ-1))·δ_min`, making
+        -- `Denom = frac·δ_min·(1 - ℓ/(ℓ-1)) < 0` for ℓ ≥ 2 — the existing bound's
+        -- precondition (`JohnsonConditionStrong`) is violated exactly at the
+        -- Jqℓ boundary. T3.2 needs the Guruswami-Sudan-style `J_{q,ℓ}`-specific
+        -- argument, not a direct port. Tracked as external admit.
 
 /-- **ABF26 Corollary 3.3.** MDS coarse Johnson corollary. For every MDS code `C` with
 rate `ρ` and `η > 0`:
