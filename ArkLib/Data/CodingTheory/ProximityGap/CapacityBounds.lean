@@ -282,7 +282,7 @@ Let `C := RS[F, L, k]` with `q = |F| ≥ 10`, rate `ρ`, and `δ` satisfying:
   `1 - H_q(δ) + 2/n + √((H_q(δ) - δ)/n) ≤ ρ ≤ 1 - δ - 2/n`
 
 Then `ε_ca(C, δ) = 1`. Uses `qEntropy` (ABF26 Definition 2.2, defined in
-`ABF26Prelims.lean`). Admitted as an external result. -/
+`Basic/Entropy.lean`). Admitted as an external result. -/
 theorem rs_epsCA_breakdown_cs25
     (domain : ι ↪ F) (k : ℕ) (δ : ℝ≥0)
     (_hq_ge : 10 ≤ Fintype.card F)

@@ -37,6 +37,22 @@ on prior items. The "Known issues" column pre-loads concerns spotted during
 the original drafting session — they should be confirmed or refuted, not
 trusted blindly.
 
+**File-path note (post-Phase-2 refactor).** The section headings below reference
+the original file layout used while drafting. Several files have since been
+split or renamed (see `ABF26_INTEGRATION_PLAN.md` §5 Phase 2):
+
+- `ABF26Prelims.lean` → split into `Basic/Entropy.lean`, `HammingBallVolume.lean`,
+  and additions to `Basic/RelativeDistance.lean`.
+- `ABF26CodeFamilies.lean` → split into `ReedSolomon/Interleaved.lean`,
+  `ReedSolomon/Folded.lean`, and `SubspaceDesign.lean`.
+- `JohnsonBound/ABF26.lean` → `JohnsonBound/Family.lean`.
+- `ListDecodingBounds.lean` → `ListDecoding/Bounds.lean`.
+- `LineDecoding.lean` → `ProximityGap/LineDecoding.lean`.
+- `Connections.lean` → `Connections/ListDecodingAndCA.lean`.
+- `ProximityGap/EpsilonErrors.lean` → `ProximityGap/Errors.lean`.
+
+The content under each heading is otherwise still accurate.
+
 ### §1 — Grand Challenges ([GrandChallenges.lean](ArkLib/Data/CodingTheory/ProximityGap/GrandChallenges.lean))
 
 | ID | Lean name | Status | Known issues / things to check |

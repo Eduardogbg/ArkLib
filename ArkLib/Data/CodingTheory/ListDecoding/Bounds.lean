@@ -19,7 +19,8 @@ External-admit *statements* for the §3 list-decoding bounds from ABF26
 Each theorem is admitted as an external result with a tagged `sorry`, matching the
 pattern established by `ProximityGap.CapacityBounds`. The statements use the
 `ListDecodable.Lambda` function (block-maximised list size) introduced in
-`ListDecodability.lean`, plus `qEntropy` / `hammingBallVolume` from `ABF26Prelims.lean`.
+`ListDecodability.lean`, plus `qEntropy` from `Basic/Entropy.lean` and
+`hammingBallVolume` from `HammingBallVolume.lean`.
 
 These bounds sit immediately above the Grand List Decoding Challenge in ABF26 §1:
 upper bounds (T3.2, C3.3) give candidate witnesses `δ_C*` for `|Λ(C^≡m, δ_C*)| ≤ ε*·|F|`,
@@ -109,7 +110,7 @@ variable {F : Type} [Field F] [Fintype F] [DecidableEq F]
 where `q = |F|`, `n = |ι|`, and `k = dim(C)` is the dimension of the linear code `C`
 (so `|C| = q^k`). The paper's proof uses an averaging argument over random words; we
 admit it here as an external result. Uses `hammingBallVolume` (ABF26 D2.4) from
-`ABF26Prelims.lean`. -/
+`HammingBallVolume.lean`. -/
 theorem linear_lambda_ge_elias_volume_eli57
     (C : Submodule F (ι → F)) (δ : ℝ) (_hδ_pos : 0 < δ) (_hδ_lt : δ < 1) :
     ENNReal.ofReal

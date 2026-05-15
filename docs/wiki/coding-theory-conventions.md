@@ -2,11 +2,10 @@
 
 Local conventions used in `ArkLib/Data/CodingTheory/` and its subdirectories.
 These are not enforced by tooling but they are followed consistently across the
-ABF26 statement layer (`ProximityGap/EpsilonErrors.lean`,
-`ProximityGap/CapacityBounds.lean`, `ListDecodingBounds.lean`,
-`Connections.lean`, `JohnsonBound/ABF26.lean`, etc.) and reviewers should look
-for them. Some of these file names may move during the Phase 2 refactor
-described in [`../../ABF26_INTEGRATION_PLAN.md`](../../ABF26_INTEGRATION_PLAN.md) §3.1.
+ABF26 statement layer (`ProximityGap/Errors.lean`,
+`ProximityGap/CapacityBounds.lean`, `ListDecoding/Bounds.lean`,
+`Connections/ListDecodingAndCA.lean`, `JohnsonBound/Family.lean`, etc.) and
+reviewers should look for them.
 
 ## Theorem naming
 
@@ -93,7 +92,7 @@ purposes but the notation itself is global).
   name in other scopes).
 - `CodingTheory.restrictedRelHammingDist T f g` is also available as the scoped
   notation `Δ[T]` with explicit `(f, g)` arguments (declared in
-  `ABF26Prelims.lean`; the paper-style is `Δ_T(f, g)`).
+  `Basic/RelativeDistance.lean`; the paper-style is `Δ_T(f, g)`).
 
 ### Conspicuously absent (only in docstring comments, not actual notation)
 
