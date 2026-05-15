@@ -162,7 +162,15 @@ def whirRelation
     : Set ((Unit × ∀ i, (OracleStatement ι F i)) × Unit) :=
   { ⟨⟨_, oracle⟩, _⟩ | δᵣ(oracle (), smoothCode φ varCount) ≤ err }
 
-/-- Theorem 5.2: **Round-by-round soundness of the WHIR Vector IOPP** -/
+/-- Theorem 5.2: **Round-by-round soundness of the WHIR Vector IOPP**
+
+  **ABF26 mapping.** This is the top-level WHIR soundness theorem; its proof composes
+  (a) the BCIKS20/CapacityBounds-style ε_ca / ε_mca bounds (ABF26 §4.2.2 / §4.3)
+  with (b) the folding-preserves-list-decoding lemmas in `Whir/Folding.lean`
+  (L4.21–L4.23, corresponding to ABF26 T3.4 specialized to FRS). The `errStar` and
+  `ε_fold` rate-distance ingredients line up with ABF26's `epsMCA` (Def 4.3); the
+  per-round shifting/folding error budget is the WHIR-side accounting of those
+  abstract bounds. -/
 theorem whir_rbr_soundness
     [SampleableType F] {d dstar : ℕ}
   -- P : set of M + 1 parameters including foldingParamᵢ, varCountᵢ, φᵢ, repeatParamᵢ,

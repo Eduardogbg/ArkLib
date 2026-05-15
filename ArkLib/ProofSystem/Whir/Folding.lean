@@ -255,7 +255,12 @@ theorem folding_listdecoding_if_genMutualCorrAgreement
     `S_0` and `S_1` denote finite sets of elements of type ι and ι², and
     `Λᵣ` denotes the list of δ-close codewords wrt block relative distance.
     `Λᵣ(0,k,f,S_0,C)` denotes Λᵣ at f : ι → F for code C and
-    `Λᵣ(1,k,fold_k(f,(fun _ : Fin 1 => α)),S_1,C')` denotes Λᵣ at fold_k : ι^2 → F for code C'. -/
+    `Λᵣ(1,k,fold_k(f,(fun _ : Fin 1 => α)),S_1,C')` denotes Λᵣ at fold_k : ι^2 → F for code C'.
+
+  **ABF26 mapping.** Specialization of ABF26 T3.4 (τ-subspace-design list decoding)
+  to folded RS: ListDecoding bound for FRS instantiates the abstract τ-subspace-design
+  bound. See `CodingTheory.subspaceDesign_list_decoding_cz25` in
+  `ArkLib/Data/CodingTheory/ListDecoding/Bounds.lean`. -/
 lemma folding_preserves_listdecoding_base
   [Fintype F] {S : Finset ι} {k m : ℕ} (hm : 1 ≤ m) {φ : ι ↪ F}
   [Fintype ι] [DecidableEq ι] [Smooth φ] {δ : ℝ≥0}
@@ -284,7 +289,13 @@ lemma folding_preserves_listdecoding_base
 /-- Lemma 4.22
   Following same parameters as Lemma 4.21 above, and states
   `∀ α : F, fold_k_set(Λᵣ(0,k,f,S_0,C,δ),(fun _ : Fin 1 => α)) ⊆
-      Λᵣ(1,k-1,fold_k(f,(fun _ : Fin 1 => α)),S_1,C',δ)` -/
+      Λᵣ(1,k-1,fold_k(f,(fun _ : Fin 1 => α)),S_1,C',δ)`
+
+  **ABF26 mapping.** Deterministic inclusion form underlying L4.21. The probabilistic
+  half (L4.21) bounds the failure probability of the *reverse* inclusion; this lemma
+  asserts the *forward* inclusion always holds. No direct ABF26 paper counterpart —
+  this is the "easy half" of folded-code list-decoding (corresponds to ABF26's "every
+  folded image of a δ-close codeword is δ-close", a structural fact). -/
 lemma folding_preserves_listdecoding_bound
   {S : Finset ι} {k m : ℕ} (hm : 1 ≤ m) {φ : ι ↪ F} [Fintype ι] [DecidableEq ι] [Smooth φ]
   {δ : ℝ≥0} {f : (indexPowT S φ 0) → F}
@@ -313,7 +324,13 @@ lemma folding_preserves_listdecoding_bound
   `Pr_{α ← F} [
       Λᵣ(1,k-1,fold_k(f,(fun _ : Fin 1 => α)),S_1,C',δ) ¬ ⊆
         fold_k_set(Λᵣ(0,k,f,S_0,C,δ),(fun _ : Fin 1 => α))
-    ] < errStar(C',2,δ)` -/
+    ] < errStar(C',2,δ)`
+
+  **ABF26 mapping.** The probabilistic half of L4.21 / L4.22 — bounds the failure
+  probability of the reverse inclusion (every δ-close codeword of the folded code
+  comes from a δ-close codeword of the unfolded code, except with `errStar` prob).
+  Combines L4.22 (forward inclusion deterministic) with this lemma to recover the
+  ≠ event of L4.21. -/
 lemma folding_preserves_listdecoding_base_ne_subset
   [Fintype F] {S : Finset ι} {k m : ℕ} (hm : 1 ≤ m) {φ : ι ↪ F}
   [Fintype ι] [DecidableEq ι] [Smooth φ] {δ : ℝ≥0}

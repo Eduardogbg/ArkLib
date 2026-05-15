@@ -30,7 +30,15 @@ namespace STIR
   and let Bstar(ρ) = √ρ. For all `δ ∈ (0, 1 - Bstar(ρ))`, `f₁,...,fₘ : ι → F`, if
   `Pr_{r ← F} [ δᵣ(rⱼ * fⱼ, C) ≤ δ] > err'(degree, ρ, δ, m)`
   then ∃ S ⊆ ι, |S| ≥ (1 - δ) * |ι| and
-  ∀ i : m, ∃ u : C, u(S) = fᵢ(S) -/
+  ∀ i : m, ∃ u : C, u(S) = fᵢ(S)
+
+  **ABF26 mapping.** This is the predicate-style "joint correlated agreement" form
+  underlying ABF26's `ε_pg` (`ProximityGap.epsPG` in
+  `ArkLib/Data/CodingTheory/ProximityGap/Errors.lean`). The contrapositive — "if no
+  large agreement set exists, then the probability is at most `err'`" — is exactly
+  `epsPG C δ ≤ err'(...)` for `C = RS[F, ι, degree]`. A future bridge lemma
+  `proximity_gap_iff_epsPG_le` would make this iff explicit; left deferred until the
+  call-site refactor in Phase 4 of `ABF26_INTEGRATION_PLAN.md`. -/
 lemma proximity_gap
   {F : Type} [Field F] [Fintype F] [DecidableEq F]
   {ι : Type} [Fintype ι] [Nonempty ι] {φ : ι ↪ F}
