@@ -627,15 +627,7 @@ T3.2, C3.3, etc. as `δ_min`) coincides with the existing `minRelHammingDistCode
 `min { hammingDist u v / n | u, v ∈ C, u ≠ v }`.
 
 **Boundary case.** When `C` is a subsingleton (no distinct codewords), both sides
-are `0` by the empty-`sInf` / else-branch conventions.
-
-**Proof sketch.** Case on whether `possibleRelHammingDists C` is nonempty.
-- Empty: both sides reduce to `0`.
-- Nonempty: use the bijection `possibleRelHammingDists C = (·/n) '' {hammingDist u v
-  | distinct pair}` plus monotonicity of `·/n` for `n > 0` to commute the minimum
-  with division.
-
-Tagged as an in-tree proof obligation. -/
+are `0` by the empty-`sInf` / else-branch conventions. -/
 lemma minDist_div_card_eq_minRelHammingDistCode
     {ι : Type*} [Fintype ι] [Nonempty ι]
     {F : Type*} [DecidableEq F]
@@ -643,10 +635,12 @@ lemma minDist_div_card_eq_minRelHammingDistCode
     ((Code.minDist C : ℚ) / (Fintype.card ι : ℚ))
       = ((minRelHammingDistCode C : ℚ≥0) : ℚ) := by
   sorry -- in-tree; commute `min` with `· / n` on `possibleRelHammingDists C`.
-        -- Fintype-instance diamond between `Set.toFinset` and the local
-        -- `Fintype.ofFinite` in `minRelHammingDistCode` makes the direct
-        -- `Finset.min'` route fiddly; needs a wrapper lemma about
-        -- `minRelHammingDistCode` to bypass.
+        -- Fintype-instance diamond between `Set.toFinset` (Decidable-via-Classical for
+        -- the toFinset coercion) and the local `Fintype.ofFinite` in
+        -- `minRelHammingDistCode`'s body resists straightforward `unfold` + tactic
+        -- proof. A clean route would be to expose three `@[simp]` characterization
+        -- lemmas about `minRelHammingDistCode` (`*_of_empty`, `*_mem`, `*_le`) using
+        -- `Subsingleton.elim` on the Fintypes — left for a focused proof pass.
 
 /-- The range set of possible relative Hamming distances from a vector to a code is a subset
   of the range of the relative Hamming distance function.
