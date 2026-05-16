@@ -119,22 +119,28 @@ theorem johnson_bound_lambda_le_ell
         -- argument, not a direct port. Tracked as external admit.
 
 /-- **ABF26 Corollary 3.3.** MDS coarse Johnson corollary. For every MDS code `C` with
-rate `ρ` and `η > 0`:
+rate `ρ := dim C / n` and `η > 0`:
 
   `|Λ(C, 1 - √ρ - η)| ≤ 1 / (2 · η · ρ)`
 
-Derives from L2.6 (Singleton bound: MDS implies `δ_min = 1 - ρ + 1/n`) plus T3.2 (or
-its asymptotic version via `Jcap`). Admitted as an external result; the path to a
-machine-checked proof requires the asymptotic-Johnson form
-`Lambda C δ ≤ 1/(2·(Jcap δ - δ))` plus MDS rate-distance manipulation. -/
+Derives from L2.6 (Singleton bound: MDS implies `δ_min = 1 - ρ + 1/n`, available via
+the `IsMDS_iff_rate_distance` bridge) plus T3.2 (or its asymptotic version via `Jcap`).
+Admitted as an external result; the path to a machine-checked proof requires the
+asymptotic-Johnson form `Lambda C δ ≤ 1/(2·(Jcap δ - δ))` plus MDS rate-distance
+manipulation.
+
+**Rate derivation.** `ρ` is bound inline as `(Module.finrank F C : ℝ) / Fintype.card ι`
+rather than passed as a separate parameter — this matches the upstream `IsMDS`
+signature (additive Nat form, no rate parameter) and lets call sites use
+`IsMDS_iff_rate_distance` to extract the rate-distance equation when needed. -/
 theorem mds_johnson_lambda_le
     {ι : Type} [Fintype ι] [Nonempty ι] [DecidableEq ι]
     {F : Type} [Field F] [Fintype F] [DecidableEq F]
-    (C : LinearCode ι F) (ρ η : ℝ)
-    (_hρ_pos : 0 < ρ) (_hρ_lt : ρ < 1) (_hη_pos : 0 < η)
-    (_h_mds : LinearCode.IsMDS C ρ) :
+    (C : LinearCode ι F) (η : ℝ) (_hη_pos : 0 < η)
+    (_h_mds : LinearCode.IsMDS C) :
+    let ρ : ℝ := (Module.finrank F C : ℝ) / Fintype.card ι
     (Lambda ((C : Set (ι → F))) (1 - ρ ^ ((1 : ℝ) / 2) - η) : ENNReal) ≤
       ENNReal.ofReal (1 / (2 * η * ρ)) := by
-  sorry -- ABF26-C3.3; derivable from L2.6 + Jcap form of T3.2.
+  sorry -- ABF26-C3.3; derivable from L2.6 (via IsMDS_iff_rate_distance) + Jcap form of T3.2.
 
 end CodingTheory
