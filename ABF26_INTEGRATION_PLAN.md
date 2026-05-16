@@ -552,56 +552,39 @@ review.
 - WHIR-MCA vs ABF26-MCA asymmetry (one-way bridge) — recorded in commit
   `d01117c8`. Resolution path documented but not implemented.
 
-### 8.1 Post-merge follow-ups (PR #430 Proximity Generators landing)
+### 8.1 Post-merge state (PR #430 + #504 landed, merge commit `37c5a6d8`)
 
-When Katy's PR #430 (`Katy/ProximityGenerators`) lands on main and we
-merge updated main into this branch, the following items become
-actionable on our side:
-
-1. **`LinearCode.IsMDS` collision resolution** (real merge conflict).
-   PR #430 adds an `IsMDS` to `Basic/LinearCode.lean`:
+1. **`LinearCode.IsMDS` collision** ✅ **resolved.** Adopted Katy's def
+   (additive Nat form, no `ρ` parameter) as canonical:
    ```lean
    def IsMDS (LC : LinearCode ι F) : Prop :=
      Code.dist LC.carrier = length LC - dim LC + 1
    ```
-   Our PR's `IsMDS` takes a rate parameter:
-   ```lean
-   def IsMDS (C : Submodule F (ι → F)) (ρ : ℝ) : Prop :=
-     (Code.minDist ... : ℝ) / Fintype.card ι = 1 - ρ + 1 / Fintype.card ι
-   ```
-   These are equivalent via our `IsMDS_iff_singleton_bound_tight` bridge
-   (with `ρ = dim/n`).
+   Our previous `IsMDS C ρ` removed; the `IsMDS_iff_singleton_bound_tight`
+   bridge was rewritten as `IsMDS_iff_rate_distance` converting Katy's
+   additive form to the rate-distance form `(δ_min : ℝ) / n = 1 - dim/n +
+   1/n` (the form ABF26 §2-§3 uses). `mds_johnson_lambda_le` was the only
+   consumer of our old `IsMDS C ρ`; it now takes `LinearCode.IsMDS C` and
+   binds `ρ` inline as `dim C / n` via a `let`.
 
-   **Action**: adopt Katy's signature. Rewrite our `mds_johnson_lambda_le`
-   (in `JohnsonBound/Family.lean`) to take `ρ` as a separate parameter and
-   apply the bridge to extract `Code.minDist`. Update the audit doc L2.6
-   row + integration-plan Phase-3 status block accordingly.
+2. **Two cosmetic renames from #430 review** (still pending — Katy noted
+   but didn't apply before merging, we offered to handle here):
+   - `Basic/MDSCode.lean` L22: rename `namespace CoreResults`.
+   - `Basic/MDSCode.lean` L167: rename `colRank_genMatrix_eq_dim_of_MDS` →
+     `colRank_genMatrix_iff_dim_of_MDS`.
+   Low priority — cosmetic only, can land in a future polish commit.
 
-2. **Two cosmetic renames from the PR #430 review thread** (Katy noted but
-   didn't apply before merging; we offered to handle in our PR):
+3. **`ProximityGap/ProximityGenerators.lean` API polish** (#430 review,
+   still pending):
+   - Connect `IsPolynomialGenerator` ↔ `IsPolynomialGeneratorOf` via
+     reorder + recursive def OR a `Iff.rfl` bridge lemma.
+   - Add docstring to `IsPolynomialGeneratorOf`.
+   - Comment the `noncomputable example` at L77-78.
+   Low priority — API polish, not blocking.
 
-   - `ArkLib/Data/CodingTheory/Basic/MDSCode.lean` L22: rename
-     `namespace CoreResults` to something MDS-specific (e.g.,
-     `namespace LinearCode.MDS`) or fold into the existing `LinearCode`
-     namespace.
-   - `ArkLib/Data/CodingTheory/Basic/MDSCode.lean` L167: rename
-     `colRank_genMatrix_eq_dim_of_MDS` → `colRank_genMatrix_iff_dim_of_MDS`
-     (statement is `LC.IsMDS ↔ Matrix.IsMDS (matrixFromBasis LC)`, not
-     an equality).
-
-3. **`ProximityGap/ProximityGenerators.lean` API polish** (originally
-   suggested in the PR #430 review, not blocker):
-
-   - Connect `IsPolynomialGenerator` and `IsPolynomialGeneratorOf`. Two
-     options — pick one:
-     - **A (preferred)**: reorder so `IsPolynomialGeneratorOf` comes first,
-       then `def IsPolynomialGenerator S G := ∃ P, IsPolynomialGeneratorOf S G P`.
-     - **B**: keep current order, add
-       `lemma isPolynomialGenerator_iff_exists : IsPolynomialGenerator S G ↔ ∃ P, IsPolynomialGeneratorOf S G P := Iff.rfl`.
-   - Add a docstring to `IsPolynomialGeneratorOf` (currently absent).
-   - Add a comment to the `noncomputable example` at L77-78 explaining
-     its documentation role (so future readers don't wonder whether to
-     promote it to a `def` or remove).
+4. **PR #504 `mem_code_*` lemmas** now available for consumption. Some of
+   our existing `simp [code, Submodule.mem_map]` unfolds in ABF26 files
+   could become cleaner one-liners; worth a future polish pass.
 
 ## 9. Local bibliography map (from Survey 4)
 
