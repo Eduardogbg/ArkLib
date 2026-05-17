@@ -185,6 +185,8 @@ import ArkLib.ProofSystem.Stir.Quotienting
 import ArkLib.ProofSystem.Sumcheck.Impl.Basic
 import ArkLib.ProofSystem.Sumcheck.Spec.General
 import ArkLib.ProofSystem.Sumcheck.Spec.SingleRound
+import ArkLib.ProofSystem.ToyProblem.Definitions
+import ArkLib.ProofSystem.ToyProblem.SoundnessBounds
 import ArkLib.ProofSystem.Whir.BlockRelDistance
 import ArkLib.ProofSystem.Whir.Folding
 import ArkLib.ProofSystem.Whir.MutualCorrAgreement

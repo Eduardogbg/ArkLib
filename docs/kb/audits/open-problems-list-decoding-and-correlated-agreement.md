@@ -179,20 +179,20 @@ framework gaps being closed. Plan Phase 8 holds these.
 
 | ABF26 ID | Paper item | Status | Lean refs | Lean target | Notes |
 | --- | --- | --- | --- | --- | --- |
-| `D6.1` | Toy problem relation `R_C^ℓ` | deferred | none | `ABF26.ToyProblem.relation` | New file under `ProofSystem/ToyProblem/`. |
-| `C6.2` | Construction 6.2 | deferred | none | `ABF26.ToyProblem.construction62` | Uses oracle-reduction framework. |
-| `D6.3` | Relaxed toy relation `R̃_C,δ^ℓ` | deferred | none | `ABF26.ToyProblem.relaxedRelation` | |
-| `D6.4` | Erasure correction | deferred | none | `CodingTheory.SupportsErasureCorrection` | |
-| `L6.5` | Every additive code supports erasure correction | deferred | none | `ABF26.fAdditive_supports_erasure` | GRS12. |
-| `L6.6` | Knowledge soundness of Construction 6.2 | deferred | related framework in [OracleReduction/Security/Basic.lean](../../../ArkLib/OracleReduction/Security/Basic.lean) | `ABF26.construction62_knowledgeSound` | Prereq: framework sorries cleared. |
-| `R6.7` | CA insufficient for L6.6 proof | deferred | none | docstring on `L6.6` | Documentation. |
-| `L6.8` | Round-by-round knowledge soundness of Construction 6.2 | deferred | related framework in [OracleReduction/Security/RoundByRound.lean](../../../ArkLib/OracleReduction/Security/RoundByRound.lean) | `ABF26.construction62_rbr` | Prereq: framework sorries cleared. |
-| `C6.9` | Construction 6.9 (attack target) | deferred | none | `ABF26.ToyProblem.construction69` | |
-| `L6.10` | Soundness of Construction 6.9 | deferred | none | `ABF26.construction69_sound` | |
-| `D6.11` | Winning set `Ω` | deferred | none | `ABF26.ToyProblem.winningSet` | |
-| `L6.12` | List-decoding lower-bound attack | deferred | none | `ABF26.listDecoding_attack` | Uses B.1. |
-| `L6.13` | CA lower-bound attack | deferred | none | `ABF26.ca_attack` | |
-| `R6.14` | Attack reaches `ε_ca` not `ε_mca` | deferred | none | docstring on `L6.13` | Documentation. |
+| `D6.1` | Toy problem relation `R_C^ℓ` | present | `ToyProblem.relation` in [Definitions.lean](../../../ArkLib/ProofSystem/ToyProblem/Definitions.lean) | `ToyProblem.relation` | Existence-of-message-matrix form; works for any `Set`-shaped code. |
+| `C6.2` | Construction 6.2 | deferred | related framework in [OracleReduction/Basic.lean](../../../ArkLib/OracleReduction/Basic.lean) | `ToyProblem.protocol62` | Follow-up file `ToyProblem/Protocol.lean`: build the IOR over the existing `OracleReduction` API. |
+| `D6.3` | Relaxed toy relation `R̃_C,δ^ℓ` | present | `ToyProblem.relaxedRelation` in [Definitions.lean](../../../ArkLib/ProofSystem/ToyProblem/Definitions.lean) | `ToyProblem.relaxedRelation` | Existence of a valid instance `W*` with at least `(1−δ)·\|ι\|` columns agreeing on every row. |
+| `D6.4` | Erasure correction | present | `ToyProblem.SupportsErasureCorrection` in [Definitions.lean](../../../ArkLib/ProofSystem/ToyProblem/Definitions.lean) | `ToyProblem.SupportsErasureCorrection` | Predicate only; correction-time `ecor` is a `ℕ` parameter (not yet enforced operationally). |
+| `L6.5` | Every additive code supports erasure correction | present-but-incomplete | `ToyProblem.additive_code_supports_erasure_correction_grs12` in [SoundnessBounds.lean](../../../ArkLib/ProofSystem/ToyProblem/SoundnessBounds.lean) | same | External admit `[GRS25]`; existence form (some `ecor` works). |
+| `L6.6` | Knowledge soundness of Construction 6.2 | deferred | related framework in [OracleReduction/Security/Basic.lean](../../../ArkLib/OracleReduction/Security/Basic.lean) | `ToyProblem.protocol62_knowledgeSound` | Awaits `Protocol.lean` (C6.2). |
+| `R6.7` | CA insufficient for L6.6 proof | deferred | none | docstring on `protocol62_knowledgeSound` | Documentation; lands with L6.6. |
+| `L6.8` | Round-by-round knowledge soundness of Construction 6.2 | deferred | related framework in [OracleReduction/Security/RoundByRound.lean](../../../ArkLib/OracleReduction/Security/RoundByRound.lean) | `ToyProblem.protocol62_rbrKnowledgeSound` | Awaits `Protocol.lean` (C6.2). ArkLib's `KnowledgeStateFunction` matches paper Def A.5. |
+| `C6.9` | Construction 6.9 (attack target) | deferred | related framework in [OracleReduction/Basic.lean](../../../ArkLib/OracleReduction/Basic.lean) | `ToyProblem.protocol69` | Simplified IOR `T'[C, t]`; lands with `Protocol.lean`. |
+| `L6.10` | Soundness of Construction 6.9 | deferred | related framework | `ToyProblem.protocol69_knowledgeSound` | Awaits C6.9. |
+| `D6.11` | Winning set `Ω` | present | `ToyProblem.winningSet` in [Definitions.lean](../../../ArkLib/ProofSystem/ToyProblem/Definitions.lean) | `ToyProblem.winningSet` | `Set F` of challenges; cardinality bounds drive L6.12 / L6.13. |
+| `L6.12` | List-decoding lower-bound attack | present-but-incomplete | `ToyProblem.simplified_iop_soundness_listDecoding_lb` in [SoundnessBounds.lean](../../../ArkLib/ProofSystem/ToyProblem/SoundnessBounds.lean) | same | Tagged sorry; uses Claim B.1 via `Probability.exists_large_image_of_pairwise_collision_bound`. |
+| `L6.13` | CA lower-bound attack | present-but-incomplete | `ToyProblem.simplified_iop_soundness_ca_lb` in [SoundnessBounds.lean](../../../ArkLib/ProofSystem/ToyProblem/SoundnessBounds.lean) | same | Tagged sorry; the bound is in terms of `ε_ca`, not `ε_mca` (cf. R6.14). |
+| `R6.14` | Attack reaches `ε_ca` not `ε_mca` | deferred | docstring on `simplified_iop_soundness_ca_lb` | docstring | Already noted in L6.13's docstring. |
 
 ## Appendix A — Additional Preliminaries
 
