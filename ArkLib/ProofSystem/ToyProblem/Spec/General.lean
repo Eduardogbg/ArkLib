@@ -320,34 +320,42 @@ def oracleProver :
 
   output := fun _ ↦ pure (((), nofun), ())
 
+/-- Query helper: fetch the prover's combined-message claim `g`
+(`pSpec` round 1 — the `P → V` direction). Mirrors FRI's `getConst`. -/
+def queryG : OracleComp [(pSpec (ι := ι) (F := F) k t).Message]ₒ (Fin k → F) :=
+  liftM <| OracleSpec.query
+    (show [(pSpec (ι := ι) (F := F) k t).Message]ₒ.Domain from
+      ⟨⟨1, by rfl⟩, (by simpa using ())⟩)
+
+/-- Query helper: read codeword `f i` at position `x : ι`. Mirrors
+FRI's `queryCodeword`. -/
+def queryF (i : Fin 2) (x : ι) : OracleComp [OracleStatement ι F]ₒ F :=
+  liftM <| OracleSpec.query
+    (show [OracleStatement ι F]ₒ.Domain from ⟨i, (by simpa using x)⟩)
+
 /-- Oracle verifier for Construction 6.2.
 
-**Intended body (deferred).** Query the prover's `g` once and the two
-oracle codewords `f₁, f₂` at each spot-check position (total query
-complexity: `2t + 1`), then `guard (accepts …)`. The query plumbing
-needs the FRI-style template:
+Queries the prover's message `g` once and the two oracle codewords
+`f₁, f₂` at each of the `t` spot-check positions (query complexity:
+`2t + 1`), then `guard (accepts …)` to decide.
 
-```lean
--- Helpers (cf. FRI's `getConst` / `queryCodeword`):
-def queryG : OracleComp [(pSpec …).Message]ₒ (Fin k → F) :=
-  liftM <| cast (β := OracleQuery _ (Fin k → F)) (by simp)
-    (OracleSpec.query (show _ from ⟨⟨1, by decide⟩, (by simpa using ())⟩))
-def queryF (i : Fin 2) (x : ι) : OracleComp [OracleStatement ι F]ₒ F :=
-  liftM <| cast (β := OracleQuery _ F) (by simp)
-    (OracleSpec.query (⟨i, x⟩ : _))
-```
-
-Currently a stub `pure ()` so the `OracleReduction` value typechecks
-and downstream consumers can target it. The `embed` and `hEq` fields
-are real (the `OutputOracleStatement` family is `Fin 0`-indexed, so
-`embed` is the empty injection and `hEq` is vacuously true). -/
-def oracleVerifier (_encode : (Fin k → F) → (ι → F)) :
+`embed` and `hEq` are trivial — `OutputOracleStatement : Fin 0 → Type`
+is empty, so the output-oracle family is vacuously a subset of input
+oracles + prover messages. -/
+def oracleVerifier (encode : (Fin k → F) → (ι → F)) :
     OracleVerifier []ₒ
       (Statement (F := F) k) (OracleStatement ι F)
       OutputStatement OutputOracleStatement
       (pSpec (ι := ι) (F := F) k t) where
-  verify := fun _ _ ↦ do
-    -- ABF26 C6.2; query-based verify body deferred. See docstring.
+  verify := fun stmt challenges ↦ do
+    let γ : F := challenges ⟨⟨0, by decide⟩, by rfl⟩
+    let xs : Fin t → ι := challenges ⟨⟨2, by decide⟩, by rfl⟩
+    let g : Fin k → F ← liftM <| queryG (ι := ι) (F := F) (k := k) (t := t)
+    guard (∑ j, g j * stmt.1 j = stmt.2.1 + γ * stmt.2.2)
+    for j in (List.finRange t) do
+      let f₀ : F ← liftM <| queryF (ι := ι) (F := F) 0 (xs j)
+      let f₁ : F ← liftM <| queryF (ι := ι) (F := F) 1 (xs j)
+      guard (encode g (xs j) = f₀ + γ * f₁)
     pure ()
   embed := ⟨fun i ↦ i.elim0, fun a _ _ ↦ a.elim0⟩
   hEq := fun i ↦ i.elim0
