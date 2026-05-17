@@ -22,7 +22,7 @@ which is Claim B.1 of [ABF26].
 
 namespace Probability
 
-open Finset
+open Finset NNReal ENNReal ProbabilityTheory
 
 /-- **Claim B.1 of [ABF26]** ("Omitted claim for Lemma 6.12").
 
@@ -63,11 +63,14 @@ colliding pairs under `φ`.
 5. **Existence by averaging.** Some `φ` in the support of `Φ` achieves at
    least the expectation, hence the claimed bound. -/
 theorem exists_large_image_of_pairwise_collision_bound
-    {S T : Type*} [Fintype S] [DecidableEq S] [Fintype T] [DecidableEq T]
-    (Φ : PMF (S → T)) (ε : ℝ≥0)
-    (hΦ : ∀ x y : S, x ≠ y → Pr_{ let φ ← Φ }[φ x = φ y] ≤ ε) :
-    ∃ φ ∈ Φ.support, ((Finset.univ.image φ).card : ℝ≥0) ≥
-      (Fintype.card S : ℝ≥0) / (1 + (Fintype.card S - 1) * ε) := by
-  sorry -- ABF26-B.1; in-paper proof, deferred. Cauchy-Schwarz on fibers + Jensen on `x ↦ |S|²/(2x+|S|)` + averaging argument.
+    {S T : Type} [Fintype S] [DecidableEq T]
+    (Φ : PMF (S → T)) (ε : ENNReal)
+    (hΦ : ∀ x y : S, x ≠ y →
+        Pr_{ let φ ← Φ }[(decide (φ x = φ y) : Prop)] ≤ ε) :
+    ∃ φ ∈ Φ.support, ((Finset.univ.image φ).card : ENNReal) ≥
+      (Fintype.card S : ENNReal) / (1 + (Fintype.card S - 1) * ε) := by
+  -- ABF26-B.1; in-paper proof, deferred. Cauchy-Schwarz on fibers + Jensen
+  -- on `x ↦ |S|²/(2x+|S|)` + averaging argument.
+  sorry
 
 end Probability
