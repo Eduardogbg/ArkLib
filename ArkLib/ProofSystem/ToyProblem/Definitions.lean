@@ -27,9 +27,10 @@ This file is the code-theoretic foundation:
   challenges `γ` for the simplified IOR attack of §6.4.
 
 Protocol-level items (Construction 6.2, Lemmas 6.6 / 6.8, Construction
-6.9, Lemma 6.10) live in `ToyProblem/Protocol.lean` and are stated over
-ArkLib's `OracleReduction/` machinery. Soundness bounds (L6.5, L6.12,
-L6.13) live in `ToyProblem/SoundnessBounds.lean`.
+6.9, Lemma 6.10) live in `ToyProblem/Spec/General.lean` and are stated
+over ArkLib's `OracleReduction/` machinery, following the conventions
+of `ProofSystem/Fri/Spec/` and `ProofSystem/Sumcheck/Spec/`. Soundness
+bounds (L6.5, L6.12, L6.13) live in `ToyProblem/SoundnessBounds.lean`.
 
 ## References
 

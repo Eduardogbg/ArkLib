@@ -164,11 +164,11 @@ def outputRelation (C : Set (ι → F)) (δ : ℝ≥0) :
       ![input.1.1.2.1, input.1.1.2.2] input.1.2
 
 omit [Fintype ι] [DecidableEq ι] [Fintype F] [DecidableEq F] in
-/-- Honest completeness, point form: if `((v, μ₁, μ₂), (f₁, f₂))` lies in
-`inputRelation` with the underlying messages `M = (M₀, M₁)` (and `fᵢ` is
-the `encode`-image of `Mᵢ`), then for any verifier challenges
-`(γ, xs)` the §6.1 decision `accepts` holds against the honest prover's
-message `g = M₀ + γ · M₁`.
+/-- Honest completeness for ABF26 Construction 6.2, point form: if
+`((v, μ₁, μ₂), (f₁, f₂))` lies in `inputRelation` with the underlying
+messages `M = (M₀, M₁)` (and `fᵢ` is the `encode`-image of `Mᵢ`), then
+for any verifier challenges `(γ, xs)` the §6.1 decision `accepts` holds
+against the honest prover's message `g = M₀ + γ · M₁`.
 
 This is the point-form companion to the
 `OracleReduction.perfectCompleteness` theorem that wraps the prover and
