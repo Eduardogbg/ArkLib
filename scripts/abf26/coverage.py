@@ -207,11 +207,17 @@ def find_decl_block(text: str, short_sym: str):
             while j < n:
                 stripped = lines[j].strip()
                 if stripped == "":
-                    # Allow a single blank line inside body; break on the
-                    # next non-comment block start.
-                    if j + 1 < n and next_decl_re.match(lines[j + 1]):
-                        break
+                    # Blank line: break if the *next* line opens a new
+                    # decl (or its docstring).
+                    if j + 1 < n:
+                        nxt = lines[j + 1].lstrip()
+                        if next_decl_re.match(nxt) or nxt.startswith("/--"):
+                            break
                 if next_decl_re.match(lines[j]):
+                    break
+                # Also break on the start of a `/--` docstring — that's
+                # the next decl's documentation, not this decl's body.
+                if lines[j].lstrip().startswith("/--"):
                     break
                 j += 1
             return True, "\n".join(lines[i:j])

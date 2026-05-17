@@ -70,9 +70,11 @@ CITATION_RE = re.compile(
     r"(?:"
     r"\[[A-Z][A-Za-z0-9+]{1,15}\]"
     r"|\b(?:[A-Z]{2,}\d{2}(?:[A-Za-z]\w*)?)\s+(?:Theorem|Thm|Lemma|"
-    r"Corollary|Cor|Definition|Def|Claim|Fact|Remark|Section|§|Item|Eq\.?)"
+    r"Corollary|Cor|Definition|Def|Construction|Claim|Fact|Remark|"
+    r"Section|§|Item|Eq\.?)"
     r"|\bpaper(?:'s)?\s+(?:Theorem|Thm|Lemma|Corollary|Cor|Definition|"
-    r"Def|Claim|Fact|Remark|Section|§|Item|Eq\.?)"
+    r"Def|Construction|Claim|Fact|Remark|Section|§|Item|Eq\.?)"
+    r"|\bConstruction\s+\d"
     r"|\b(?:Admitted|external)\s+(?:as|admit|proof|result)"
     r"|\bABF26[\s:\-][A-Z]?\d"
     r")",

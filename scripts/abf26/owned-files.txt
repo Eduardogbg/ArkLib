@@ -22,4 +22,5 @@ ArkLib/Data/CodingTheory/ReedSolomon/Interleaved.lean
 ArkLib/Data/CodingTheory/SubspaceDesign.lean
 ArkLib/Data/Probability/Combinatorial.lean
 ArkLib/ProofSystem/ToyProblem/Definitions.lean
+ArkLib/ProofSystem/ToyProblem/Protocol.lean
 ArkLib/ProofSystem/ToyProblem/SoundnessBounds.lean
