@@ -64,12 +64,12 @@ restriction of `x` to `S` (each value forced into `F \ {y j}`). Counting:
 lemma card_filter_hammingDist_eq
     {ι : Type} [Fintype ι] [DecidableEq ι]
     {F : Type} [Fintype F] [DecidableEq F] (y : ι → F) (i : ℕ) :
-    (Finset.univ.filter (fun x : ι → F => hammingDist y x = i)).card
+    (Finset.univ.filter (fun x : ι → F ↦ hammingDist y x = i)).card
       = Nat.choose (Fintype.card ι) i * (Fintype.card F - 1) ^ i := by
   classical
   -- Disagreement set of `x` from `y`. By `hammingDist` def, `(dis x).card = hammingDist y x`.
-  let dis : (ι → F) → Finset ι := fun x => Finset.univ.filter (fun j => y j ≠ x j)
-  have h_dis_card : ∀ x, (dis x).card = hammingDist y x := fun _ => rfl
+  let dis : (ι → F) → Finset ι := fun x ↦ Finset.univ.filter (fun j ↦ y j ≠ x j)
+  have h_dis_card : ∀ x, (dis x).card = hammingDist y x := fun _ ↦ rfl
   -- Step 1: split LHS by the disagreement set.
   rw [Finset.card_eq_sum_card_fiberwise (f := dis)
       (t := Finset.univ.powersetCard i)
@@ -80,35 +80,35 @@ lemma card_filter_hammingDist_eq
           true_and, h_dis_card, hx])]
   -- Step 2: each fiber `{x | dis x = S}` has `(Fintype.card F - 1) ^ i` words.
   have h_fiber : ∀ S ∈ Finset.univ.powersetCard i,
-      ((Finset.univ.filter (fun x : ι → F => hammingDist y x = i)).filter
-          (fun x => dis x = S)).card = (Fintype.card F - 1) ^ i := by
+      ((Finset.univ.filter (fun x : ι → F ↦ hammingDist y x = i)).filter
+          (fun x ↦ dis x = S)).card = (Fintype.card F - 1) ^ i := by
     intro S hS
     rw [Finset.mem_powersetCard] at hS
     -- Drop the outer "hammingDist y x = i" filter (implied by `dis x = S`).
-    have h_simp : (Finset.univ.filter (fun x : ι → F => hammingDist y x = i)).filter
-        (fun x => dis x = S) = Finset.univ.filter (fun x : ι → F => dis x = S) := by
+    have h_simp : (Finset.univ.filter (fun x : ι → F ↦ hammingDist y x = i)).filter
+        (fun x ↦ dis x = S) = Finset.univ.filter (fun x : ι → F ↦ dis x = S) := by
       ext x
       simp only [Finset.mem_filter, Finset.mem_univ, true_and, and_iff_right_iff_imp]
       intro h_dis
       rw [← h_dis_card, h_dis, hS.2]
     rw [h_simp]
     -- Build a bijection: `{x | dis x = S} ≃ (j : ι) → (if j ∈ S then F\{y j} else {y j})`.
-    have h_set_eq : Finset.univ.filter (fun x : ι → F => dis x = S) =
+    have h_set_eq : Finset.univ.filter (fun x : ι → F ↦ dis x = S) =
         ((Finset.univ : Finset ι).pi
-          (fun j => if j ∈ S then ({y j}ᶜ : Finset F) else ({y j} : Finset F))).image
-        (fun f j => f j (Finset.mem_univ j)) := by
+          (fun j ↦ if j ∈ S then ({y j}ᶜ : Finset F) else ({y j} : Finset F))).image
+        (fun f j ↦ f j (Finset.mem_univ j)) := by
       ext x
       simp only [Finset.mem_filter, Finset.mem_univ, true_and, Finset.mem_image,
         Finset.mem_pi]
       constructor
       · intro h_dis_eq
-        refine ⟨fun j _ => x j, ?_, rfl⟩
+        refine ⟨fun j _ ↦ x j, ?_, rfl⟩
         intro j _
         by_cases hj : j ∈ S
         · simp only [if_pos hj, Finset.mem_compl, Finset.mem_singleton]
           have : j ∈ dis x := by rw [h_dis_eq]; exact hj
           simp only [dis, Finset.mem_filter, Finset.mem_univ, true_and] at this
-          exact fun heq => this heq.symm
+          exact fun heq ↦ this heq.symm
         · simp only [if_neg hj, Finset.mem_singleton]
           have : j ∉ dis x := by rw [h_dis_eq]; exact hj
           simp only [dis, Finset.mem_filter, Finset.mem_univ, true_and, not_not] at this
@@ -121,7 +121,7 @@ lemma card_filter_hammingDist_eq
         · rw [if_pos hj] at hfj
           simp only [Finset.mem_compl, Finset.mem_singleton] at hfj
           simp only [hj, iff_true]
-          exact fun heq => hfj heq.symm
+          exact fun heq ↦ hfj heq.symm
         · rw [if_neg hj] at hfj
           simp only [Finset.mem_singleton] at hfj
           simp only [hj, iff_false, not_not]
@@ -162,10 +162,10 @@ theorem hammingBallVolume_eq_ncard_hammingBall
   -- Step 1: convert RHS ncard → Finset.card with explicit filter.
   have h_rhs :
       (ListDecodable.hammingBall (F := F) y r).ncard
-        = (Finset.univ.filter (fun x : ι → F => hammingDist y x ≤ r)).card := by
+        = (Finset.univ.filter (fun x : ι → F ↦ hammingDist y x ≤ r)).card := by
     have h_finite : (ListDecodable.hammingBall (F := F) y r).Finite := Set.toFinite _
     rw [Set.ncard_eq_toFinset_card _ h_finite]
-    apply Finset.card_bij (fun x _ => x)
+    apply Finset.card_bij (fun x _ ↦ x)
     · intro x hx
       simp only [Finset.mem_filter, Finset.mem_univ, true_and]
       rw [Set.Finite.mem_toFinset, ListDecodable.hammingBall, Set.mem_setOf_eq] at hx
@@ -178,16 +178,16 @@ theorem hammingBallVolume_eq_ncard_hammingBall
       convert hx using 2
   -- Step 2: partition by exact distance.
   have h_partition :
-      (Finset.univ.filter (fun x : ι → F => hammingDist y x ≤ r)).card
+      (Finset.univ.filter (fun x : ι → F ↦ hammingDist y x ≤ r)).card
         = ∑ i ∈ Finset.range (r + 1),
-            (Finset.univ.filter (fun x : ι → F => hammingDist y x = i)).card := by
+            (Finset.univ.filter (fun x : ι → F ↦ hammingDist y x = i)).card := by
     rw [← Finset.card_biUnion]
     · congr 1
       ext x
       simp only [Finset.mem_filter, Finset.mem_biUnion, Finset.mem_range,
         Finset.mem_univ, true_and]
-      refine ⟨fun h => ⟨hammingDist y x, by omega, rfl⟩,
-              fun ⟨i, hi, hd⟩ => ?_⟩
+      refine ⟨fun h ↦ ⟨hammingDist y x, by omega, rfl⟩,
+              fun ⟨i, hi, hd⟩ ↦ ?_⟩
       omega
     · -- disjointness
       intro a _ b _ hab
@@ -197,7 +197,7 @@ theorem hammingBallVolume_eq_ncard_hammingBall
   -- Combine.
   rw [h_rhs, h_partition]
   unfold hammingBallVolume
-  refine Finset.sum_congr rfl (fun i _ => ?_)
+  refine Finset.sum_congr rfl (fun i _ ↦ ?_)
   exact (card_filter_hammingDist_eq y i).symm
 
 end CodingTheory

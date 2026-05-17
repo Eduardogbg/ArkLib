@@ -253,7 +253,7 @@ theorem epsCA_antitone_δ_int
   by_cases hjp' : jointProximity (C := C) (u := u) δ_int'
   · rw [if_pos hjp']; exact zero_le _
   · -- Contrapositive of `h_jp_mono`: `¬jointProximity_δ_int' → ¬jointProximity_δ_int`.
-    have hjp : ¬ jointProximity (C := C) (u := u) δ_int := fun h_jp => hjp' (h_jp_mono h_jp)
+    have hjp : ¬ jointProximity (C := C) (u := u) δ_int := fun h_jp ↦ hjp' (h_jp_mono h_jp)
     rw [if_neg hjp', if_neg hjp]
 
 /-! ## Helpers toward ABF26 Fact 4.5
@@ -276,9 +276,9 @@ theorem jointProximity_imp_line_close
   have h_agree : ∀ j ∈ S, v 0 j = u 0 j ∧ v 1 j = u 1 j := by
     intro j hj
     refine ⟨?_, ?_⟩
-    · have : j ∈ Finset.filter (fun k => v 0 k = u 0 k) Finset.univ := (hv 0).2 hj
+    · have : j ∈ Finset.filter (fun k ↦ v 0 k = u 0 k) Finset.univ := (hv 0).2 hj
       exact (Finset.mem_filter.mp this).2
-    · have : j ∈ Finset.filter (fun k => v 1 k = u 1 k) Finset.univ := (hv 1).2 hj
+    · have : j ∈ Finset.filter (fun k ↦ v 1 k = u 1 k) Finset.univ := (hv 1).2 hj
       exact (Finset.mem_filter.mp this).2
   intro γ
   have hv_γ_mem : (v 0 + γ • v 1) ∈ (MC : Set (ι → A)) :=
@@ -288,7 +288,7 @@ theorem jointProximity_imp_line_close
   rw [relCloseToWord_iff_exists_agreementCols]
   refine ⟨S, (relDist_floor_bound_iff_complement_bound _ _ _).mpr hS_card, ?_⟩
   intro j
-  refine ⟨fun hj_in => ?_, fun hne hj_in => ?_⟩
+  refine ⟨fun hj_in ↦ ?_, fun hne hj_in ↦ ?_⟩
   · obtain ⟨h0, h1⟩ := h_agree j hj_in
     simp [Pi.add_apply, Pi.smul_apply, h0, h1]
   · obtain ⟨h0, h1⟩ := h_agree j hj_in
@@ -354,7 +354,7 @@ theorem epsCA_le_epsMCA (MC : Submodule F (ι → A)) (δ : ℝ≥0) :
       (relDist_floor_bound_iff_complement_bound _ _ _).mp hS_card_nat
     -- Step 2: assemble `mcaEvent` with witness `S`, codeword `w` for the line-side, and the
     -- still-to-prove negation on the pair-side.
-    refine ⟨S, hS_card_real, ⟨w, hw_mem, fun i hi => ((h_word_agree i).1 hi).symm⟩, ?_⟩
+    refine ⟨S, hS_card_real, ⟨w, hw_mem, fun i hi ↦ ((h_word_agree i).1 hi).symm⟩, ?_⟩
     -- Step 3: ¬ pairJointAgreesOn MC S (u 0) (u 1). Argue by contradiction with `hjp`:
     -- if there were a joint codeword pair agreeing on `S`, `finMapTwoWords` would build a
     -- jointAgreement witness, which `jointAgreement_iff_jointProximity` would lift to
@@ -433,7 +433,7 @@ theorem δ_ε_correlatedAgreementAffineLines_iff_epsCA_le
   classical
   constructor
   · intro h_pred
-    refine iSup_le fun u => ?_
+    refine iSup_le fun u ↦ ?_
     by_cases hjp : jointProximity (C := C) (u := u) δ
     · rw [if_pos hjp]; exact zero_le _
     · rw [if_neg hjp]
@@ -462,7 +462,7 @@ theorem δ_ε_correlatedAgreementCurves_iff_epsCA_curves_le {k : ℕ}
   classical
   constructor
   · intro h_pred
-    refine iSup_le fun u => ?_
+    refine iSup_le fun u ↦ ?_
     by_cases hjp : jointProximity (C := C) (u := u) δ
     · rw [if_pos hjp]; exact zero_le _
     · rw [if_neg hjp]
@@ -492,16 +492,16 @@ theorem Pr_exists_Fin_le_sum {α : Type} (D : PMF α) {t : ℕ} (f : Fin t → �
   rw [prob_tsum_form_singleton]
   have h_rhs : (∑ k : Fin t, Pr_{ let r ← D }[ f k r ]) =
                ∑ k : Fin t, ∑' r, D r * (if f k r then (1 : ENNReal) else 0) := by
-    refine Finset.sum_congr rfl fun k _ => ?_
+    refine Finset.sum_congr rfl fun k _ ↦ ?_
     exact prob_tsum_form_singleton _ _
   rw [h_rhs]
   -- Swap finite sum with tsum (Fubini for ENNReal, where summability is automatic).
-  rw [← Summable.tsum_finsetSum (fun _ _ => ENNReal.summable)]
+  rw [← Summable.tsum_finsetSum (fun _ _ ↦ ENNReal.summable)]
   -- Pull D r out of the inner finite sum.
   have h_mul : ∀ r, (∑ k : Fin t, D r * (if f k r then (1 : ENNReal) else 0)) =
                     D r * (∑ k : Fin t, if f k r then (1 : ENNReal) else 0) :=
-    fun r => Finset.mul_sum _ _ _ |>.symm
-  rw [tsum_congr (fun r => h_mul r)]
+    fun r ↦ Finset.mul_sum _ _ _ |>.symm
+  rw [tsum_congr (fun r ↦ h_mul r)]
   -- Pointwise bound: `D r * I[∃ k, f k r] ≤ D r * ∑ k, I[f k r]`.
   apply ENNReal.tsum_le_tsum
   intro r
@@ -512,8 +512,8 @@ theorem Pr_exists_Fin_le_sum {α : Type} (D : PMF α) {t : ℕ} (f : Fin t → �
     calc (1 : ENNReal)
         = if f k₀ r then 1 else 0 := by rw [if_pos hk₀]
       _ ≤ ∑ k : Fin t, if f k r then (1 : ENNReal) else 0 :=
-          Finset.single_le_sum (f := fun k => if f k r then (1 : ENNReal) else 0)
-            (fun _ _ => zero_le _) (Finset.mem_univ k₀)
+          Finset.single_le_sum (f := fun k ↦ if f k r then (1 : ENNReal) else 0)
+            (fun _ _ ↦ zero_le _) (Finset.mem_univ k₀)
   · rw [if_neg h]
     exact zero_le _
 
@@ -541,7 +541,7 @@ theorem epsMCA_eq_epsCA_below_udr
 /-- Row-extraction: the `k`-th row of a `Fin t → A`-valued word, as an `A`-valued word. -/
 private def row_of {ι : Type} {A : Type} {t : ℕ}
     (w : ι → (Fin t → A)) (k : Fin t) : ι → A :=
-  fun j => w j k
+  fun j ↦ w j k
 
 /-- **ABF26 Lemma 4.7.** For any F-additive code `C` (here: a `Submodule F (ι → A)`) and
 `t : ℕ`: `ε_mca(C^≡t, δ) ≤ t · ε_mca(C, δ)`.
@@ -586,7 +586,7 @@ theorem epsMCA_interleaved_le (C : Submodule F (ι → A)) (t : ℕ) (δ : ℝ�
              (∃ w' ∈ (C : Set (ι → A)),
                 ∀ j ∈ S, w' j = row_of (u 0) k j + γ • row_of (u 1) k j) ∧
              ¬ pairJointAgreesOn (C : Set (ι → A)) S (row_of (u 0) k) (row_of (u 1) k)) :=
-        fun h => h_k ⟨S, h.1, h.2.1, h.2.2⟩
+        fun h ↦ h_k ⟨S, h.1, h.2.1, h.2.2⟩
       -- size_S inherited from `hS_card`.
       -- line_S: the row-k version of w is in C and agrees on S.
       have h_size : (S.card : ℝ≥0) ≥ (1 - δ) * Fintype.card ι := hS_card
@@ -613,7 +613,7 @@ theorem epsMCA_interleaved_le (C : Submodule F (ι → A)) (t : ℕ) (δ : ℝ�
     apply h_no_pair_int
     choose V₀_fn hV₀_mem V₁_fn hV₁_mem h_V_agree using h_row_pair
     -- V₀_fn : Fin t → ι → A,  V₀_fn k j = row k's first witness at j
-    refine ⟨fun j k => V₀_fn k j, ?_, fun j k => V₁_fn k j, ?_, ?_⟩
+    refine ⟨fun j k ↦ V₀_fn k j, ?_, fun j k ↦ V₁_fn k j, ?_, ?_⟩
     · intro k; exact hV₀_mem k
     · intro k; exact hV₁_mem k
     · intro j hj
@@ -625,10 +625,10 @@ theorem epsMCA_interleaved_le (C : Submodule F (ι → A)) (t : ℕ) (δ : ℝ�
   refine le_trans (Pr_exists_Fin_le_sum _ _) ?_
   -- Step 4: each summand ≤ epsMCA C δ.
   refine le_trans (Finset.sum_le_sum (s := (Finset.univ : Finset (Fin t)))
-    (fun k _ => le_iSup
-      (fun v : WordStack A (Fin 2) ι =>
+    (fun k _ ↦ le_iSup
+      (fun v : WordStack A (Fin 2) ι ↦
         Pr_{let γ ← $ᵖ F}[mcaEvent (C : Set (ι → A)) δ (v 0) (v 1) γ])
-      (fun i j => row_of (u i) k j))) ?_
+      (fun i j ↦ row_of (u i) k j))) ?_
   -- Step 5: sum-of-constants reduces to t * (epsMCA C δ).
   rw [Finset.sum_const, Finset.card_univ, Fintype.card_fin]
   exact le_of_eq (nsmul_eq_mul _ _)
@@ -643,7 +643,7 @@ theorem δ_ε_correlatedAgreementAffineSpaces_iff_epsCA_affineSpaces_le {k : ℕ
   classical
   constructor
   · intro h_pred
-    refine iSup_le fun u => ?_
+    refine iSup_le fun u ↦ ?_
     by_cases hjp : jointProximity (C := C) (u := u) δ
     · rw [if_pos hjp]; exact zero_le _
     · rw [if_neg hjp]

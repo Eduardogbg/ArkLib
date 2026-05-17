@@ -86,7 +86,7 @@ structure ExtensionFieldPresentation (B F : Type) [Field B] [Field F] where
   φ_add : ∀ x y : F, φ (x + y) = φ x + φ y
   /-- `φ` respects the `B`-action induced by `ψ`: `φ (ψ b * x) = b • φ x`,
       equivalently `φ ((ψ b) · x) j = b · φ x j` for every coordinate `j`. -/
-  φ_smul_psi : ∀ (b : B) (x : F), φ (ψ b * x) = fun j => b * φ x j
+  φ_smul_psi : ∀ (b : B) (x : F), φ (ψ b * x) = fun j ↦ b * φ x j
 
 namespace ExtensionFieldPresentation
 
@@ -97,12 +97,12 @@ This makes the base-field copy of `B` inside `F` align with the first coordinate
 Requires `P.e ≥ 1` for the "first coordinate" to exist; we sidestep the
 `Fin P.e` typeclass requirement by indexing on `i.val`. -/
 def IsSystematic (P : ExtensionFieldPresentation B F) : Prop :=
-  ∀ x : B, P.φ (P.ψ x) = fun i => if i.val = 0 then x else 0
+  ∀ x : B, P.φ (P.ψ x) = fun i ↦ if i.val = 0 then x else 0
 
 /-- The `i`-th coordinate `φᵢ : F → B` of an extension-field presentation. Applied
 componentwise to vectors in the paper. -/
 def coord (P : ExtensionFieldPresentation B F) (i : Fin P.e) : F → B :=
-  fun x => P.φ x i
+  fun x ↦ P.φ x i
 
 /-- Each coordinate `P.coord j` is additive. -/
 lemma coord_add (P : ExtensionFieldPresentation B F) (j : Fin P.e) (x y : F) :
@@ -124,7 +124,7 @@ linear code `C_B : B^k → B^n` via an extension-field presentation. Defined on 
 vector `v : ι → F` by
 
   `v ∈ C_F  ↔  ∃ c_B : ι → Fin e → B, (∀ i, c_B i ∈ projections of v) ∧`
-  `              (∀ j : Fin e, (fun i => c_B i j) ∈ C_B)`
+  `              (∀ j : Fin e, (fun i ↦ c_B i j) ∈ C_B)`
 
 i.e. each of the `e` coordinate-projections of `v` lies in `C_B`. We express the
 codeword set; the underlying `Submodule F (ι → F)` structure follows by closure of
@@ -149,7 +149,7 @@ def extensionCode {ι : Type} [Fintype ι]
     {B F : Type} [Field B] [Field F]
     (P : ExtensionFieldPresentation B F)
     (C_B : Set (ι → B)) : Set (ι → F) :=
-  { v : ι → F | ∀ j : Fin P.e, (fun i => P.coord j (v i)) ∈ C_B }
+  { v : ι → F | ∀ j : Fin P.e, (fun i ↦ P.coord j (v i)) ∈ C_B }
 
 /-- **Bridge to paper's encoder-image view.** The paper writes
 `C_F(v) := φ⁻¹(C_B(φ_1(v)), …, C_B(φ_e(v)))` as an encoder, so
@@ -170,7 +170,7 @@ lemma extensionCode_iff_coord_in_base
     (P : ExtensionFieldPresentation B F)
     (C_B : Set (ι → B)) (v : ι → F) :
     v ∈ extensionCode P C_B ↔
-      ∀ j : Fin P.e, (fun i => P.coord j (v i)) ∈ C_B := by
+      ∀ j : Fin P.e, (fun i ↦ P.coord j (v i)) ∈ C_B := by
   rfl
 
 /-- **`extensionCode` is closed under addition** when `C_B` is. Uses the additivity
@@ -185,8 +185,8 @@ lemma extensionCode_add_mem
     u + v ∈ extensionCode P C_B := by
   intro j
   have h := hadd (hu j) (hv j)
-  have hpt : (fun i => P.coord j ((u + v) i)) =
-      (fun i => P.coord j (u i)) + fun i => P.coord j (v i) := by
+  have hpt : (fun i ↦ P.coord j ((u + v) i)) =
+      (fun i ↦ P.coord j (u i)) + fun i ↦ P.coord j (v i) := by
     ext i
     exact P.coord_add j (u i) (v i)
   rw [hpt]
@@ -202,10 +202,10 @@ lemma extensionCode_psi_smul_mem
     {C_B : Set (ι → B)}
     (hsmul : ∀ (b : B) {a : ι → B}, a ∈ C_B → b • a ∈ C_B)
     (b : B) {v : ι → F} (hv : v ∈ extensionCode P C_B) :
-    (fun i => P.ψ b * v i) ∈ extensionCode P C_B := by
+    (fun i ↦ P.ψ b * v i) ∈ extensionCode P C_B := by
   intro j
   have h := hsmul b (hv j)
-  have hpt : (fun i => P.coord j (P.ψ b * v i)) = b • fun i => P.coord j (v i) := by
+  have hpt : (fun i ↦ P.coord j (P.ψ b * v i)) = b • fun i ↦ P.coord j (v i) := by
     ext i
     simpa [Pi.smul_apply, smul_eq_mul] using P.coord_psi_smul j b (v i)
   rw [hpt]
@@ -246,7 +246,7 @@ lemma extensionCode_smul_mem
     (_hadd : ∀ {a b : ι → B}, a ∈ C_B → b ∈ C_B → a + b ∈ C_B)
     (_hsmul : ∀ (b : B) {a : ι → B}, a ∈ C_B → b • a ∈ C_B)
     (α : F) {v : ι → F} (_hv : v ∈ extensionCode P C_B) :
-    (fun i => α * v i) ∈ extensionCode P C_B := by
+    (fun i ↦ α * v i) ∈ extensionCode P C_B := by
   sorry -- ABF26-D2.20 F-scalar closure; needs F-algebra structure constants (B5 refactor).
 
 /-- **ABF26 Lemma 2.21 [BCFW25 Lemma D.3].** List size of an extension code equals the

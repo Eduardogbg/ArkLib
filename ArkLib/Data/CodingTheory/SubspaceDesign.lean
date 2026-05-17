@@ -64,7 +64,7 @@ def IsSubspaceDesign {ι : Type} [Fintype ι]
     (∑ i : ι,
         (Module.finrank F (↥(A ⊓
             (LinearMap.ker
-              (LinearMap.proj (R := F) (φ := fun _ : ι => Fin s → F) i)) :
+              (LinearMap.proj (R := F) (φ := fun _ : ι ↦ Fin s → F) i)) :
             Submodule F (ι → Fin s → F))) : ℝ)) /
         Fintype.card ι ≤
       Module.finrank F A * τ r
@@ -78,7 +78,7 @@ this lets downstream proofs rewrite freely between the technical `ker(proj i)` f
 in the `IsSubspaceDesign` definition for type-class reasons) and the paper's
 comprehension form. -/
 lemma ker_proj_eq_vanish_at {ι : Type*} {F : Type*} [Semiring F] {s : ℕ} (i : ι) :
-    (LinearMap.ker (LinearMap.proj (R := F) (φ := fun _ : ι => Fin s → F) i) :
+    (LinearMap.ker (LinearMap.proj (R := F) (φ := fun _ : ι ↦ Fin s → F) i) :
         Set (ι → Fin s → F)) =
       {a | a i = 0} := by
   ext a
@@ -117,7 +117,7 @@ theorem frs_is_subspaceDesign_gk16
     (domain : ι ↪ F) (k s : ℕ) (ω : F)
     (L : Finset F) (_hL_dom : ∀ i : ι, domain i ∈ L)
     (_hω : ReedSolomon.Folded.Admissible L s ω) :
-    let τ : ℕ → ℝ := fun r =>
+    let τ : ℕ → ℝ := fun r ↦
       if r ∈ Finset.Icc 1 s then
         (s : ℝ) * (k : ℝ) / Fintype.card ι / (s - r + 1)
       else 1

@@ -76,12 +76,12 @@ lemma dim_irsCode {ι : Type} [Fintype ι] [Nonempty ι] [DecidableEq ι]
   -- range is exactly `irsCode`, then chain finrank-equalities.
   let RS : Submodule F (ι → F) := ReedSolomon.code domain (k / s)
   let encoder : (Fin s → ↥RS) →ₗ[F] (ι → Fin s → F) :=
-    { toFun := fun g i j => ((g j : ι → F) i)
+    { toFun := fun g i j ↦ ((g j : ι → F) i)
       map_add' := by intros; ext i j; simp
       map_smul' := by intros; ext i j; simp }
   -- Encoder values: `encoder g i j = (g j).val i`.
   have h_encoder_apply : ∀ (g : Fin s → ↥RS) (i : ι) (j : Fin s),
-      encoder g i j = (g j : ι → F) i := fun _ _ _ => rfl
+      encoder g i j = (g j : ι → F) i := fun _ _ _ ↦ rfl
   have h_inj : Function.Injective encoder := by
     intro g g' hgg'
     funext j
@@ -102,7 +102,7 @@ lemma dim_irsCode {ι : Type} [Fintype ι] [Nonempty ι] [DecidableEq ι]
       convert (g j).2 using 1
     · intro hV
       -- `V ∈ irsCode` means `∀ j, V.transpose j ∈ RS`. Construct `g j := ⟨V.transpose j, hV j⟩`.
-      refine ⟨fun j => ⟨Matrix.transpose V j, hV j⟩, ?_⟩
+      refine ⟨fun j ↦ ⟨Matrix.transpose V j, hV j⟩, ?_⟩
       ext i j
       rfl
   -- Now: `finrank irsCode = finrank (Fin s → ↥RS) = s · finrank ↥RS = s · (k/s)`.

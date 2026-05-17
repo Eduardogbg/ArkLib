@@ -56,7 +56,7 @@ mirroring `ReedSolomon.evalOnPoints` (which is the `s = 1` special case). -/
 def frsEvalOnPoints {ι : Type} [Fintype ι]
     {F : Type} [CommSemiring F]
     (domain : ι ↪ F) (s : ℕ) (ω : F) : Polynomial F →ₗ[F] (ι → Fin s → F) where
-  toFun p := fun x j => p.eval (domain x * ω ^ (j : ℕ))
+  toFun p := fun x j ↦ p.eval (domain x * ω ^ (j : ℕ))
   map_add' p q := by ext; simp
   map_smul' c p := by ext; simp
 
@@ -126,8 +126,8 @@ lemma mem_frsCode_iff_flipped {ι : Type} [Fintype ι] [DecidableEq ι]
       ∃ p ∈ Polynomial.degreeLT F k,
         ∀ x : ι, ∀ j : Fin s, p.eval (domain x * ω ^ (j : ℕ)) = f x j := by
   rw [mem_frsCode_iff]
-  refine exists_congr fun p => and_congr_right fun _ => ?_
-  exact ⟨fun h x j => (h x j).symm, fun h x j => (h x j).symm⟩
+  refine exists_congr fun p ↦ and_congr_right fun _ ↦ ?_
+  exact ⟨fun h x j ↦ (h x j).symm, fun h x j ↦ (h x j).symm⟩
 
 /-- **Sanity check: `FRS[F, L, k, 1, ω] ≃ RS[F, L, k]`.** With `s = 1` there is exactly
 one fold and `Fin 1 → F ≃ F`, so the folded RS code collapses to the standard
@@ -137,7 +137,7 @@ lemma mem_frsCode_one_iff_mem_rsCode {ι : Type} [Fintype ι] [DecidableEq ι]
     {F : Type} [Field F] [DecidableEq F]
     (domain : ι ↪ F) (k : ℕ) (ω : F) (f : ι → Fin 1 → F) :
     f ∈ frsCode domain k 1 ω ↔
-      (fun i => f i 0) ∈ ReedSolomon.code domain k := by
+      (fun i ↦ f i 0) ∈ ReedSolomon.code domain k := by
   simp only [mem_frsCode_iff, ReedSolomon.code, Submodule.mem_map, ReedSolomon.evalOnPoints]
   constructor
   · rintro ⟨p, hp, hf⟩
@@ -161,7 +161,7 @@ lemma frsCode_one_map_eq_rsCode {ι : Type} [Fintype ι] [DecidableEq ι]
     {F : Type} [Field F] [DecidableEq F]
     (domain : ι ↪ F) (k : ℕ) (ω : F) :
     (frsCode domain k 1 ω).map
-        (LinearEquiv.piCongrRight (fun _ : ι => LinearEquiv.funUnique (Fin 1) F F) :
+        (LinearEquiv.piCongrRight (fun _ : ι ↦ LinearEquiv.funUnique (Fin 1) F F) :
             (ι → Fin 1 → F) ≃ₗ[F] (ι → F)).toLinearMap =
       ReedSolomon.code domain k := by
   ext g
@@ -171,7 +171,7 @@ lemma frsCode_one_map_eq_rsCode {ι : Type} [Fintype ι] [DecidableEq ι]
     rw [mem_frsCode_one_iff_mem_rsCode] at hf
     convert hf using 1
   · intro hg
-    refine ⟨fun i _ => g i, ?_, ?_⟩
+    refine ⟨fun i _ ↦ g i, ?_, ?_⟩
     · rw [mem_frsCode_one_iff_mem_rsCode]
       convert hg using 1
     · ext i
