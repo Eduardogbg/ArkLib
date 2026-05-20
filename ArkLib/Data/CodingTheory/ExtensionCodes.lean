@@ -259,6 +259,45 @@ lemma extensionCode_smul_mem
     intros m _
     exact hsmul _ (hv m)
 
+/-- **Submodule-packaging of `extensionCode`** when `C_B` is a `B`-submodule.
+
+Bundles the three closure laws (`add_mem`, `zero_mem`, `smul_mem`) into a
+single `Submodule F (ι → F)`, mirroring the `ReedSolomon.code` pattern
+(which returns a `Submodule F (ι → F)` directly). Downstream code that
+wants to consume an extension code as a linear code should use this
+form rather than the raw `Set`-based `extensionCode`.
+
+Built directly from the existing closure lemmas — no parallel
+implementation. The `Set`-form `extensionCode` is the carrier. -/
+noncomputable def extensionCodeSubmodule
+    {ι : Type} [Fintype ι]
+    {B F : Type} [Field B] [Field F] [Algebra B F]
+    (P : ExtensionFieldPresentation B F)
+    (C_B : Submodule B (ι → B)) : Submodule F (ι → F) where
+  carrier := extensionCode P (C_B : Set (ι → B))
+  add_mem' {u v} hu hv := extensionCode_add_mem P (fun ha hb ↦ C_B.add_mem ha hb) hu hv
+  zero_mem' := by
+    intro j
+    change (fun i ↦ P.coord j ((0 : ι → F) i)) ∈ (C_B : Set (ι → B))
+    -- (fun i ↦ P.coord j 0) = (fun i ↦ 0) = 0, which is in C_B by Submodule.zero_mem
+    simp only [Pi.zero_apply, (P.coord j).map_zero]
+    exact C_B.zero_mem
+  smul_mem' c v hv :=
+    extensionCode_smul_mem P
+      (hadd := fun {a b} (ha : a ∈ C_B) (hb : b ∈ C_B) ↦ C_B.add_mem ha hb)
+      (hsmul := fun (b : B) {a : ι → B} (ha : a ∈ C_B) ↦ C_B.smul_mem b ha)
+      c hv
+
+/-- The carrier of `extensionCodeSubmodule P C_B` coincides with the `Set`-form
+`extensionCode P (C_B : Set _)` — by construction. -/
+@[simp] lemma coe_extensionCodeSubmodule
+    {ι : Type} [Fintype ι]
+    {B F : Type} [Field B] [Field F] [Algebra B F]
+    (P : ExtensionFieldPresentation B F)
+    (C_B : Submodule B (ι → B)) :
+    (extensionCodeSubmodule P C_B : Set (ι → F)) =
+      extensionCode P (C_B : Set (ι → B)) := rfl
+
 /-- **ABF26 Lemma 2.21 [BCFW25 Lemma D.3].** List size of an extension code equals the
 list size of the corresponding interleaved base code. Let `C_B : B^k → B^n` be a
 linear code and `P` be an extension-field presentation. For every `δ ∈ (0, 1)`:

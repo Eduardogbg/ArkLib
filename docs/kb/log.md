@@ -390,3 +390,21 @@ fully landed for the extension-code item: ArkLib's
 `Algebra` / `Basis` machinery, and the F-scalar closure proof — which
 pre-refactor would have required introducing structure-constant fields
 — is a 30-line basis-expansion chain.
+
+## [2026-05-20] coding-theory | extensionCodeSubmodule packaging
+
+Added `CodingTheory.extensionCodeSubmodule` mirroring `ReedSolomon.code`'s
+`Submodule F (ι → F)` shape: when `C_B : Submodule B (ι → B)`, the
+extension code is itself a `Submodule F (ι → F)`. Built directly from
+the three closure lemmas (`extensionCode_add_mem`, `Submodule.zero_mem`,
+`extensionCode_smul_mem`); no parallel implementation.
+
+`coe_extensionCodeSubmodule` is the `(extensionCodeSubmodule … : Set _) =
+extensionCode P (C_B : Set _)` carrier bridge — `rfl`.
+
+Per the no-duplication rule: this is the natural Mathlib-aligned shape
+for downstream consumers ("here is a linear code over F") — the Set-form
+remains available for callers that want the more general
+non-linear-code variant.
+
+Audit D2.20 row's Lean target column now lists both forms.
