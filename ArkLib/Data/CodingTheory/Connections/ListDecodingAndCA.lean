@@ -200,6 +200,12 @@ theorem rs_epsCA_separation_bgks20
     {ι : Type} [Fintype ι] [Nonempty ι] [DecidableEq ι]
     {F : Type} [Field F] [Fintype F] [DecidableEq F] [CharP F 2]
     (_hF_eq_ι : Fintype.card F = Fintype.card ι)
+    -- Without `|F| ≥ 8` the dimension `k = ⌊|F| / 8⌋` truncates to 0,
+    -- giving the trivial code `{0}` for which the conclusion's
+    -- `ε_ca(C, _) ≥ 1 - 1/|F|` is not the intended separation result.
+    -- The paper implicitly assumes `|F|` large enough for a meaningful
+    -- rate-`1/8` code; we surface that hypothesis explicitly.
+    (_hF_ge : 8 ≤ Fintype.card F)
     (domain : ι ↪ F) :
     let k : ℕ := Fintype.card F / 8
     let ρ : ℝ := 1 / 8

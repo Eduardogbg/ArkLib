@@ -41,15 +41,24 @@ set_option linter.unusedSectionVars false
 namespace ReedSolomon
 namespace Folded
 
-/-- **ABF26 Definition 2.14.** An element `ω : F` is `(L, s)`-admissible if for every
-two distinct elements `α, β` of `L` and every `0 ≤ i < s` we have `α · ω^i ≠ β`.
+/-- **ABF26 Definition 2.14.** An element `ω : F` is `(L, s)`-admissible if **every
+evaluation point appears only once across all folds**, i.e. the map
+`(α, i) ↦ α · ω^i : L × Fin s → F` is injective.
 
-Equivalently, the orbits `{α · ω^i : 0 ≤ i < s}` separate distinct points of `L`. This
-ensures that in a folded Reed-Solomon codeword, every evaluation point appears only
-once across all folds. -/
+Split into two equivalent conjuncts to keep the predicate `simp`-friendly:
+
+  - **inter-orbit:** for distinct `α ≠ β ∈ L`, `α · ω^i ≠ β` for every `i < s`.
+  - **intra-orbit:** for every `α ∈ L`, `α · ω^i ≠ α` for every `0 < i < s` —
+    equivalently, `ω` has multiplicative order at least `s` on the non-zero
+    orbit of `α`. Without this clause an `ω` with `ω^j = 1` for some
+    `0 < j < s` would still satisfy admissibility (the inter-orbit clause is
+    vacuously OK on `α = β`), collapsing the fold's `s`-tuple to a
+    repeated-entry vector and silently weakening the FRS distance argument
+    downstream (T2.18, T4.14). -/
 def Admissible {F : Type} [Field F] [DecidableEq F]
     (L : Finset F) (s : ℕ) (ω : F) : Prop :=
-  ∀ α ∈ L, ∀ β ∈ L, α ≠ β → ∀ i : ℕ, i < s → α * ω ^ i ≠ β
+  (∀ α ∈ L, ∀ β ∈ L, α ≠ β → ∀ i : ℕ, i < s → α * ω ^ i ≠ β) ∧
+  (∀ α ∈ L, ∀ i : ℕ, 0 < i → i < s → α * ω ^ i ≠ α)
 
 /-- The FRS evaluation map as an `F`-linear map from polynomials to `ι → Fin s → F`,
 mirroring `ReedSolomon.evalOnPoints` (which is the `s = 1` special case). -/

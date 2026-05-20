@@ -162,15 +162,22 @@ section LargeAlphabetBarrier
 
 /-- **ABF26 Theorem 3.10 [BDG24, AGL23].** Large-alphabet barrier for generalized
 Singleton attainment. For every `ℓ ≥ 2` and `ρ ∈ (0, 1)` there exists a constant
-`α_ℓρ > 0` such that for every `η > 0` and every sufficiently large `n`, every error-
-correcting code `C ⊆ F^n` of rate `ρ` with `|Λ(C, ℓ/(ℓ+1) · (1-ρ-η))| ≤ ℓ` satisfies:
+`α_ℓρ > 0` such that for every `η > 0` and every sufficiently large `n`, every linear
+error-correcting code `C ⊆ F^n` of rate at least `ρ` with `|Λ(C, ℓ/(ℓ+1) · (1-ρ-η))| ≤ ℓ`
+satisfies:
 
   `|F| ≥ 2^{α_ℓρ / η}`
 
 i.e. attaining the generalized Singleton bound up to `η` slack requires alphabet size
 exponential in `1/η`. We existentially package the "sufficiently large" threshold as
-an explicit `n₀` parameter rather than relying on Lean's `eventually` API. Admitted as
-an external result. -/
+an explicit `n₀` parameter rather than relying on Lean's `eventually` API.
+
+**Rate hypothesis.** Phrased as `Module.finrank F C ≥ ρ · n` (a lower bound; matches
+the paper's "rate at least ρ" reading and avoids the impossible real-equality
+`finrank/n = ρ` for irrational `ρ`). The rate-≥-ρ form is what the proof actually
+uses (the conclusion is a *lower* bound on `|F|`, monotone in the rate hypothesis).
+
+Admitted as an external result. -/
 theorem large_alphabet_barrier_bdg24_agl23
     (ℓ : ℕ) (_hℓ_ge : 2 ≤ ℓ) (ρ : ℝ) (_hρ_pos : 0 < ρ) (_hρ_lt : ρ < 1) :
     ∃ α : ℝ, 0 < α ∧
@@ -178,9 +185,10 @@ theorem large_alphabet_barrier_bdg24_agl23
         ∃ n₀ : ℕ,
           ∀ {ι : Type} [Fintype ι] [Nonempty ι] [DecidableEq ι]
             {F : Type} [Field F] [Fintype F] [DecidableEq F]
-            (C : Set (ι → F)),
+            (C : Submodule F (ι → F)),
             n₀ ≤ Fintype.card ι →
-            Lambda C ((ℓ : ℝ) / (ℓ + 1) * (1 - ρ - η)) ≤ (ℓ : ℕ∞) →
+            (Module.finrank F C : ℝ) ≥ ρ * Fintype.card ι →
+            Lambda ((C : Set (ι → F))) ((ℓ : ℝ) / (ℓ + 1) * (1 - ρ - η)) ≤ (ℓ : ℕ∞) →
             (Fintype.card F : ℝ) ≥ (2 : ℝ) ^ (α / η) := by
   sorry -- ABF26-T3.10; external admit [BDG24, AGL23].
 
@@ -208,8 +216,13 @@ theorem random_linear_lambda_lower_glmrsw22
           ∀ {ι : Type} [Fintype ι] [Nonempty ι] [DecidableEq ι]
             {F : Type} [Field F] [Fintype F] [DecidableEq F],
             Fintype.card F = q → n₀ ≤ Fintype.card ι →
+            -- Rate `≥ ρ` (not `= ρ`) so the statement is provable for *any* real
+            -- `ρ` in the interval, including irrationals where the rational
+            -- `finrank/|ι|` cannot exactly equal `ρ`. The conclusion's bound is
+            -- monotone in `ρ`, so a code of rate strictly above `ρ` still
+            -- witnesses the `ρ`-indexed bound.
             ∃ C : Submodule F (ι → F),
-              (Module.finrank F C : ℝ) / Fintype.card ι = ρ ∧
+              (Module.finrank F C : ℝ) / Fintype.card ι ≥ ρ ∧
               (Lambda ((C : Set (ι → F))) δ : ENNReal) >
                 ((Nat.floor (qEntropy q δ / (1 - qEntropy q δ - ρ) - ε) : ℕ) : ENNReal) := by
   sorry -- ABF26-T3.11; external admit [GLMRSW22 Thm 4.1].
@@ -227,11 +240,15 @@ a Reed-Solomon code `C := RS[F_q, F_q, ⌊q^α⌋]` and a word `w : F_q → F_q`
 Admitted as an external result. -/
 theorem rs_lambda_superpoly_extension_bkr06
     (α β : ℝ) (_hα_pos : 0 < α) (_hα_lt : α < β) (_hβ_lt : β < 1) :
-    ∃ qs : ℕ → ℕ, StrictMono qs ∧
+    -- `qs` carries the prime-power requirement as a *conjunct* alongside
+    -- `StrictMono`. The previous shape `∀ i, IsPrimePow (qs i) → P i` was
+    -- vacuously satisfied by any non-prime-power sequence; we now require
+    -- *every* `qs i` to be a prime power up front.
+    ∃ qs : ℕ → ℕ, StrictMono qs ∧ (∀ i, IsPrimePow (qs i)) ∧
       ∀ i : ℕ,
         ∀ {ι : Type} [Fintype ι] [Nonempty ι] [DecidableEq ι]
           {F : Type} [Field F] [Fintype F] [DecidableEq F],
-          IsPrimePow (qs i) → Fintype.card F = qs i → Fintype.card ι = qs i →
+          Fintype.card F = qs i → Fintype.card ι = qs i →
           ∃ (domain : ι ↪ F) (w : ι → F),
             let q : ℕ := qs i
             let k : ℕ := Nat.floor ((q : ℝ) ^ α)
@@ -274,14 +291,21 @@ Witnesses that high-rate RS codes cannot be list-decoded beyond `1/(j+1)` with l
 size `j`. Admitted as an external result. -/
 theorem rs_lambda_high_rate_jh01
     (j : ℕ) (_hj_ge : 2 ≤ j) :
+    -- Prime-power and modular requirements moved out of `→`-implications
+    -- into conjuncts of the outer existential so the sequence cannot be
+    -- vacuously satisfied by non-prime-powers (or values not ≡ 1 mod j+1).
     ∃ qs : ℕ → ℕ, StrictMono qs ∧
+      (∀ i, IsPrimePow (qs i)) ∧ (∀ i, qs i % (j + 1) = 1) ∧
       ∀ i : ℕ,
         ∀ {ι : Type} [Fintype ι] [Nonempty ι] [DecidableEq ι]
           {F : Type} [Field F] [Fintype F] [DecidableEq F],
-          IsPrimePow (qs i) → qs i % (j + 1) = 1 →
           Fintype.card F = qs i → Fintype.card ι = j + 1 →
           ∃ (domain : ι ↪ F) (k : ℕ) (w : ι → F),
             let C := ReedSolomon.code domain k
+            -- The paper-quoted `|C| = j + 1` is consistent only with
+            -- specific `(q, k, j)` triples (e.g. `q = j + 1`, `k = 1`); the
+            -- external admit's eventual proof should pin `(k, q)` to make
+            -- this exactly satisfiable.
             Set.ncard ((C : Set (ι → F))) = j + 1 ∧
             (j : ℕ∞) < (Lambda_at ((C : Set (ι → F))) (1 / (j + 1 : ℝ)) w).ncard := by
   sorry -- ABF26-T3.14; external admit [JH01 Thm 2].

@@ -85,9 +85,15 @@ lemma ker_proj_eq_vanish_at {ι : Type*} {F : Type*} [Semiring F] {s : ℕ} (i :
   simp [LinearMap.mem_ker, LinearMap.proj_apply]
 
 /-- **ABF26 Lemma 2.17 [GG25].** For any τ-subspace-design code of rate `ρ`, the
-profile `τ` is lower-bounded by `ρ - 1/n`:
+profile `τ` is lower-bounded by `ρ - 1/n` over the paper's range `r ∈ [s] = {1, …, s}`:
 
-  `min_r τ(r) ≥ ρ - 1/n` .
+  `min_{r ∈ [s]} τ(r) ≥ ρ - 1/n` .
+
+The quantifier is restricted to `r ∈ Finset.Icc 1 s` to match the paper's `[s]`
+notation: outside this range the `IsSubspaceDesign` predicate places no
+constraint on `τ`, so the bound is vacuous for `r = 0` (where `A ≤ C` with
+`finrank A ≤ 0` forces `A = ⊥`, making the design inequality `0 ≤ 0 · τ(0)`
+trivially satisfied by any `τ(0)` including ones violating the lower bound).
 
 Admitted as an external result. -/
 theorem subspaceDesign_tau_lower
@@ -95,7 +101,8 @@ theorem subspaceDesign_tau_lower
     {F : Type} [Field F] [Fintype F] [DecidableEq F]
     (s : ℕ) (τ : ℕ → ℝ) (C : Submodule F (ι → Fin s → F))
     (_h : IsSubspaceDesign s τ C) :
-    ∀ r : ℕ, τ r ≥ (Module.finrank F C : ℝ) / Fintype.card ι - 1 / Fintype.card ι := by
+    ∀ r ∈ Finset.Icc 1 s,
+      τ r ≥ (Module.finrank F C : ℝ) / Fintype.card ι - 1 / Fintype.card ι := by
   sorry -- ABF26-L2.17; external admit [GG25].
 
 /-- **ABF26 Theorem 2.18 [GK16].** Both folded Reed-Solomon codes and univariate
