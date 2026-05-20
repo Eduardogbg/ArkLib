@@ -13,6 +13,8 @@ Edit the source of truth, not the output.
 | `dependency_graphs/` | generated dependency visualizations | No | rerun scripts under `scripts/dependency_analysis/` |
 | `docs/kb/_generated/references.json` | normalized bibliography export | No | `python3 ./scripts/kb/sync_from_bib.py` |
 | `docs/kb/_generated/lean-citations.json` | generated map from Lean files to cited keys | No | `python3 ./scripts/kb/extract_lean_citations.py` |
+| `docs/kb/_generated/declarations.json` | declaration catalog across `ArkLib/` (file, kind, namespace, line, brief signature, docstring head) | No | `python3 ./scripts/kb/extract_declarations.py --root ArkLib --out docs/kb/_generated/declarations.json` |
+| `docs/kb/_generated/dedup-report.md` | cross-namespace declaration-similarity report (Jaccard ≥ 0.85 flags) | No | `python3 ./scripts/kb/find_dedup_candidates.py --in docs/kb/_generated/declarations.json --out docs/kb/_generated/dedup-report.md` |
 
 ## Important Notes
 
