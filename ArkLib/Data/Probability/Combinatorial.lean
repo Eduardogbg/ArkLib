@@ -69,8 +69,43 @@ theorem exists_large_image_of_pairwise_collision_bound
         Pr_{ let φ ← Φ }[(decide (φ x = φ y) : Prop)] ≤ ε) :
     ∃ φ ∈ Φ.support, ((Finset.univ.image φ).card : ENNReal) ≥
       (Fintype.card S : ENNReal) / (1 + (Fintype.card S - 1) * ε) := by
-  -- ABF26-B.1; in-paper proof, deferred. Cauchy-Schwarz on fibers + Jensen
-  -- on `x ↦ |S|²/(2x+|S|)` + averaging argument.
+  -- ABF26 Claim B.1. Contradiction-form proof avoiding Jensen explicitly:
+  -- if every `φ ∈ support` has `|φ(S)| < K := |S|/(1 + (|S|−1)ε)`, then
+  -- Cauchy-Schwarz forces every `φ` to have *more* colliding pairs than the
+  -- hypothesis's `E[colls] ≤ (|S| choose 2)·ε` bound permits — contradiction.
+  --
+  -- ## Proof skeleton (full closure deferred — bounded follow-up)
+  --
+  -- Let `numColls φ : ℕ` be the count of unordered pairs `{x,y}` with
+  -- `x ≠ y ∧ φ x = φ y` (paper's `|C_φ|`). The chain:
+  --
+  -- Step 1 (pointwise Cauchy-Schwarz):  for every `φ : S → T`,
+  --    `|S|² ≤ |φ(S)| · (2 · numColls φ + |S|)`
+  --   via `Finset.sq_sum_le_card_mul_sum_sq` applied to fiber-cardinalities
+  --   `μ ↦ |φ⁻¹(μ)|` over the image `φ(S)`. The `Σ |φ⁻¹(μ)|²` decomposes
+  --   into `2 · numColls + |S|` by counting ordered same-image pairs.
+  --
+  -- Step 2 (rearrange):  if `|φ(S)| < K`, then
+  --    `numColls φ > (|S| choose 2) · ε`
+  --   from Step 1's bound + the explicit value of K.
+  --
+  -- Step 3 (averaging):  if `∀ φ ∈ support, numColls φ > c`,
+  --   then `E_{φ←Φ}[numColls φ] > c`. Standard.
+  --
+  -- Step 4 (linearity of expectation):  the hypothesis sums to
+  --    `E_{φ←Φ}[numColls φ] ≤ (|S| choose 2) · ε`
+  --   (pairwise-collision bound, summed over `(|S| choose 2)` unordered
+  --   pairs). The `decide` wrapper in `hΦ` unwraps via `decide_iff`.
+  --
+  -- Step 5 (contradict):  Steps 3 + 4 together force
+  --    `(|S| choose 2) · ε < E[…] ≤ (|S| choose 2) · ε`,
+  --   a contradiction.
+  --
+  -- Each step is a stand-alone proof; closure of all 5 steps is a focused
+  -- proof-PR (~100-200 lines through PMF expectations and ENNReal /
+  -- ℕ casts; also needs an auxiliary `numColls` definition that handles
+  -- the unordered-pair count canonically, e.g. via `Sym2` or by
+  -- requiring `[LinearOrder S]` and using `p.1 < p.2`).
   sorry
 
 end Probability
