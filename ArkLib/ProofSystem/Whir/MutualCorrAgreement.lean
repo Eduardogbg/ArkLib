@@ -79,7 +79,7 @@ clause sits inside `∀ s ∈ S` so empty `S` makes the bridge fail). -/
 lemma proximityCondition_imp_mcaEvent_affineLine
     {C : LinearCode ι F} {δ : ℝ≥0} (hδ : δ < 1)
     (f : Fin 2 → ι → F) (γ : F)
-    (h : proximityCondition (parℓ := Fin 2) f δ (fun j => if j = 0 then 1 else γ)
+    (h : proximityCondition (parℓ := Fin 2) f δ (fun j ↦ if j = 0 then 1 else γ)
       C) :
     ProximityGap.mcaEvent (F := F) (A := F) ((C : Set (ι → F))) δ (f 0) (f 1) γ := by
   obtain ⟨S, hS_card, u, hu_mem, h_inner⟩ := h
@@ -129,14 +129,14 @@ lemma Pr_proximityCondition_le_epsMCA
     {C : LinearCode ι F} {δ : ℝ≥0} (hδ : δ < 1)
     (f : Fin 2 → ι → F) :
     Pr_{let γ ←$ᵖ F}[proximityCondition (parℓ := Fin 2) f δ
-        (fun j => if j = 0 then 1 else γ) C]
+        (fun j ↦ if j = 0 then 1 else γ) C]
       ≤ ProximityGap.epsMCA (F := F) (A := F) ((C : Set (ι → F))) δ := by
   refine le_trans ?_ (le_iSup
-    (fun u : Code.WordStack F (Fin 2) ι =>
+    (fun u : Code.WordStack F (Fin 2) ι ↦
       Pr_{let γ ←$ᵖ F}[ProximityGap.mcaEvent (F := F) (A := F)
         ((C : Set (ι → F))) δ (u 0) (u 1) γ]) f)
   exact Pr_le_Pr_of_implies _ _ _
-    (fun γ h => proximityCondition_imp_mcaEvent_affineLine hδ f γ h)
+    (fun γ h ↦ proximityCondition_imp_mcaEvent_affineLine hδ f γ h)
 
 /-- Definition 4.9
   Let `C` be a linear code, then Gen is a proximity generator with mutual correlated agreement,
