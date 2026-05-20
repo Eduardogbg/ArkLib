@@ -139,7 +139,7 @@ theorem mds_johnson_lambda_le
     (C : LinearCode ι F) (η : ℝ) (_hη_pos : 0 < η)
     (_h_mds : LinearCode.IsMDS C) :
     let ρ : ℝ := (Module.finrank F C : ℝ) / Fintype.card ι
-    (Lambda ((C : Set (ι → F))) (1 - ρ ^ ((1 : ℝ) / 2) - η) : ENNReal) ≤
+    (Lambda ((C : Set (ι → F))) (1 - Real.sqrt ρ - η) : ENNReal) ≤
       ENNReal.ofReal (1 / (2 * η * ρ)) := by
   sorry -- ABF26-C3.3; derivable from L2.6 (via IsMDS_iff_rate_distance) + Jcap form of T3.2.
 

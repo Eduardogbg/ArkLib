@@ -7,7 +7,6 @@ Authors: Alexander Hicks
 import Mathlib.Data.Nat.Choose.Basic
 import Mathlib.Algebra.Order.Floor.Defs
 import Mathlib.Algebra.Order.Floor.Semiring
-import Mathlib.Data.NNReal.Basic
 import ArkLib.Data.CodingTheory.ListDecodability
 
 /-!
@@ -49,6 +48,9 @@ Noncomputable because the floor `⌊δ · n⌋₊` over `ℝ` is noncomputable (
 noncomputable def hammingBallVolume (q : ℕ) (δ : ℝ) (n : ℕ) : ℕ :=
   ∑ i ∈ Finset.range (⌊δ * n⌋₊ + 1), Nat.choose n i * (q - 1) ^ i
 
+/-- Boundary case: a Hamming ball of zero radius contains exactly one word
+(the center itself). The single summand `i = 0` contributes
+`(n choose 0) · (q-1)^0 = 1`. -/
 @[simp]
 lemma hammingBallVolume_zero_radius (q n : ℕ) : hammingBallVolume q 0 n = 1 := by
   simp [hammingBallVolume]

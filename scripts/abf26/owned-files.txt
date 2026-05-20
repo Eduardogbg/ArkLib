@@ -19,6 +19,7 @@ ArkLib/Data/CodingTheory/ProximityGap/GrandChallenges.lean
 ArkLib/Data/CodingTheory/ProximityGap/LineDecoding.lean
 ArkLib/Data/CodingTheory/ReedSolomon/Folded.lean
 ArkLib/Data/CodingTheory/ReedSolomon/Interleaved.lean
+ArkLib/Data/CodingTheory/ReedSolomon/Multiplicity.lean
 ArkLib/Data/CodingTheory/SubspaceDesign.lean
 ArkLib/Data/Probability/Combinatorial.lean
 ArkLib/ProofSystem/ToyProblem/Definitions.lean

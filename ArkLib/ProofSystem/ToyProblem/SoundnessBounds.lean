@@ -43,7 +43,7 @@ from below.
 
 * [Arnon, G., Boneh, D., Fenzi, G., *Open Problems in List Decoding and
   Correlated Agreement*][ABF26]
-* [Guruswami, V., Rudra, A., Sudan, M., *Essential Coding Theory*][GRS25]
+* [Guruswami, V., Rudra, A., Sudan, M., *Essential Coding Theory*][GRS12]
 -/
 
 namespace ToyProblem
@@ -68,9 +68,9 @@ Admitted as an external result. -/
 theorem additive_code_supports_erasure_correction_grs12
     (C : Set (ι → F)) :
     ∃ ecor : ℕ, SupportsErasureCorrection C ecor := by
-  -- ABF26-L6.5; external admit [GRS25 / Guruswami-Rudra-Sudan, Essential
-  -- Coding Theory]. Polynomial-time erasure-correction algorithm via
-  -- Gaussian elimination on the parity-check matrix of any additive code.
+  -- ABF26-L6.5; external admit [GRS12]. Polynomial-time erasure-correction
+  -- algorithm via Gaussian elimination on the parity-check matrix of any
+  -- additive code (cf. Guruswami-Rudra-Sudan, *Essential Coding Theory*).
   sorry
 
 omit [DecidableEq F] in

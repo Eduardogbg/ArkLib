@@ -6,7 +6,6 @@ Authors: Alexander Hicks
 
 import ArkLib.Data.CodingTheory.ReedSolomon
 import Mathlib.Algebra.Polynomial.Derivative
-import Mathlib.LinearAlgebra.LinearIndependent.Defs
 
 /-!
 # Univariate multiplicity codes (ABF26 Definition A.7)

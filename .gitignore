@@ -32,6 +32,26 @@
 /.venv/
 /.vscode/
 __pycache__/
+Y
+
+# Vendored / scratch artifacts (review-only; not part of the repo content)
+# Reference PDFs (ABF26 + cited works), see references/MANIFEST.md if vendored.
+*.pdf
+# Ad-hoc review / inspection notes (claude_review.md, codex_review.md,
+# *_REVIEW*.md, CL_PR_COMMENT.md, CL_PR_COMMENTS_*.md).
+claude_review.md
+codex_review.md
+*_REVIEW*.md
+CL_PR_COMMENT*.md
+CL_REVIEW_*.md
+CD_REVIEW_*.md
+TOYPROBLEM_REVIEW.md
+PR[0-9]*_REVIEW*.md
+PR[0-9]*_INLINE_COMMENTS.md
+# Downloaded HTML / paper dumps
+*.html
+"VEIL — Formal Verification Audit_files/"
+references/
 
 # Generated dependency analysis files
 /dependency_graphs/

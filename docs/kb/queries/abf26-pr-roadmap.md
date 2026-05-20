@@ -116,7 +116,7 @@ The harness got two defensive fixes during the sweep that *stay*:
 
 ### Phase 3 — deferred & stretch (optional for this PR)
 
-- Resolve the 3 deferred rows (T3.6, T4.15, T3.6) — need
+- Resolve the 3 deferred rows (T3.6, T4.15, R6.14) — need
   `Data/Probability/UniformSubset` primitive or explicit
   out-of-scope marker.
 - ~~`Probability.Combinatorial.exists_large_image_of_pairwise_collision_bound`
