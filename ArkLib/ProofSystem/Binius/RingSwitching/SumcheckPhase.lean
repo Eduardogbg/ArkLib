@@ -58,49 +58,35 @@ variable {𝓑 : Fin 2 ↪ L}
 variable (aOStmtIn : AbstractOStmtIn L ℓ')
 
 section IteratedSumcheckStep
-def iteratedSumcheckPrvState (i : Fin ℓ') : Fin (2 + 1) → Type := fun
-  -- Initial : current  witness x t_eval_point x challenges
-  | ⟨0, _⟩ => (Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) i.castSucc
-    × (∀ j, aOStmtIn.OStmtIn j)) × SumcheckWitness L ℓ' i.castSucc
-  -- After sending h_i(X)
-  | ⟨1, _⟩ => Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) i.castSucc
-    × (∀ j, aOStmtIn.OStmtIn j) × SumcheckWitness L ℓ' i.castSucc × L⦃≤ 2⦄[X]
-  -- After receiving r'_i (Note that this covers the last two messages, i.e. after each of them)
-  | _ => Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) i.castSucc ×
-    (∀ j, aOStmtIn.OStmtIn j) ×
-    SumcheckWitness L ℓ' i.castSucc × L⦃≤ 2⦄[X] × L
 
-/-- This is in fact usable immediately after the V->P challenge since all inputs
-are available at that time. -/
+/-! ## Per-round prover / verifier (re-exported from `Sumcheck.Structured.SingleRound`)
+
+The per-round protocol code (`iteratedSumcheck{PrvState, OracleProver, OracleVerifier,
+OracleReduction}`, the helper `getIteratedSumcheckProverFinalOutput`, and the error bound
+`iteratedSumcheckRoundKnowledgeError`) was lifted to
+`ArkLib.ProofSystem.Sumcheck.Structured.SingleRound`, parameterized over a generic
+`Context : Type` and `OStmtIn : ιₛᵢ → Type`.
+
+For backwards compatibility, the wrappers below preserve the original autobound signature
+(via the surrounding variable block — `κ L K ℓ ℓ' (𝓑 := 𝓑) aOStmtIn`) by specializing
+`Context := RingSwitchingBaseContext κ L K ℓ` and `OStmtIn := aOStmtIn.OStmtIn`. They are
+`@[reducible]` so that subsequent soundness proofs and the seqCompose loop can still
+access fields like `.KnowledgeStateFunction` / `.rbrKnowledgeSoundness` through them. -/
+
+@[reducible]
+def iteratedSumcheckPrvState (i : Fin ℓ') : Fin (2 + 1) → Type :=
+  Sumcheck.Structured.iteratedSumcheckPrvState (L := L) ℓ'
+    (RingSwitchingBaseContext κ L K ℓ) (OStmtIn := aOStmtIn.OStmtIn) i
+
+@[reducible]
 noncomputable def getIteratedSumcheckProverFinalOutput (i : Fin ℓ')
     (finalPrvState : iteratedSumcheckPrvState κ L K ℓ ℓ' aOStmtIn i 2) :
     ((Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) i.succ
-      × (∀ j, aOStmtIn.OStmtIn j)) × SumcheckWitness L ℓ' i.succ)
-  := by
-  let (stmtIn, oStmtIn, witIn, h_i, r_i') := finalPrvState
-  let newSumcheckTarget : L := h_i.val.eval r_i'
-  let stmtOut : Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) i.succ := {
-    ctx := stmtIn.ctx,
-    sumcheck_target := newSumcheckTarget,
-    challenges := Fin.snoc stmtIn.challenges r_i'
-  }
-  let challenges : Fin (1) → L := fun cId => r_i'
-  let witOut : SumcheckWitness L ℓ' i.succ := by
-    let projectedH := fixFirstVariablesOfMQP (ℓ := ℓ' - i) (v := ⟨1, by omega⟩)
-      (H := witIn.H.val) (challenges := challenges)
-    exact {
-      t' := witIn.t',
-      H := ⟨projectedH, by
-        have hp := witIn.H.property
-        simpa using
-          (fixFirstVariablesOfMQP_degreeLE (L := L) (ℓ := ℓ' - i) (v := ⟨1, by omega⟩)
-            (poly := witIn.H.val) (challenges := challenges) (deg := 2) hp)
-      ⟩
-    }
-  have h_succ_val : i.succ.val = i.val + 1 := rfl
-  exact ⟨⟨stmtOut, oStmtIn⟩, witOut⟩
+      × (∀ j, aOStmtIn.OStmtIn j)) × SumcheckWitness L ℓ' i.succ) :=
+  Sumcheck.Structured.getIteratedSumcheckProverFinalOutput (L := L) ℓ'
+    (RingSwitchingBaseContext κ L K ℓ) (OStmtIn := aOStmtIn.OStmtIn) i finalPrvState
 
-/-- The prover for the `i`-th round of Ring Switching. -/
+@[reducible]
 noncomputable def iteratedSumcheckOracleProver (i : Fin ℓ') :
   OracleProver (oSpec := []ₒ)
     (StmtIn := Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) i.castSucc)
@@ -109,75 +95,23 @@ noncomputable def iteratedSumcheckOracleProver (i : Fin ℓ') :
     (StmtOut := Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) i.succ)
     (OStmtOut := aOStmtIn.OStmtIn)
     (WitOut := SumcheckWitness L ℓ' i.succ)
-    (pSpec := pSpecSumcheckRound L) where
+    (pSpec := pSpecSumcheckRound L) :=
+  Sumcheck.Structured.iteratedSumcheckOracleProver (L := L) ℓ' 𝓑
+    (RingSwitchingBaseContext κ L K ℓ) (OStmtIn := aOStmtIn.OStmtIn) i
 
-  PrvState := iteratedSumcheckPrvState κ L K ℓ ℓ' aOStmtIn i
-
-  input := fun ⟨⟨stmt, oStmt⟩, wit⟩ => ((stmt, oStmt), wit)
-
-  sendMessage -- There are 2 messages in the pSpec
-  | ⟨0, _⟩ => fun ⟨⟨stmt, oStmt⟩, wit⟩ => do
-    let curH : ↥L⦃≤ 2⦄[X Fin (ℓ' - ↑i.castSucc)] := wit.H
-    let h_i : L⦃≤ 2⦄[X] := by
-      exact getSumcheckRoundPoly ℓ' 𝓑 (i := i) curH
-    pure ⟨h_i, (stmt, oStmt, wit, h_i)⟩
-  | ⟨1, _⟩ => by contradiction
-
-  receiveChallenge
-  | ⟨0, h⟩ => nomatch h -- i.e. contradiction
-  | ⟨1, _⟩ => fun ⟨stmt, oStmt, wit, h_i⟩ => do
-    pure (fun r_i' => (stmt, oStmt, wit, h_i, r_i'))
-  -- | ⟨2, h⟩ => nomatch h -- no challenge after third message
-
-  -- output : PrvState → StmtOut × (∀i, OracleStatement i) × WitOut
-  output := fun finalPrvState =>
-    let res := getIteratedSumcheckProverFinalOutput κ L K ℓ ℓ' aOStmtIn i finalPrvState
-    pure res
-
-/-- The oracle verifier for the `i`-th round of Ring Switching. -/
+@[reducible]
 noncomputable def iteratedSumcheckOracleVerifier (i : Fin ℓ') :
   OracleVerifier
     (oSpec := []ₒ)
     (StmtIn := Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) i.castSucc)
     (OStmtIn := aOStmtIn.OStmtIn)
-    -- next round
     (StmtOut := Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) i.succ)
     (OStmtOut := aOStmtIn.OStmtIn)
-    (pSpec := pSpecSumcheckRound L) where
+    (pSpec := pSpecSumcheckRound L) :=
+  Sumcheck.Structured.iteratedSumcheckOracleVerifier (L := L) ℓ'
+    (RingSwitchingBaseContext κ L K ℓ) (OStmtIn := aOStmtIn.OStmtIn) i
 
-  -- The core verification logic. Takes the input statement `stmtIn` and the transcript, and
-  -- performs an oracle computation that outputs a new statement
-  verify := fun stmtIn pSpecChallenges => do
-    -- Message 0 : Receive h_i(X) from prover
-    let h_i : L⦃≤ 2⦄[X] ← query (spec := [(pSpecSumcheckRound L).Message]ₒ)
-      ⟨⟨0, rfl⟩, ()⟩
-
-    -- Check sumcheck : s_i ?= h_i(0) + h_i(1)
-    let sumcheck_check := h_i.val.eval 0 + h_i.val.eval 1 = stmtIn.sumcheck_target
-    unless sumcheck_check do
-      -- Return a dummy statement indicating failure
-      let dummyStmt : Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) i.succ := {
-        ctx := stmtIn.ctx,
-        sumcheck_target := 0,
-        challenges := Fin.snoc stmtIn.challenges 0
-      }
-      return dummyStmt
-
-    -- Message 1 : Sample challenge r'_i and send to prover
-    let r_i' : L := pSpecChallenges ⟨1, rfl⟩  -- This gets the challenge for message 1
-
-    -- Update statement for next round
-    let stmtOut : Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) i.succ := {
-      ctx := stmtIn.ctx,
-      sumcheck_target := h_i.val.eval r_i',
-      challenges := Fin.snoc stmtIn.challenges r_i'
-    }
-
-    pure stmtOut
-  embed := ⟨fun j => Sum.inl j, fun a b h => by cases h; rfl⟩
-  hEq := fun _ => rfl
-
-/-- The oracle reduction that is the `i`-th round of Ring Switching. -/
+@[reducible]
 noncomputable def iteratedSumcheckOracleReduction (i : Fin ℓ') :
   OracleReduction (oSpec := []ₒ)
     (StmtIn := Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) i.castSucc)
@@ -186,9 +120,9 @@ noncomputable def iteratedSumcheckOracleReduction (i : Fin ℓ') :
     (StmtOut := Statement (L := L) (ℓ := ℓ') (RingSwitchingBaseContext κ L K ℓ) i.succ)
     (OStmtOut := aOStmtIn.OStmtIn)
     (WitOut := SumcheckWitness L ℓ' i.succ)
-    (pSpec := pSpecSumcheckRound L) where
-  prover := iteratedSumcheckOracleProver κ L K ℓ ℓ' (𝓑 := 𝓑) aOStmtIn i
-  verifier := iteratedSumcheckOracleVerifier κ L K ℓ ℓ' aOStmtIn i
+    (pSpec := pSpecSumcheckRound L) :=
+  Sumcheck.Structured.iteratedSumcheckOracleReduction (L := L) ℓ' 𝓑
+    (RingSwitchingBaseContext κ L K ℓ) (OStmtIn := aOStmtIn.OStmtIn) i
 
 variable {R : Type} [CommSemiring R] [DecidableEq R] [SampleableType R]
   {n : ℕ} {deg : ℕ} {m : ℕ} {D : Fin m ↪ R}
@@ -210,7 +144,9 @@ theorem iteratedSumcheckOracleReduction_perfectCompleteness (i : Fin ℓ') :
 
 open scoped NNReal
 
-def iteratedSumcheckRoundKnowledgeError (_ : Fin ℓ') : ℝ≥0 := (2 : ℝ≥0) / (Fintype.card L)
+-- Lifted to `Sumcheck.Structured.iteratedSumcheckRoundKnowledgeError`.
+-- Re-exported so existing references resolve unchanged.
+export Sumcheck.Structured (iteratedSumcheckRoundKnowledgeError)
 
 noncomputable def iteratedSumcheckRbrExtractor (i : Fin ℓ') :
   Extractor.RoundByRound []ₒ
