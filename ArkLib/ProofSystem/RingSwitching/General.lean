@@ -4,9 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Chung Thai Nguyen, Quang Dao
 -/
 
-import ArkLib.ProofSystem.Binius.RingSwitching.Spec
-import ArkLib.ProofSystem.Binius.RingSwitching.BatchingPhase
-import ArkLib.ProofSystem.Binius.RingSwitching.SumcheckPhase
+import ArkLib.ProofSystem.RingSwitching.Spec
+import ArkLib.ProofSystem.RingSwitching.BatchingPhase
+import ArkLib.ProofSystem.RingSwitching.SumcheckPhase
 import ArkLib.OracleReduction.Security.RoundByRound
 import ArkLib.OracleReduction.Composition.Sequential.Append
 
@@ -25,12 +25,12 @@ ring-switching protocol. The protocol is a sequential composition of:
   Towers." Cryptology ePrint Archive (2024).
 -/
 
-namespace Binius.RingSwitching.FullRingSwitching
+namespace RingSwitching.FullRingSwitching
 noncomputable section
-open Polynomial MvPolynomial OracleSpec OracleComp ProtocolSpec Finset AdditiveNTT Module
+open Polynomial MvPolynomial OracleSpec OracleComp ProtocolSpec Finset Module
 
 variable (κ : ℕ) [NeZero κ]
-variable (L : Type) [Field L] [Fintype L] [DecidableEq L] [CharP L 2]
+variable (L : Type) [Field L] [Fintype L] [DecidableEq L]
   [SampleableType L]
 variable (K : Type) [Field K] [Fintype K] [DecidableEq K]
 variable [Algebra K L]
@@ -97,6 +97,7 @@ abbrev fullInputRelation := BatchingPhase.batchingInputRelation κ L K β ℓ �
 abbrev fullOutputRelation := acceptRejectOracleRel
 
 open scoped NNReal
+open Sumcheck.Structured
 
 section SecurityProperties
 variable {σ : Type} (init : ProbComp σ) {impl : QueryImpl []ₒ (StateT σ ProbComp)}
@@ -184,4 +185,4 @@ theorem fullOracleVerifier_rbrKnowledgeSoundness :
 
 end SecurityProperties
 end
-end Binius.RingSwitching.FullRingSwitching
+end RingSwitching.FullRingSwitching

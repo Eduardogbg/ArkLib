@@ -4,14 +4,15 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Chung Thai Nguyen, Quang Dao
 -/
 
-import ArkLib.ProofSystem.Binius.RingSwitching.Prelude
-import ArkLib.ProofSystem.Binius.RingSwitching.Spec
+import ArkLib.ProofSystem.RingSwitching.Prelude
+import ArkLib.ProofSystem.RingSwitching.Spec
 import ArkLib.OracleReduction.Basic
 import CompPoly.Fields.Binary.Tower.TensorAlgebra
 
-open OracleSpec OracleComp ProtocolSpec Finset AdditiveNTT Polynomial MvPolynomial
-  Module Binius.BinaryBasefold TensorProduct Nat Matrix
+open OracleSpec OracleComp ProtocolSpec Finset Polynomial MvPolynomial
+  Module TensorProduct Nat Matrix
 open scoped NNReal
+open Sumcheck.Structured
 
 /-!
 # Ring-Switching IOP Batching Phase
@@ -46,10 +47,10 @@ Output: `witOut = (Statement (L := L) (ℓ := ℓ')`
 -/
 
 noncomputable section
-namespace Binius.RingSwitching.BatchingPhase
+namespace RingSwitching.BatchingPhase
 
 variable (κ : ℕ) [NeZero κ]
-variable (L : Type) [Field L] [Fintype L] [DecidableEq L] [CharP L 2]
+variable (L : Type) [Field L] [Fintype L] [DecidableEq L]
   [SampleableType L]
 variable (K : Type) [Field K] [Fintype K] [DecidableEq K]
 variable [Algebra K L]
@@ -342,4 +343,4 @@ theorem batchingOracleVerifier_rbrKnowledgeSoundness :
   sorry
 
 end BatchingPhase
-end Binius.RingSwitching
+end RingSwitching

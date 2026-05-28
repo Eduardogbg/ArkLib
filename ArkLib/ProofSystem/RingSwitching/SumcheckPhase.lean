@@ -4,15 +4,16 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Chung Thai Nguyen, Quang Dao
 -/
 
-import ArkLib.ProofSystem.Binius.RingSwitching.Prelude
-import ArkLib.ProofSystem.Binius.RingSwitching.Spec
+import ArkLib.ProofSystem.RingSwitching.Prelude
+import ArkLib.ProofSystem.RingSwitching.Spec
 import ArkLib.OracleReduction.Composition.Sequential.General
 import ArkLib.OracleReduction.Composition.Sequential.Append
 import ArkLib.OracleReduction.Security.RoundByRound
 
-open OracleSpec OracleComp ProtocolSpec Finset AdditiveNTT Polynomial MvPolynomial
-  Module Binius.BinaryBasefold TensorProduct Nat Matrix
+open OracleSpec OracleComp ProtocolSpec Finset Polynomial MvPolynomial
+  Module TensorProduct Nat Matrix
 open scoped NNReal
+open Sumcheck.Structured
 
 /-!
 # Ring-Switching Core Interaction Phase
@@ -43,11 +44,11 @@ source of RBR knowledge soundness error.
 9. `V` requires `s_{ℓ'} ?= (Σ_{u ∈ {0,1}^κ} eq̃(u_0, ..., u_{κ-1}, r''_0, ..., r''_{κ-1}) ⋅ e_u) ⋅ s'`.
 -/
 
-namespace Binius.RingSwitching.SumcheckPhase
+namespace RingSwitching.SumcheckPhase
 noncomputable section
 
 variable (κ : ℕ) [NeZero κ]
-variable (L : Type) [Field L] [Fintype L] [DecidableEq L] [CharP L 2]
+variable (L : Type) [Field L] [Fintype L] [DecidableEq L]
   [SampleableType L]
 variable (K : Type) [Field K] [Fintype K] [DecidableEq K]
 variable [Algebra K L]
@@ -582,4 +583,4 @@ theorem coreInteraction_rbrKnowledgeSoundness:
 
 end LargeFieldReduction
 end
-end Binius.RingSwitching.SumcheckPhase
+end RingSwitching.SumcheckPhase

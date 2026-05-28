@@ -6,7 +6,7 @@ Authors: Chung Thai Nguyen, Quang Dao
 
 import ArkLib.ProofSystem.Binius.BinaryBasefold.QueryPhase
 import ArkLib.ProofSystem.Binius.FRIBinius.CoreInteractionPhase
-import ArkLib.ProofSystem.Binius.RingSwitching.BatchingPhase
+import ArkLib.ProofSystem.RingSwitching.BatchingPhase
 
 /-!
 # FRI-Binius IOPCS
@@ -30,7 +30,7 @@ noncomputable section
 
 open Polynomial MvPolynomial OracleSpec OracleComp ProtocolSpec Finset AdditiveNTT Module
   Binius
-open Binius.BinaryBasefold Binius.RingSwitching
+open Binius.BinaryBasefold RingSwitching
 
 variable (κ : ℕ) [NeZero κ]
 variable (L : Type) [Field L] [Fintype L] [DecidableEq L] [CharP L 2]

@@ -3,9 +3,10 @@ Copyright (c) 2025 ArkLib Contributors. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Chung Thai Nguyen, Quang Dao
 -/
-import ArkLib.ProofSystem.Binius.RingSwitching.Prelude
+import ArkLib.ProofSystem.RingSwitching.Prelude
+import ArkLib.ProofSystem.Sumcheck.Structured.SingleRound
 
-namespace Binius.RingSwitching
+namespace RingSwitching
 
 /-! ## Protocol Specs for Ring-Switching
 This module contains the protocol specs, oracle index bounds,
@@ -15,9 +16,10 @@ instances of OracleInterface and SampleableType for the Ring Switching protocol.
 noncomputable section
 open OracleSpec OracleComp ProtocolSpec Finset Polynomial MvPolynomial
 open scoped NNReal
+open Sumcheck.Structured
 
 variable (κ : ℕ) [NeZero κ]
-variable (L : Type) [Field L] [Fintype L] [DecidableEq L] [CharP L 2]
+variable (L : Type) [Field L] [Fintype L] [DecidableEq L]
   [SampleableType L]
 variable (K : Type) [Field K] [Fintype K] [DecidableEq K]
 variable [Algebra K L]
@@ -115,4 +117,4 @@ instance : ∀ i, SampleableType ((fullPspec κ (L:=L) (K:=K) (ℓ':=ℓ') mlIOP
 end Pspec
 
 end
-end Binius.RingSwitching
+end RingSwitching

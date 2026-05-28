@@ -4,12 +4,11 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Chung Thai Nguyen, Quang Dao
 -/
 
-import CompPoly.Fields.Binary.AdditiveNTT.AdditiveNTT
 import ArkLib.Data.MvPolynomial.Multilinear
 import ArkLib.OracleReduction.Basic
 import ArkLib.OracleReduction.Security.RoundByRound
 import CompPoly.Fields.Binary.Tower.TensorAlgebra
-import ArkLib.ProofSystem.Binius.BinaryBasefold.Basic
+import ArkLib.ProofSystem.Sumcheck.Structured
 import Mathlib.Data.Fintype.Basic
 import Mathlib.Data.Matrix.Basic
 
@@ -30,17 +29,17 @@ between small field K and large field L, including embeddings `φ₀ : L → L �
 
 noncomputable section
 
-namespace Binius.RingSwitching
-open Binius.BinaryBasefold
+namespace RingSwitching
 
-open OracleSpec OracleComp ProtocolSpec Finset AdditiveNTT Polynomial MvPolynomial TensorProduct
+open OracleSpec OracleComp ProtocolSpec Finset Polynomial MvPolynomial TensorProduct
 open scoped NNReal
+open Sumcheck.Structured
 
 /- This section defines generic preliminaries for the ring-switching protocol. -/
 section Preliminaries
 
 variable (κ : ℕ) [NeZero κ]
-variable (L : Type) [Field L] [Fintype L] [DecidableEq L] [CharP L 2]
+variable (L : Type) [Field L] [Fintype L] [DecidableEq L]
 variable (K : Type) [Field K] [Fintype K] [DecidableEq K]
 variable [Algebra K L]
 variable (ℓ ℓ' : ℕ) [NeZero ℓ] [NeZero ℓ']
@@ -196,9 +195,12 @@ We define the Statement and Witness types at the boundaries of each phase
 following the enhanced specification.
 -/
 
--- Initial Input (Input to Batching Phase)
-abbrev MLPEvalStatement :=
-  Binius.BinaryBasefold.InitialStatement (L := L) (ℓ := ℓ)
+/-- Initial input (input to the Batching Phase): a polynomial-evaluation claim `s = t(r)`. -/
+structure MLPEvalStatement where
+  /-- The evaluation point `r = (r₀, …, r_{ℓ-1})` — shared input. -/
+  t_eval_point : Fin ℓ → L
+  /-- The claimed evaluation `s = t(r)`. -/
+  original_claim : L
 
 structure WitMLP where
   t : MultilinearPoly K ℓ
@@ -302,10 +304,10 @@ end Preliminaries
 the basis of L over K has rank `2^κ` instead of `κ` as in the Preliminaries section.
 -/
 section Relations
-open Module Binius.BinaryBasefold
+open Module
 
 variable (κ : ℕ) [NeZero κ]
-variable (L : Type) [Field L] [Fintype L] [DecidableEq L] [CharP L 2]
+variable (L : Type) [Field L] [Fintype L] [DecidableEq L]
   [SampleableType L]
 variable (K : Type) [Field K] [Fintype K] [DecidableEq K]
 variable [Algebra K L]
@@ -442,4 +444,4 @@ def sumcheckRoundRelation (aOStmtIn : AbstractOStmtIn L ℓ') (i : Fin (ℓ' + 1
 
 end Relations
 
-end Binius.RingSwitching
+end RingSwitching

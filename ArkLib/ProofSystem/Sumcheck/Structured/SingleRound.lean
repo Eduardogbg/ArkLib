@@ -25,10 +25,10 @@ This file collects single-round primitives for the structured (witness-mode) sum
 - `roundKnowledgeError` — the `2 / |L|` Schwartz–Zippel round error.
 
 These were originally housed in `Binius.BinaryBasefold.Prelude`,
-`Binius.RingSwitching.Spec`, and `Binius.RingSwitching.SumcheckPhase`. They are fully
+`RingSwitching.Spec`, and `RingSwitching.SumcheckPhase`. They are fully
 generic (no binary-tower or ring-switching dependencies) and have been promoted here so
 that future ring-switching protocols (Hachi, Galois-ring PCS) can reuse them without
-depending on `Binius.*`. `Binius.RingSwitching.SumcheckPhase` retains thin `@[reducible]`
+depending on `Binius.*`. `RingSwitching.SumcheckPhase` retains thin `@[reducible]`
 wrappers that specialize `Context` and `OStmtIn` back to the ring-switching types.
 -/
 
