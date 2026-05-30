@@ -6,11 +6,14 @@ Authors: Bolton Bailey
 
 import ArkLib.CommitmentScheme.Basic
 import ArkLib.OracleReduction.Composition.Sequential.General
+import Arklib.OracleReduction.VectorIOR
 
 /-!
-# The Killian Transformation
 
-This file is to describe the Killian transformation ([Killian '92], [SNARGs book Chapter 20]).
+
+# The Kilian Transformation
+
+This file is to describe the Kilian transformation ([Kilian '92], [SNARGs book Chapter 20]).
 This transformation converts a Probabilistically Checkable Proof (PCP) into an succinct interactive argument/Sigma protocol using Merkle trees. This can then be made non-interactive using the Fiat-Shamir transformation, (these two transformations together are referred to by the SNARGs book as the "Micali transformation" [Micali '00]).
 
 -/
@@ -39,6 +42,8 @@ structure PCP (Stmt Wit : Type) (rel : Stmt → Wit → Prop) where
   length : ℕ
   Prover : Stmt → Wit → ProbComp (List.Vector Symbol length)
   Verifier : Stmt → OracleComp (unifSpec + PCP.spec Symbol length) Bool
+
+#check VectorIOP
 
 namespace PCP
 
@@ -92,8 +97,8 @@ noncomputable def perfectSoundness (pcp : PCP Stmt Wit rel) : Prop :=
 
 end PCP
 
-section KillianTransformation
+section KilianTransformation
 
 #check InductiveMerkleTree.verifyProof
 
-end KillianTransformation
+end KilianTransformation
