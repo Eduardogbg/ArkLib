@@ -93,10 +93,14 @@ open ListDecodable JohnsonBound
   `|Λ(C, J_{q,ℓ}(δ_min(C)))| ≤ ℓ`
 
 where `δ_min(C) = minDist(C) / n` is the relative minimum distance and `J_{q,ℓ}`
-is the paper's q-ary ℓ-radius Johnson function. An existing in-tree proof of
-the Johnson bound in absolute-distance form lives in
-[`JohnsonBound/Basic.lean`](Basic.lean) (`johnson_bound`, `johnson_bound_alphabet_free`);
-porting it to this ABF26-style `Lambda`-based form is tracked in `ABF26_PLAN.md`.
+is the paper's q-ary ℓ-radius Johnson function. **Admitted (tagged sorry).** Note
+the existing absolute-distance Johnson bound in
+[`JohnsonBound/Basic.lean`](Basic.lean) (`johnson_bound`, `johnson_bound_alphabet_free`)
+is **not** directly portable to this `J_{q,ℓ}`-radius `Lambda` form: at the `Jqℓ`
+boundary the existing bound's `JohnsonConditionStrong` precondition is violated (the
+denominator goes negative — see the inline comment below for the computation), so a
+Guruswami–Sudan-style `J_{q,ℓ}`-specific argument is required. Tracked in
+`docs/kb/ABF26_PLAN.md`.
 
 **Alphabet generality.** Stated over an arbitrary alphabet `α` (not necessarily a
 field), matching the paper's `Σ`. The Johnson bound is a purely combinatorial fact

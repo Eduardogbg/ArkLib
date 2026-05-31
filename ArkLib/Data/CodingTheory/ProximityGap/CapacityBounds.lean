@@ -85,7 +85,7 @@ is either:
 - ABF26 Theorem 4.15 [GG25 Thm 5.15] (random RS MCA up to capacity) — blocked on a
   uniform distribution over size-`n` subsets of `F`.
 
-These are tracked in `ABF26_PLAN.md` §7 and will be stated alongside the corresponding
+These are tracked in `docs/kb/ABF26_PLAN.md` §7 and will be stated alongside the corresponding
 code-family definitions in Phase 3.
 
 ## References
@@ -400,35 +400,44 @@ theorem frs_epsMCA_capacity_gg25
         + 24 / (η ^ 3 * Fintype.card F)) := by
   sorry -- ABF26-T4.14; external admit [GG25 Cor 4.10].
 
-/-- **ABF26 BCGM25 extension to T4.13 / T4.14 (polynomial generators preserve MCA).**
+/-- **ABF26 BCGM25 extension to T4.13 / T4.14 (polynomial generators preserve
+correlated agreement).**
 
-[BCGM25] shows that MCA is preserved not only under affine line combinations
-`f₀ + γ · f₁` but under arbitrary *polynomial generators* — combinations of the form
-`f₀ + G(γ) · f₁` for a large class of functions `G : F → F` called "polynomial
-generators". Stated in ABF26 §4.2.2 (subsection on "subspace-design codes") as a
-parenthetical remark and footnote 2 of the introduction; not separately numbered as
-`T4.x`, but materially extends the reach of T4.13 / T4.14.
+[BCGM25] shows that the correlated/mutual agreement of subspace-design codes is
+preserved not only under affine line combinations `u₀ + γ · u₁` but under arbitrary
+*polynomial generators* — combinations of the form `∑ᵢ Gᵢ(γ) · uᵢ` for a large class
+of functions called "polynomial generators". Stated in ABF26 §4.2.2 (subsection on
+"subspace-design codes") and footnote 2 of the introduction; not separately numbered
+as `T4.x`, but materially extends the reach of T4.13 / T4.14.
 
-The statement formalisation here follows the curve-MCA generalisation: instead of
-the affine line `u₀ + γ · u₁`, we consider polynomial combinations
-`u₀ + p(γ) · u₁` for `p : F[X]` from some specified family (paper's polynomial-
-generator class). For the simplest case `p(γ) = γ^d` (power curves), this matches
-ABF26's `epsCA_curves` shape.
+**Canonical formalization lives elsewhere — this is the survey-ledger shadow.** The
+genuine polynomial-generator MCA framework (the `Generator` / `IsMCAGenerator` / `IsMCA`
+abstraction, formalizing [BSGM25] Lemmas 4.1, 4.2 and Definition 4.3) is being built in
+`ProximityGap/MCAGenerator.lean` and `ProximityGap/ProximityGenerators.lean` by PR #489
+(`Katy/MCAgens`). Once that lands on `main` and merges into this branch, **this entry
+should be restated in terms of `IsMCAGenerator` (or removed in favour of it)** rather than
+the affine-style `epsCA`/`epsMCA` errors here. Do not grow a parallel polynomial-generator
+notion under `CapacityBounds`.
 
-Admitted as an external result. -/
-theorem subspaceDesign_epsMCA_polynomial_generators_bcgm25
+**What this placeholder captures meanwhile.** Unlike T4.13 (`subspaceDesign_epsMCA_gg25`),
+the left-hand side is the **power-curve** correlated-agreement error `epsCA_curves … k`
+(combinations `∑ i : Fin (k+1), γ^i · uᵢ`) — the genuine polynomial-generator family, so
+this is not a copy of T4.13. Two honesty caveats: (i) [BSGM25] proves *mutual* correlated
+agreement; this shadow uses the *correlated-agreement* curve error because the ABF26 branch
+has no curve-MCA notion yet (PR #489 supplies the real one); (ii) the RHS reuses the GG25
+affine bound shape `(t·n + 4t²)/|F|`, with the precise polynomial-generator constants as
+in [BSGM25]. Admitted as an external result. -/
+theorem subspaceDesign_epsCA_curves_polynomial_generators_bcgm25
     {ι : Type} [Fintype ι] [Nonempty ι] [DecidableEq ι]
     {F : Type} [Field F] [Fintype F] [DecidableEq F]
     (s : ℕ) (τ : ℕ → ℝ) (C : Submodule F (ι → Fin s → F))
     (_h : IsSubspaceDesign s τ C)
-    (t : ℕ) (_ht : 0 < t) :
-    -- Same conclusion shape as T4.13 but valid for any polynomial-generator family
-    -- (we existentially package "polynomial generator" as a placeholder; the
-    -- formal definition is gated on additional Mathlib polynomial machinery).
-    epsMCA (F := F) (A := Fin s → F) ((C : Set (ι → Fin s → F)))
+    (t k : ℕ) (_ht : 0 < t) :
+    epsCA_curves (F := F) (A := Fin s → F) ((C : Set (ι → Fin s → F))) k
+        ((1 - τ (t + 1) - 3 / (2 * t)).toNNReal)
         ((1 - τ (t + 1) - 3 / (2 * t)).toNNReal) ≤
       ENNReal.ofReal (((t : ℝ) * Fintype.card ι + 4 * t ^ 2) / Fintype.card F) := by
-  sorry -- ABF26-BCGM25; external admit. Polynomial-generator MCA extension of T4.13.
+  sorry -- ABF26-BCGM25; external admit. Polynomial-generator (curve) CA extension of T4.13.
 
 end SubspaceDesignFRS
 

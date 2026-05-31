@@ -41,20 +41,25 @@ set_option linter.unusedSectionVars false
 namespace ReedSolomon
 namespace Folded
 
-/-- **ABF26 Definition 2.14.** An element `ω : F` is `(L, s)`-admissible if **every
-evaluation point appears only once across all folds**, i.e. the map
+/-- **ABF26 Definition 2.14 (strengthened).** An element `ω : F` is `(L, s)`-admissible
+if **every evaluation point appears only once across all folds**, i.e. the map
 `(α, i) ↦ α · ω^i : L × Fin s → F` is injective.
 
-Split into two equivalent conjuncts to keep the predicate `simp`-friendly:
+Split into two conjuncts to keep the predicate `simp`-friendly:
 
   - **inter-orbit:** for distinct `α ≠ β ∈ L`, `α · ω^i ≠ β` for every `i < s`.
   - **intra-orbit:** for every `α ∈ L`, `α · ω^i ≠ α` for every `0 < i < s` —
     equivalently, `ω` has multiplicative order at least `s` on the non-zero
-    orbit of `α`. Without this clause an `ω` with `ω^j = 1` for some
-    `0 < j < s` would still satisfy admissibility (the inter-orbit clause is
-    vacuously OK on `α = β`), collapsing the fold's `s`-tuple to a
-    repeated-entry vector and silently weakening the FRS distance argument
-    downstream (T2.18, T4.14). -/
+    orbit of `α`.
+
+**Deviation from the paper's literal text.** Definition 2.14 of ABF26 states only the
+*inter-orbit* clause (it quantifies over unordered pairs `{α, β} ∈ (L choose 2)`, hence
+distinct `α ≠ β`). Its literal reading therefore does *not* forbid `ω^j = 1` for some
+`0 < j < s`, which would collapse a fold's `s`-tuple to a repeated-entry vector and
+silently weaken the FRS distance argument downstream (T2.18, T4.14). We add the
+*intra-orbit* conjunct so that `Admissible` is exactly the GR08 injectivity condition
+the paper's results actually rely on. This is a deliberate strengthening, not a verbatim
+transcription. -/
 def Admissible {F : Type} [Field F] [DecidableEq F]
     (L : Finset F) (s : ℕ) (ω : F) : Prop :=
   (∀ α ∈ L, ∀ β ∈ L, α ≠ β → ∀ i : ℕ, i < s → α * ω ^ i ≠ β) ∧
