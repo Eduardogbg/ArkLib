@@ -8,12 +8,19 @@ import ArkLib.Data.Lattices.CyclotomicRing.NormBounds.Basic
 /-!
 # The Micciancio/Young Product Norm-Growth Bound
 
-The honest Young/Micciancio inequality `‖(c·d)·v‖₂² ≤ ‖d‖₁² · ‖c·v‖₂²` over the cyclotomic
-convolution with centered representatives: scaling an already-`c`-scaled vector by a further
-ring element `d` of bounded centered `ℓ₁` norm grows the squared `ℓ₂` norm by at most `κ²`.
+The honest Young/Micciancio inequality `‖(c·d)·v‖₂² ≤ ‖d‖₁² · ‖c·v‖₂²` over the power-of-two
+negacyclic convolution (`φ = X^{2^α} + 1`, `powTwoCyclotomic α`) with centered
+representatives: scaling an already-`c`-scaled vector by a further ring element `d` of
+bounded centered `ℓ₁` norm grows the squared `ℓ₂` norm by at most `κ²`.
+
+The statement is pinned to `powTwoCyclotomic α`: the per-entry product bound
+`‖d·w‖₂ ≤ ‖d‖₁·‖w‖₂` rests on multiplication-by-`X` being an `ℓ₂`-isometry on the
+coefficient vector, which holds for the cyclic/negacyclic rings `X^n ∓ 1` of [Mic07] but
+*fails* for a general cyclotomic `Φ_m` (e.g. in `ℤ[X]/(X²+X+1)`, `‖X·X‖₂ = √2 > ‖X‖₁·‖X‖₂`).
+Phrasing this for an arbitrary `Φ` would therefore be unsound.
 
 This is one of the two *deep* analytic inputs to the Greyhound [NS24] / Hachi [NOZ26]
-weak-binding argument (discrete Cauchy–Schwarz over the cyclic convolution, together with
+weak-binding argument (discrete Cauchy–Schwarz over the negacyclic convolution, together with
 minimality of the centered representative; the product norm inequality `‖fg‖ ≤ ‖f‖₁·‖g‖` is
 [Mic07, Lemma 2]). Its proof is currently deferred (`sorry`), exactly as in VCV-io's
 `LatticeCrypto.Ring.NormBounds`.
@@ -31,12 +38,15 @@ open scoped BigOperators
 
 namespace ArkLib.Lattices.CyclotomicModulus
 
-variable {q : ℕ} [NeZero q] [Fact (Nat.Prime q)] [BEq (ZMod q)] [LawfulBEq (ZMod q)]
-  (Φ : CyclotomicModulus (ZMod q)) [IsCyclotomic Φ]
+variable {q : ℕ} [NeZero q] [Fact (Nat.Prime q)] [BEq (ZMod q)] [LawfulBEq (ZMod q)] (α : ℕ)
 
-/-- **Micciancio/Young product bound.** Scaling an already-`c`-scaled vector by a further
+/-- The power-of-two ("Hachi") cyclotomic modulus `X^{2^α}+1` over `ZMod q`. -/
+local notation "Φ" => (powTwoCyclotomic (R := ZMod q) α)
+
+/-- **Micciancio/Young product bound.** Over the power-of-two cyclotomic modulus
+`powTwoCyclotomic α` (`φ = X^{2^α}+1`), scaling an already-`c`-scaled vector by a further
 ring element `d` of bounded centered `ℓ₁` norm grows the squared `ℓ₂` norm by at most `κ²`
-(the honest Young/Micciancio inequality `‖(c·d)·v‖₂² ≤ ‖d‖₁² · ‖c·v‖₂²` over the cyclotomic
+(the honest Young/Micciancio inequality `‖(c·d)·v‖₂² ≤ ‖d‖₁² · ‖c·v‖₂²` over the negacyclic
 convolution with centered representatives; discrete Cauchy–Schwarz, deferred). -/
 theorem scalarVecMul_mul_l2NormSq_le {cols : ℕ} (c d : Rq Φ) (v : PolyVec (Rq Φ) cols)
     {κ βSq : ℕ} (hd : Rq.l1Norm Φ d ≤ κ)

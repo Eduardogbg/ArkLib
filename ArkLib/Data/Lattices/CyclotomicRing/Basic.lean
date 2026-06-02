@@ -66,6 +66,7 @@ theorem cyclotomicRing_eq [IsCyclotomic Φ] :
 implemented by CompPoly's `modByMonic`. -/
 def reduce (p : CPolynomial R) : CPolynomial R := p.modByMonic Φ.φ
 
+-- TODO add proper NTT multiplication here, not just reduce-after-CPolynomial-mul.
 /-- Computable multiplication in the cyclotomic ring: multiply in `CPolynomial R`,
 then reduce modulo `φ`. -/
 def mul (a b : CPolynomial R) : CPolynomial R := Φ.reduce (a * b)
