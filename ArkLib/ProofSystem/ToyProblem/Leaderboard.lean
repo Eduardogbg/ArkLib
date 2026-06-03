@@ -265,7 +265,8 @@ structure ToyParams where
   ρ : ℝ≥0 := 1 / 2
   /-- Documentary: interleaving / codeword symbol size `s`. -/
   s : ℕ := 1
-  /-- Documentary: block length `n = |ι|`. -/
+  /-- Documentary: intended block length `n` (the intended rate is `ρ = k/n`).
+  Need not equal `|ι|` for stand-in parameters. -/
   n : ℕ := 0
   /-- Documentary: Johnson slack `η`. -/
   η : ℝ≥0 := 0
@@ -395,8 +396,9 @@ sextic extension, `ρ = 1/2`, `t = 128`). Two design points keep the anchors
 The two anchors below are `sorry`-backed by design (like Phase 1's
 `MCALowerWitness.ofJohnsonBCHKS25`). -/
 
-/-- `𝔽₂` primality, for the `GaloisField 2 128` anchor carrier. -/
-instance : Fact (Nat.Prime 2) := ⟨Nat.prime_two⟩
+/-- `𝔽₂` primality, for the `GaloisField 2 128` anchor carrier. Kept `local`
+so it does not leak `Fact (Nat.Prime 2)` into downstream importers. -/
+local instance : Fact (Nat.Prime 2) := ⟨Nat.prime_two⟩
 
 /-- Opaque placeholder code over the KoalaBear-sextic-sized field `GF(2^128)`;
 its fine structure is deferred to Phase 5 (the genuine RS/IRS code). Keeping it
@@ -412,7 +414,11 @@ full-protocol spot-check term `(1-δ)^128 ≈ 2^(-65.9) ≤ 2^(-64)` is consiste
 with the headline 64-bit provable ceiling (cf. ABF26 §6.3, `.tex` 2819–2823).
 The carrier is the `2^128`-element field `GaloisField 2 128` (a same-order
 stand-in for the `≈2^186`-element KoalaBear sextic; Phase 5 substitutes the
-real field and code). The documentary numeric fields carry the genuine regime. -/
+real field and code). The documentary numeric fields `(q, ext, ρ, s, n, η)`
+state the *intended* KoalaBear-sextic regime (rate `ρ = k/n = 2/4 = 1/2`); the
+operational stand-in `(F = GF(2^128), ι = Fin 3, k = 2, opaque C)` does not yet
+realise it (it is not literally a rate-`1/2` RS code over the sextic field) —
+Phase 5 reconciles the two. -/
 noncomputable def koalaIRS : ToyParams := by
   haveI : Fintype (GaloisField 2 128) := Fintype.ofFinite _
   classical
@@ -427,7 +433,7 @@ noncomputable def koalaIRS : ToyParams := by
       ext := 6
       ρ := 1 / 2
       s := 1
-      n := 3
+      n := 4
       η := 1 / 16 }
 
 /-- **ArkLib provable lower bound (≈64 bits) at the IRS/KoalaBear/`t=128`
