@@ -53,9 +53,11 @@ PR[0-9]*_PR_COMMENT*.md
 "VEIL — Formal Verification Audit_files/"
 references/
 
-# ABF26 working notes — plans / reviews / roadmaps kept local, out of the PR
+# ABF26 working notes — plans / reviews / roadmaps / bootstraps kept local, out of the PR
 /docs/kb/ABF26_*.md
 /docs/kb/queries/abf26-*.md
+# Upstream author source repo for the paper (canonical reference, kept local; pull to refresh)
+/ef-millenium/
 # ABF26 / kb helper tooling kept local (regenerate as needed)
 /scripts/abf26/
 /scripts/kb/extract_declarations.py

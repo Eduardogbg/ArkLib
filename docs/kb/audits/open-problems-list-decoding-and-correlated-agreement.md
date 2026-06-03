@@ -13,15 +13,19 @@ tree.
 Every per-item PR is expected to update this audit row in the same
 commit.
 
-`ABF26.pdf` in the working tree and the file the previous audit referred to
-as `paper.pdf` are the same document; the audit always refers to it by its
-short name `ABF26`.
+The **canonical reference** for this work is the upstream LaTeX source,
+`ef-millenium/ef-millenium.tex` (the authors' repo, kept as a local clone and
+refreshed with `git -C ef-millenium pull`), **not** the static `ABF26.pdf`
+snapshot — the `.tex` tracks edits the PDF predates (e.g. the §4.5 MCA
+conjecture and Appendix C). Cited works are tracked against the authoritative
+`ef-millenium/references.bib`; the audit refers to the paper by its short name
+`ABF26` (eprint 2026/680).
 
 ## Metadata
 
-- **Paper**: ABF26 — *Open Problems in List Decoding and Correlated Agreement*, April 8, 2026
-- **Paper SHA-256** (of `ABF26.pdf` at audit time): `e543ec6a4f3312b4383000e72e5aa23862e79cc9770ce21db2c48db679581de3`
-- **Last verified against commit**: `05a010e3` (2026-05-14)
+- **Paper**: ABF26 — *Open Problems in List Decoding and Correlated Agreement* (eprint 2026/680)
+- **Canonical source**: `ef-millenium/ef-millenium.tex` (upstream author repo, local clone; `git -C ef-millenium pull` to refresh)
+- **Bibliography of record**: `ef-millenium/references.bib`
 - **Audit owner**: ABF26 formalization (PR #505)
 
 ## Status Legend
