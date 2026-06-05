@@ -434,7 +434,7 @@ def oracleVerifier : OracleVerifier oSpec (StmtIn R) (OStmtIn R deg) (StmtOut R)
     -- Needs to convert `evals` to `R⦃≤ deg⦄[X]`, and then evaluate at `chal`
     pure (sorry, chal default)
   embed := .inl
-  hEq := fun i => by simp [pSpec]; rfl
+  hEq := fun i => by simp [pSpec]
 
 def oracleReduction : OracleReduction oSpec (StmtIn R) (OStmtIn R deg) Unit
                                             (StmtOut R) (OStmtOut R deg) Unit (pSpec R deg) where
@@ -546,26 +546,10 @@ theorem reduction_perfectCompleteness :
       erw [simulateQ_bind] at hchal
       erw [StateT.run_bind] at hchal
       rw [mem_support_bind_iff] at hchal
-      obtain ⟨⟨discr_val, s_d⟩, hchal_fst, hchal_rest⟩ := hchal
-      erw [simulateQ_map] at hchal_fst
-      erw [simulateQ_pure] at hchal_fst
-      rw [StateT.run_map, StateT.run_pure] at hchal_fst
-      simp only [support_map, support_pure, Set.mem_image, Set.mem_singleton_iff] at hchal_fst
-      obtain ⟨_, rfl, heq_d⟩ := hchal_fst
-      obtain ⟨rfl, rfl⟩ := Prod.mk.inj heq_d
-      -- Second part: f <$> liftComp query — peel map, then liftComp, then query
-      erw [simulateQ_map] at hchal_rest
-      erw [StateT.run_map] at hchal_rest
-      simp only [support_map, Set.mem_image] at hchal_rest
-      obtain ⟨⟨inner_val, s_inner⟩, hinner, heq_c⟩ := hchal_rest
-      obtain ⟨rfl, rfl⟩ := Prod.mk.inj heq_c
-      simp only [QueryImpl.addLift_def,
-        QueryImpl.simulateQ_add_liftComp_right, QueryImpl.simulateQ_add_liftComp_left] at hinner
-      erw [simulateQ_query] at hinner
-      erw [StateT.run_map] at hinner
-      simp only [support_map, Set.mem_image] at hinner
-      obtain ⟨⟨oracle_resp, s_o⟩, _, heq_q⟩ := hinner
-      obtain ⟨rfl, rfl⟩ := Prod.mk.inj heq_q
+      obtain ⟨⟨discr_val, s_d⟩, _, hchal_rest⟩ := hchal
+      erw [simulateQ_pure] at hchal_rest
+      simp only [StateT.run_pure, support_pure, Set.mem_singleton_iff] at hchal_rest
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj hchal_rest
       erw [simulateQ_pure] at hval
       simp only [StateT.run_pure, support_pure, Set.mem_singleton_iff] at hval
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj hval
@@ -643,26 +627,10 @@ theorem reduction_perfectCompleteness :
       erw [simulateQ_bind] at hchal
       erw [StateT.run_bind] at hchal
       rw [mem_support_bind_iff] at hchal
-      obtain ⟨⟨discr_val, s_d⟩, hchal_fst, hchal_rest⟩ := hchal
-      erw [simulateQ_map] at hchal_fst
-      erw [simulateQ_pure] at hchal_fst
-      rw [StateT.run_map, StateT.run_pure] at hchal_fst
-      simp only [support_map, support_pure, Set.mem_image, Set.mem_singleton_iff] at hchal_fst
-      obtain ⟨_, rfl, heq_d⟩ := hchal_fst
-      obtain ⟨rfl, rfl⟩ := Prod.mk.inj heq_d
-      -- Second part: f <$> liftComp query — peel map, then liftComp, then query
-      erw [simulateQ_map] at hchal_rest
-      erw [StateT.run_map] at hchal_rest
-      simp only [support_map, Set.mem_image] at hchal_rest
-      obtain ⟨⟨inner_val, s_inner⟩, hinner, heq_c⟩ := hchal_rest
-      obtain ⟨rfl, rfl⟩ := Prod.mk.inj heq_c
-      simp only [QueryImpl.addLift_def,
-        QueryImpl.simulateQ_add_liftComp_right, QueryImpl.simulateQ_add_liftComp_left] at hinner
-      erw [simulateQ_query] at hinner
-      erw [StateT.run_map] at hinner
-      simp only [support_map, Set.mem_image] at hinner
-      obtain ⟨⟨oracle_resp, s_o⟩, _, heq_q⟩ := hinner
-      obtain ⟨rfl, rfl⟩ := Prod.mk.inj heq_q
+      obtain ⟨⟨discr_val, s_d⟩, _, hchal_rest⟩ := hchal
+      erw [simulateQ_pure] at hchal_rest
+      simp only [StateT.run_pure, support_pure, Set.mem_singleton_iff] at hchal_rest
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj hchal_rest
       erw [simulateQ_pure] at hval
       simp only [StateT.run_pure, support_pure, Set.mem_singleton_iff] at hval
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj hval

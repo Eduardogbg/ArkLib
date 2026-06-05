@@ -241,8 +241,7 @@ theorem toPoly_divByMonic (fp fq : CPolynomial R) (hq : fq.toPoly.Monic) :
   set quot := (Raw.divModByMonicAux.go fuel fp.val fq.val).1
   set rem := (Raw.divModByMonicAux.go fuel fp.val fq.val).2
   have hd : (fp.divByMonic fq).toPoly = quot.toPoly := by
-    change (Raw.divByMonic fp.val fq.val).trim.toPoly = quot.toPoly
-    rw [Raw.toPoly_trim]
+    change (Raw.divByMonic fp.val fq.val).toPoly = quot.toPoly
     change (Raw.divModByMonicAux fp.val fq.val).1.toPoly = quot.toPoly
     simp only [Raw.divModByMonicAux, fuel, quot]
   have huniq := @Polynomial.div_modByMonic_unique R _ fp.toPoly fq.toPoly

@@ -358,7 +358,6 @@ lemma mkLastOracleIndex_last : mkLastOracleIndex ℓ ϑ (Fin.last ℓ) = ℓ / �
   dsimp only [mkLastOracleIndex, Fin.val_last, lt_self_iff_false, Lean.Elab.WF.paramLet,
     eq_mpr_eq_cast, cast_eq]
   simp only [lt_self_iff_false, ↓reduceDIte]
-  rfl
 
 end OracleStatementIndex
 

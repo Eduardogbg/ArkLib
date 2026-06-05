@@ -210,9 +210,9 @@ section Instances
 
 theorem challengeOracleInterface_cast {h : n₁ = n₂} {hSpec : pSpec₁.cast h = pSpec₂}
     {i : pSpec₁.ChallengeIdx} :
-    pSpec₁.challengeOracleInterface i =
-      dcast (by simp) (pSpec₂.challengeOracleInterface (i.cast hn hSpec)) := by
-  subst h; subst hSpec; simp [challengeOracleInterface, ChallengeIdx.cast]; rfl
+      pSpec₁.challengeOracleInterface i =
+        dcast (by simp) (pSpec₂.challengeOracleInterface (i.cast hn hSpec)) := by
+    subst h; subst hSpec; simp [challengeOracleInterface]
 
 end Instances
 

@@ -10,7 +10,6 @@ import ArkLib.Data.CodingTheory.Prelims
 import ArkLib.Data.CodingTheory.Basic.Distance
 import Mathlib.LinearAlgebra.FreeModule.PID
 import Mathlib.RingTheory.PicardGroup
-import Mathlib.RingTheory.RegularLocalRing.Defs
 import Mathlib.RingTheory.SimpleRing.Principal
 import CompPoly.Data.Nat.Bitwise
 

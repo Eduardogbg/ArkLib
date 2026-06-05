@@ -8,7 +8,7 @@ import ArkLib.ToVCVio.OracleComp.Coercions.SubSpec
 import ArkLib.ToVCVio.ToMathlib.Control.StateT
 import VCVio.EvalDist.Defs.NeverFails
 import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
-import VCVio.OracleComp.SimSemantics.StateT
+import VCVio.OracleComp.SimSemantics.StateT.Basic
 
 /-!
 # Additions to VCV-io's `OracleComp.SimSemantics.SimulateQ`
@@ -56,12 +56,12 @@ lemma OptionT.probEvent_eq_one_of_simulateQ_support
       HasEvalPMF.probFailure_eq_zero _
     rw [hfail, _root_.zero_add]
     exact probOutput_eq_zero_of_not_mem_support fun hnone =>
-      let hnone' := support_simulateQ_run'_subset impl oa s₀ hnone
+      let hnone' := _root_.support_simulateQ_run'_subset impl oa s₀ hnone
       let ⟨_, hsome, _⟩ := h none hnone'
       by cases hsome
   · intro x hx
     rw [OptionT.mem_support_iff] at hx
-    obtain ⟨a, ha, hP⟩ := h (some x) (support_simulateQ_run'_subset impl oa s₀ hx)
+    obtain ⟨a, ha, hP⟩ := h (some x) (_root_.support_simulateQ_run'_subset impl oa s₀ hx)
     cases ha
     exact hP
 
@@ -75,7 +75,7 @@ lemma OptionT.aux_mem_support_simulateQ_run'
     (h : ∀ x ∈ support oa, ∀ a, x = some a → P a)
     {x : α} (hx : x ∈ support (OptionT.mk ((simulateQ impl oa).run' s₀))) : P x := by
   rw [OptionT.mem_support_iff] at hx
-  exact h (some x) (support_simulateQ_run'_subset impl oa s₀ hx) x rfl
+  exact h (some x) (_root_.support_simulateQ_run'_subset impl oa s₀ hx) x rfl
 
 namespace OptionT
 

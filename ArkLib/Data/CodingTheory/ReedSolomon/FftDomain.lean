@@ -812,7 +812,7 @@ lemma subdomain_0' {n} {ω : SmoothFftDomain n F}
   x ∈ ω.subdomain 0 ↔ x = 1 := by
   simp only [mem_domain_iff_exists]; constructor
   · rintro ⟨i, rfl⟩; simp [subdomain, subdomain_embed]; norm_cast
-  · intro h; subst h; exact ⟨0, by simp [subdomain, subdomain_embed]; norm_cast⟩
+  · intro h; subst h; exact ⟨0, by simp [subdomain, subdomain_embed]⟩
 
 
 private lemma subdomain_embed_last {n : ℕ} (k : Fin (2 ^ (Fin.last n : ℕ))) :
@@ -1091,9 +1091,9 @@ omit [DecidableEq F] in
 lemma subdomainNat_zero {n} {ω : SmoothFftDomain n F}
   {x : F} :
   x ∈ ω.subdomainNat 0 ↔ x = 1 := by
-    simp only [subdomainNat, mem_domain_iff_exists]; constructor
-    · rintro ⟨i, rfl⟩; simp [subdomain, subdomain_embed]; norm_cast
-    · intro h; subst h; exact ⟨0, by simp [subdomain, subdomain_embed]; norm_cast⟩
+  simp only [subdomainNat, mem_domain_iff_exists]; constructor
+  · rintro ⟨i, rfl⟩; simp [subdomain, subdomain_embed]; norm_cast
+  · intro h; subst h; exact ⟨0, by simp [subdomain, subdomain_embed]⟩
 
 omit [DecidableEq F] in
 @[simp]
@@ -1517,13 +1517,13 @@ lemma subdomainNat_zero {n} {ω : SmoothCosetFftDomain n F}
       simp only [eval_coset_fft_domain_eq_eval_x_mul_domain, Units.val_pow_eq_pow_val]
       have : (ω.fftDomain.subdomain 0) i = 1 :=
         FftDomain.subdomain_0'.mp ⟨i, rfl⟩
-      rw [this, mul_one]
+      simpa [this]
     · intro h; subst h
       exact ⟨0, by
         simp only [eval_coset_fft_domain_eq_eval_x_mul_domain, Units.val_pow_eq_pow_val]
         have : (ω.fftDomain.subdomain 0) (0 : Fin _) = 1 :=
           FftDomain.subdomain_0'.mp ⟨0, rfl⟩
-        rw [this, mul_one]⟩
+        simpa [this]⟩
 
 omit [DecidableEq F] in
 @[simp]

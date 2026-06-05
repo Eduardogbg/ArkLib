@@ -15,12 +15,12 @@ linter.style.longFile = 1500
 [[require]]
 name = "VCVio"
 git = "https://github.com/Verified-zkEVM/VCV-io"
-rev = "f85df0b4ec3ef4249876996da28a07c38e9137c2"
+rev = "72fcc23c1cdc1ae6282ec21fef823dd7ff7afdac"
 
 [[require]]
 name = "«doc-gen4»"
 git = "https://github.com/leanprover/doc-gen4"
-rev = "v4.29.0"
+rev = "v4.28.0"
 
 [[require]]
 name = "checkdecls"
@@ -30,7 +30,7 @@ rev = "lean4.18.0"
 [[require]]
 name = "CompPoly"
 git = "https://github.com/Verified-zkEVM/CompPoly"
-rev = "067a22b6623a0d61f27deda02f8c8a0b8b339b33"
+rev = "8fd779a6589267aec1f8cbe403fe8168bdb2e4bd"
 
 [[lean_lib]]
 name = "ArkLib"

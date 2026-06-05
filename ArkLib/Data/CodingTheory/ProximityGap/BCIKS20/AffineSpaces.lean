@@ -613,7 +613,9 @@ private lemma spanU_eq_sup {k : ℕ} (u : Fin (k + 1) → ι → F)
     refine Fin.cases ?_ (fun j => ?_) i
     · exact Submodule.mem_sup_left (Submodule.subset_span rfl)
     · exact Submodule.mem_sup_right (hU' ▸ Submodule.subset_span
-        (Finset.mem_image.mpr ⟨j, Finset.mem_univ _, rfl⟩))
+        (by
+          change (Fin.tail u) j ∈ (Finset.univ.image (Fin.tail u) : Set (ι → F))
+          exact Finset.mem_image.mpr ⟨j, Finset.mem_univ _, rfl⟩))
   · exact sup_le (Submodule.span_le.mpr (Set.singleton_subset_iff.mpr
       (Submodule.subset_span ⟨0, rfl⟩))) hU'_le
 
@@ -721,7 +723,9 @@ theorem all_affine_elements_close {k : ℕ} [NeZero k]
             apply le_antisymm
             · apply Submodule.span_le.mpr; rintro x ⟨i, rfl⟩
               refine Fin.cases hu0_in (fun j => Submodule.subset_span ?_) i
-              exact Finset.mem_image.mpr ⟨j, Finset.mem_univ _, rfl⟩
+              change (Fin.tail u) j ∈ (Finset.univ.image (Fin.tail u) : Set (ι → F))
+              exact
+                Finset.mem_image.mpr ⟨j, Finset.mem_univ _, rfl⟩
             · exact hU'_le_spanU
           have hall : ∀ y : spanU_aff, δᵣ(↑y, (V : Set (ι → F))) ≤ δ := by
             intro ⟨y, hy⟩
@@ -732,7 +736,9 @@ theorem all_affine_elements_close {k : ℕ} [NeZero k]
               = 1 := by
                 rw [prob_uniform_eq_card_filter_div_card]
                 rw [Finset.filter_true_of_mem (fun y _ => hall y), Finset.card_univ]
-                exact_mod_cast div_self (Nat.cast_ne_zero.mpr Fintype.card_ne_zero)
+                have hcard_ne : (Fintype.card ↥spanU_aff : ℝ≥0) ≠ 0 :=
+                  Nat.cast_ne_zero.mpr Fintype.card_ne_zero
+                exact ENNReal.div_self ((ENNReal.coe_ne_zero).2 hcard_ne) ENNReal.coe_ne_top
             _ > _ := by exact_mod_cast hε_lt
         · -- u₀ ∉ U': Pr_spanU > ε via coset counting.
           -- Pr = Pr_U + (1-Pr_U)/|F| > ε, using:
@@ -769,10 +775,16 @@ theorem all_affine_elements_close {k : ℕ} [NeZero k]
           -- Coset counting: Pr_aff ≤ Pr_span via cross-multiply
           apply lt_of_lt_of_le hPr_fin
           simp only [prob_uniform_eq_card_filter_div_card]
-          rw [← ENNReal.coe_div', ← ENNReal.coe_div', ENNReal.coe_le_coe]
           haveI : Nonempty ↥(affineFinset (u 0) (Fin.tail u)) :=
             Finset.Nonempty.to_subtype ⟨u 0, Finset.mem_image.2
               ⟨0, Set.mem_toFinset.mpr (Submodule.zero_mem _), add_zero _⟩⟩
+          have haff_card_ne :
+              (Fintype.card ↥(affineFinset (u 0) (Fin.tail u)) : ℝ≥0) ≠ 0 :=
+            Nat.cast_ne_zero.mpr Fintype.card_ne_zero
+          have hspan_card_ne : (Fintype.card ↥spanU_aff : ℝ≥0) ≠ 0 :=
+            Nat.cast_ne_zero.mpr Fintype.card_ne_zero
+          rw [← ENNReal.coe_div haff_card_ne, ← ENNReal.coe_div hspan_card_ne,
+            ENNReal.coe_le_coe]
           rw [div_le_div_iff₀ (Nat.cast_pos.mpr Fintype.card_pos)
             (Nat.cast_pos.mpr (Fintype.card_pos (α := ↥spanU_aff)))]
           -- Goal in NNReal: ↑ca * ↑|span| ≤ ↑cs * ↑|aff|
@@ -1237,7 +1249,8 @@ theorem bucket_exists_common_codeword
         apply le_antisymm
         · apply Submodule.span_le.mpr
           intro x hx
-          obtain ⟨i, _, rfl⟩ := Finset.mem_image.mp hx
+          rw [Finset.mem_coe, Finset.mem_image] at hx
+          obtain ⟨i, _, rfl⟩ := hx
           exact (bW i).2
         · intro x hx
           have h := bW.sum_repr ⟨x, hx⟩
@@ -1246,7 +1259,8 @@ theorem bucket_exists_common_codeword
           rw [← h]
           exact Submodule.sum_mem _ fun i _ =>
             Submodule.smul_mem _ _ (Submodule.subset_span
-              (Finset.mem_image.mpr ⟨i, Finset.mem_univ _, rfl⟩))
+              (show dirs' i ∈ (Finset.univ.image dirs' : Set (ι → F)) from
+                Finset.mem_image.mpr ⟨i, Finset.mem_univ _, rfl⟩))
       -- v₀ agrees with u₀ on D'
       have hv₀_agree : ∀ c ∈ D', v₀ c = u₀ c := fun c hc =>
         (Finset.mem_filter.mp (hD'_sub_filter hc)).2
@@ -2196,7 +2210,9 @@ theorem correlatedAgreement_affine_spaces {k : ℕ} [NeZero k]
         simp only [hδ_star_def]
         exact_mod_cast hx_le_div
     rw [this, Finset.card_univ]
-    exact_mod_cast div_self (Nat.cast_ne_zero.mpr Fintype.card_ne_zero)
+    have hcard_ne : (Fintype.card F : ℝ≥0) ≠ 0 :=
+      Nat.cast_ne_zero.mpr Fintype.card_ne_zero
+    exact ENNReal.div_self ((ENNReal.coe_ne_zero).2 hcard_ne) ENNReal.coe_ne_top
   -- ═══════════════════════════════════════════════════════════
   -- Step 3: Direction generators through u* stay in U.
   -- ═══════════════════════════════════════════════════════════

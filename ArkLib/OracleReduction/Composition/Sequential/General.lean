@@ -230,7 +230,7 @@ lemma seqCompose_toVerifier {m : ℕ}
     (seqCompose Stmt OStmt V).toVerifier =
       Verifier.seqCompose (fun i => Stmt i × (∀ j, OStmt i j)) (fun i => (V i).toVerifier) := by
   induction m with
-  | zero => simp; exact OracleVerifier.id_toVerifier
+  | zero => simp
   | succ m ih =>
     simp only [seqCompose_succ, Verifier.seqCompose_succ]
     have h1 := OracleVerifier.append_toVerifier (V 0) (seqCompose (Stmt ∘ Fin.succ)
@@ -304,7 +304,7 @@ lemma seqCompose_toReduction {m : ℕ}
       Reduction.seqCompose (fun i => Stmt i × (∀ j, OStmt i j)) Wit
         (fun i => (R i).toReduction) := by
   induction m with
-  | zero => simp; exact OracleReduction.id_toReduction
+  | zero => simp
   | succ m ih =>
     simp only [seqCompose_succ, Reduction.seqCompose_succ]
     have h1 := OracleReduction.append_toReduction (R 0) (seqCompose (Stmt ∘ Fin.succ)
@@ -394,7 +394,7 @@ theorem seqCompose_soundness
       (Verifier.seqCompose Stmt V).soundness init impl (lang 0) (lang (Fin.last m))
         (∑ i, soundnessError i) := by
   induction m with
-  | zero => simp; exact Verifier.id_soundness init impl
+  | zero => simp
   | succ m ih =>
     simp
     have := ih (fun i => lang i.succ) (fun i => V i.succ)
@@ -415,7 +415,7 @@ theorem seqCompose_knowledgeSoundness
       (Verifier.seqCompose Stmt V).knowledgeSoundness init impl (rel 0) (rel (Fin.last m))
         (∑ i, knowledgeError i) := by
   induction m with
-  | zero => simp; exact Verifier.id_knowledgeSoundness init impl
+  | zero => simp
   | succ m ih =>
     simp
     have := ih (fun i => rel i.succ) (fun i => V i.succ)

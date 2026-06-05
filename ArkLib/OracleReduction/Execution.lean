@@ -514,7 +514,6 @@ theorem Reduction.id_run (stmt : StmtIn) (wit : WitIn) :
     (Reduction.id : Reduction oSpec StmtIn WitIn _ _ _).run stmt wit =
       pure ⟨⟨default, stmt, wit⟩, stmt⟩ := by
   simp [Reduction.run, Reduction.id, Prover.run, Verifier.run, Prover.id, Verifier.id]
-  rfl
 
 /-- Running the identity or trivial reduction, with logging of queries to the shared oracle,
   results in the same input statement and witness, empty transcript, and empty query logs. -/

@@ -170,7 +170,6 @@ theorem oracleReduction_completeness :
       cont_query, input_apply, id_eq, zero_add, probOutput_eq_zero_iff, support_map,
       Set.mem_image, Prod.exists, exists_and_right, exists_eq_right, not_exists]
     intro
-    erw [simulateQ_pure]
     simp [support_pure, pure_bind]
   · intro a b x hx x_1 hx1 x_2 x_3
     erw [simulateQ_bind]

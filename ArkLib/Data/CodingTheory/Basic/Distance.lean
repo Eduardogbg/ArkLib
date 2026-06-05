@@ -845,7 +845,6 @@ lemma distFromCode'_eq_distFromCode (C : Set (n → R)) [Fintype C] (u : n → R
     simp only [distFromCode', Finset.univ_eq_empty, Finset.image_empty, Finset.min_empty,
       distFromCode, Set.mem_empty_iff_false, false_and, exists_false, Set.setOf_false,
       _root_.sInf_empty]
-    rfl
   · have hC_nonempty : Nonempty C := Set.nonempty_iff_ne_empty'.mpr hC_empty
     unfold distFromCode distFromCode'
     -- The minimum equals the infimum for finite sets

@@ -379,12 +379,13 @@ lemma mk_canonicalRepOf𝒪 {H : F[X][Y]} (hH : 0 < H.natDegree) (β : 𝒪 H) :
             simp [canonicalRepOf𝒪, I, q, p]
     _ = Ideal.Quotient.mk I (p %ₘ q) + Ideal.Quotient.mk I (q * (p /ₘ q)) := by
             simp [hq_zero]
-    _ = Ideal.Quotient.mk I (p %ₘ q + q * (p /ₘ q)) := by
-            rw [map_add]
-    _ = Ideal.Quotient.mk I p := by
-            rw [Polynomial.modByMonic_add_div]
-    _ = β := by
-            simp [I, p]
+      _ = Ideal.Quotient.mk I (p %ₘ q + q * (p /ₘ q)) := by
+              rw [map_add]
+      _ = Ideal.Quotient.mk I p := by
+              rw [Polynomial.modByMonic_add_div p (by
+                simpa [q] using H_tilde'_monic H hH)]
+      _ = β := by
+              simp [I, p]
 
 omit [IsDomain F] in
 /-- Canonical representatives of quotient constructors are computed by `modByMonic`. -/

@@ -261,7 +261,9 @@ theorem liftContext_runWithLogToRound
   unfold runWithLogToRound
   induction i using Fin.induction with
   | zero => simp [liftContext, Function.uncurry]
-  | succ i ih => simp [liftContext_runToRound, Function.uncurry]
+  | succ i ih =>
+    simp [liftContext_runToRound, Function.uncurry]
+    congr 1
 
 /-- Running the lifted outer prover is equivalent to running the inner prover on the projected
   input, and then integrating the output -/

@@ -1045,8 +1045,7 @@ theorem fold_advances_evaluation_poly
     rw [normalizedWᵢ_eval_βᵢ_eq_1 𝔽q β]
     ring_nf
     conv_rhs => rw [←add_zero (a := 1)]
-    rw [add_sub_assoc]
-    congr 1
+    rw [add_left_cancel_iff]
     rw [sub_eq_zero]
     apply Finset.sum_congr (h := by rfl)
     simp only [mem_univ, congr_eqRec, Fin.val_succ, Nat.add_eq_zero, one_ne_zero, and_false,

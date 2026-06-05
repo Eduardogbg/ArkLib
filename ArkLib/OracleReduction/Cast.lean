@@ -52,10 +52,9 @@ protected def cast (P : Prover oSpec StmtIn WitIn StmtOut WitOut pSpec₁) :
 @[simp]
 theorem cast_id :
     Prover.cast rfl rfl = (id : Prover oSpec StmtIn WitIn StmtOut WitOut pSpec₁ → _) := by
-  funext; simp [Prover.cast]; ext <;> simp
-  · funext _ _; simp [MessageIdx.cast, bind_pure]
-  · funext _ _; simp [ChallengeIdx.cast]
-  · rfl
+  funext
+  ext <;> simp [Prover.cast, MessageIdx.cast, ChallengeIdx.cast, bind_pure, Function.comp]
+  · funext st; rfl
 
 instance instDCast₂ : DCast₂ Nat ProtocolSpec
     (fun _ pSpec => Prover oSpec StmtIn WitIn StmtOut WitOut pSpec) where
@@ -234,29 +233,30 @@ theorem cast_processRound (j : Fin n₁)
     (currentResult : OracleComp (oSpec + [pSpec₁.Challenge]ₒ)
       (Transcript j.castSucc pSpec₁ × P.PrvState j.castSucc)) :
     P.processRound j currentResult =
-      cast (by subst_vars; simp [Prover.cast]; rfl)
+      cast (by subst_vars; simp [Prover.cast])
         ((P.cast hn hSpec).processRound (Fin.cast hn j)
-          (cast (by subst_vars; simp [Prover.cast]; rfl) currentResult)) := by
-  subst hn; subst hSpec; congr 1; ext <;> simp [Prover.cast]
-  · funext _ _; simp [MessageIdx.cast, bind_pure]
-  · funext _ _; simp [ChallengeIdx.cast]
-  · rfl
+          (cast (by subst_vars; simp [Prover.cast]) currentResult)) := by
+  subst hn; subst hSpec
+  congr 1
+  ext <;> simp [Prover.cast, MessageIdx.cast, ChallengeIdx.cast, bind_pure, Function.comp]
+  · funext st; rfl
 
 theorem cast_runToRound (j : Fin (n₁ + 1)) (stmt : StmtIn) (wit : WitIn)
     (P : Prover oSpec StmtIn WitIn StmtOut WitOut pSpec₁) :
     P.runToRound j stmt wit =
-      cast (by subst_vars; simp [Prover.cast]; rfl)
+      cast (by subst_vars; simp [Prover.cast])
         ((P.cast hn hSpec).runToRound (Fin.cast (congrArg (· + 1) hn) j) stmt wit) := by
-  subst hn; subst hSpec; congr 1; ext <;> simp [Prover.cast]
-  · funext _ _; simp [MessageIdx.cast, bind_pure]
-  · funext _ _; simp [ChallengeIdx.cast]
-  · rfl
+  subst hn; subst hSpec
+  congr 1
+  ext <;> simp [Prover.cast, MessageIdx.cast, ChallengeIdx.cast, bind_pure, Function.comp]
+  · funext st; rfl
 
 theorem cast_run (stmt : StmtIn) (wit : WitIn)
     (P : Prover oSpec StmtIn WitIn StmtOut WitOut pSpec₁) :
     P.run stmt wit =
-      cast (by subst_vars; simp; rfl) ((P.cast hn hSpec).run stmt wit) := by
-  subst hn; subst hSpec; simp only [Prover.cast_id, id_eq]; rfl
+      cast (by subst_vars; simp) ((P.cast hn hSpec).run stmt wit) := by
+  subst hn; subst hSpec
+  simp [Prover.cast_id, cast_eq]
 
 end Prover
 
@@ -280,8 +280,9 @@ variable (R : Reduction oSpec StmtIn WitIn StmtOut WitOut pSpec₁)
 
 theorem cast_run (stmt : StmtIn) (wit : WitIn) :
     R.run stmt wit =
-      cast (by subst_vars; simp; rfl) ((R.cast hn hSpec).run stmt wit) := by
-  subst hn; subst hSpec; simp only [Reduction.cast_id, id_eq]; rfl
+      cast (by subst_vars; simp) ((R.cast hn hSpec).run stmt wit) := by
+  subst hn; subst hSpec
+  simp [Reduction.cast_id, cast_eq]
 
 end Reduction
 

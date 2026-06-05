@@ -98,8 +98,8 @@ lemma IsMDS_of_matrix_IsMDS [Field F] [DecidableEq F] {G : Matrix (Fin k) (Fin n
     · obtain ⟨u, hu⟩ : ∃ u : Fin n → F, u ∈ fromRowGenMat G ∧ u ≠ 0 := by
         contrapose! h_rank_eq_k;
         rw [show fromRowGenMat G = ⊥ from eq_bot_iff.mpr h_rank_eq_k]
-        simp only [Module.finrank_eq_zero_of_subsingleton, ne_eq]
-        linarith
+        simp only [finrank_bot, ne_eq]
+        exact (Nat.ne_of_gt hk).symm
       exact ⟨_, ⟨u, hu.1, 0, by simp only [Submodule.carrier_eq_coe, SetLike.mem_coe, zero_mem],
       hu.2, le_rfl⟩⟩
     · rintro d ⟨u, hu, v, hv, huv, hd⟩
