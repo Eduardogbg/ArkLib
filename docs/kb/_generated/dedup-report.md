@@ -4,7 +4,7 @@ Generated from `docs/kb/_generated/declarations.json`. **Eyeball, do not auto-re
 
 ## Stats
 
-- `ArkLib` — 205 files, 4092 declarations
+- `ArkLib` — 205 files, 4111 declarations
 
 ## Same short-name across multiple files (106 groups)
 
@@ -460,9 +460,9 @@ Each group lists declarations sharing a short name across ≥2 files. Most are l
 
 ### `toFinset` (3 declarations, 2 files)
 
-- `def ReedSolomon.toFinset` [ArkLib/Data/CodingTheory/ReedSolomon.lean:98](../../../ArkLib/Data/CodingTheory/ReedSolomon.lean#L98) — (no docstring)
-- `def ReedSolomon.FftDomain.toFinset` [ArkLib/Data/CodingTheory/ReedSolomon/FftDomain.lean:183](../../../ArkLib/Data/CodingTheory/ReedSolomon/FftDomain.lean#L183) — (no docstring)
-- `def ReedSolomon.CosetFftDomain.toFinset` [ArkLib/Data/CodingTheory/ReedSolomon/FftDomain.lean:545](../../../ArkLib/Data/CodingTheory/ReedSolomon/FftDomain.lean#L545) — (no docstring)
+- `def ReedSolomon.toFinset` [ArkLib/Data/CodingTheory/ReedSolomon.lean:97](../../../ArkLib/Data/CodingTheory/ReedSolomon.lean#L97) — (no docstring)
+- `def ReedSolomon.FftDomain.toFinset` [ArkLib/Data/CodingTheory/ReedSolomon/FftDomain.lean:184](../../../ArkLib/Data/CodingTheory/ReedSolomon/FftDomain.lean#L184) — (no docstring)
+- `def ReedSolomon.CosetFftDomain.toFinset` [ArkLib/Data/CodingTheory/ReedSolomon/FftDomain.lean:552](../../../ArkLib/Data/CodingTheory/ReedSolomon/FftDomain.lean#L552) — (no docstring)
 
 ### `ChallengeIdx` (2 declarations, 2 files)
 
@@ -627,7 +627,7 @@ Each group lists declarations sharing a short name across ≥2 files. Most are l
 ### `minDist` (2 declarations, 2 files)
 
 - `def Code.minDist` [ArkLib/Data/CodingTheory/Basic/Distance.lean:164](../../../ArkLib/Data/CodingTheory/Basic/Distance.lean#L164) — (no docstring)
-- `theorem ReedSolomon.minDist` [ArkLib/Data/CodingTheory/ReedSolomon.lean:420](../../../ArkLib/Data/CodingTheory/ReedSolomon.lean#L420) — The minimal code distance of an RS code of length `ι` and dimension `deg` is `ι - deg + 1`.
+- `theorem ReedSolomon.minDist` [ArkLib/Data/CodingTheory/ReedSolomon.lean:419](../../../ArkLib/Data/CodingTheory/ReedSolomon.lean#L419) — The minimal code distance of an RS code of length `ι` and dimension `deg` is `ι - deg + 1`.
 
 ### `pSpecCoreInteraction` (2 declarations, 2 files)
 
