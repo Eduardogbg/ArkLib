@@ -1,5 +1,5 @@
 {
-  "count": 40,
+  "count": 50,
   "entries": {
     "ACFY24": {
       "authors": [
@@ -116,6 +116,26 @@
       "url": "",
       "venue": "Annual International Cryptology Conference",
       "year": "2023"
+    },
+    "Ajt96": {
+      "authors": [
+        "Ajtai, Mikl{\\'o}s"
+      ],
+      "authors_text": "Ajtai, Mikl{\\'o}s",
+      "doi": "",
+      "entry_type": "inproceedings",
+      "fields": {
+        "author": "Ajtai, Mikl{\\'o}s",
+        "booktitle": "Proceedings of the 28th Annual ACM Symposium on the Theory of Computing (STOC)",
+        "pages": "99--108",
+        "title": "Generating hard instances of lattice problems (extended abstract)",
+        "year": "1996"
+      },
+      "key": "Ajt96",
+      "title": "Generating hard instances of lattice problems (extended abstract)",
+      "url": "",
+      "venue": "Proceedings of the 28th Annual ACM Symposium on the Theory of Computing (STOC)",
+      "year": "1996"
     },
     "Arc": {
       "authors": [
@@ -312,6 +332,29 @@
       "venue": "SIAM Journal on Computing",
       "year": "2008"
     },
+    "CGKY25": {
+      "authors": [
+        "Alessandro Chiesa",
+        "Ziyi Guan",
+        "Christian Knabenhans",
+        "Zihan Yu"
+      ],
+      "authors_text": "Alessandro Chiesa and Ziyi Guan and Christian Knabenhans and Zihan Yu",
+      "doi": "",
+      "entry_type": "misc",
+      "fields": {
+        "author": "Alessandro Chiesa and Ziyi Guan and Christian Knabenhans and Zihan Yu",
+        "howpublished": "Cryptology {ePrint} Archive, Paper 2025/902",
+        "title": "On the Fiat-Shamir Security of Succinct Arguments from Functional Commitments",
+        "url": "https://eprint.iacr.org/2025/902",
+        "year": "2025"
+      },
+      "key": "CGKY25",
+      "title": "On the Fiat-Shamir Security of Succinct Arguments from Functional Commitments",
+      "url": "https://eprint.iacr.org/2025/902",
+      "venue": "",
+      "year": "2025"
+    },
     "ChiesaYogev2024": {
       "authors": [
         "Chiesa, Alessandro",
@@ -426,6 +469,30 @@
       "url": "https://doi.org/10.1007/978-3-031-91134-7_4",
       "venue": "Advances in Cryptology \u2013 EUROCRYPT 2025: 44th Annual International Conference on the Theory and Applications of Cryptographic Techniques, Madrid, Spain, May 4\u20138, 2025, Proceedings, Part IV",
       "year": "2025"
+    },
+    "FMN24": {
+      "authors": [
+        "Fenzi, Giacomo",
+        "Moghaddas, Hossein",
+        "Nguyen, Ngoc Khanh"
+      ],
+      "authors_text": "Fenzi, Giacomo and Moghaddas, Hossein and Nguyen, Ngoc Khanh",
+      "doi": "",
+      "entry_type": "article",
+      "fields": {
+        "author": "Fenzi, Giacomo and Moghaddas, Hossein and Nguyen, Ngoc Khanh",
+        "journal": "Journal of Cryptology",
+        "number": "3",
+        "pages": "31",
+        "title": "Lattice-based polynomial commitments: Towards asymptotic and concrete efficiency",
+        "volume": "37",
+        "year": "2024"
+      },
+      "key": "FMN24",
+      "title": "Lattice-based polynomial commitments: Towards asymptotic and concrete efficiency",
+      "url": "",
+      "venue": "Journal of Cryptology",
+      "year": "2024"
     },
     "FP97": {
       "authors": [
@@ -561,6 +628,56 @@
       "venue": "Annual International Cryptology Conference",
       "year": "2024"
     },
+    "KZG10": {
+      "authors": [
+        "Aniket Kate",
+        "Gregory M. Zaverucha",
+        "Ian Goldberg"
+      ],
+      "authors_text": "Aniket Kate and Gregory M. Zaverucha and Ian Goldberg",
+      "doi": "10.1007/978-3-642-17373-8_11",
+      "entry_type": "inproceedings",
+      "fields": {
+        "author": "Aniket Kate and Gregory M. Zaverucha and Ian Goldberg",
+        "booktitle": "Advances in Cryptology -- ASIACRYPT 2010",
+        "doi": "10.1007/978-3-642-17373-8_11",
+        "pages": "177--194",
+        "publisher": "Springer",
+        "series": "Lecture Notes in Computer Science",
+        "title": "Constant-Size Commitments to Polynomials and Their Applications",
+        "url": "https://www.iacr.org/archive/asiacrypt2010/6477178/6477178.pdf",
+        "volume": "6477",
+        "year": "2010"
+      },
+      "key": "KZG10",
+      "title": "Constant-Size Commitments to Polynomials and Their Applications",
+      "url": "https://www.iacr.org/archive/asiacrypt2010/6477178/6477178.pdf",
+      "venue": "Advances in Cryptology -- ASIACRYPT 2010",
+      "year": "2010"
+    },
+    "KZG10TR": {
+      "authors": [
+        "Aniket Kate",
+        "Gregory M. Zaverucha",
+        "Ian Goldberg"
+      ],
+      "authors_text": "Aniket Kate and Gregory M. Zaverucha and Ian Goldberg",
+      "doi": "",
+      "entry_type": "techreport",
+      "fields": {
+        "author": "Aniket Kate and Gregory M. Zaverucha and Ian Goldberg",
+        "institution": "Centre for Applied Cryptographic Research, University of Waterloo",
+        "number": "CACR 2010-10",
+        "title": "Polynomial Commitments",
+        "url": "https://cacr.uwaterloo.ca/techreports/2010/cacr2010-10.pdf",
+        "year": "2010"
+      },
+      "key": "KZG10TR",
+      "title": "Polynomial Commitments",
+      "url": "https://cacr.uwaterloo.ca/techreports/2010/cacr2010-10.pdf",
+      "venue": "",
+      "year": "2010"
+    },
     "LCH14": {
       "authors": [
         "Lin, Sian-Jheng",
@@ -641,6 +758,30 @@
       "venue": "",
       "year": "2024"
     },
+    "LS18": {
+      "authors": [
+        "Lyubashevsky, Vadim",
+        "Seiler, Gregor"
+      ],
+      "authors_text": "Lyubashevsky, Vadim and Seiler, Gregor",
+      "doi": "",
+      "entry_type": "inproceedings",
+      "fields": {
+        "author": "Lyubashevsky, Vadim and Seiler, Gregor",
+        "booktitle": "Advances in Cryptology -- EUROCRYPT 2018",
+        "pages": "204--224",
+        "publisher": "Springer",
+        "series": "Lecture Notes in Computer Science",
+        "title": "Short, Invertible Elements in Partially Splitting Cyclotomic Rings and Applications to Lattice-Based Zero-Knowledge Proofs",
+        "volume": "10820",
+        "year": "2018"
+      },
+      "key": "LS18",
+      "title": "Short, Invertible Elements in Partially Splitting Cyclotomic Rings and Applications to Lattice-Based Zero-Knowledge Proofs",
+      "url": "",
+      "venue": "Advances in Cryptology -- EUROCRYPT 2018",
+      "year": "2018"
+    },
     "Lan02": {
       "authors": [
         "Lang, Serge"
@@ -688,6 +829,74 @@
       "url": "",
       "venue": "Advances in Cryptology--EUROCRYPT 2020: 39th Annual International Conference on the Theory and Applications of Cryptographic Techniques, Zagreb, Croatia, May 10--14, 2020, Proceedings, Part I 39",
       "year": "2020"
+    },
+    "Mic07": {
+      "authors": [
+        "Micciancio, Daniele"
+      ],
+      "authors_text": "Micciancio, Daniele",
+      "doi": "",
+      "entry_type": "article",
+      "fields": {
+        "author": "Micciancio, Daniele",
+        "journal": "Computational Complexity",
+        "number": "4",
+        "pages": "365--411",
+        "title": "Generalized compact knapsacks, cyclic lattices, and efficient one-way functions",
+        "volume": "16",
+        "year": "2007"
+      },
+      "key": "Mic07",
+      "title": "Generalized compact knapsacks, cyclic lattices, and efficient one-way functions",
+      "url": "",
+      "venue": "Computational Complexity",
+      "year": "2007"
+    },
+    "NOZ26": {
+      "authors": [
+        "Nguyen, Ngoc Khanh",
+        "O'Rourke, George",
+        "Zhang, Jiapeng"
+      ],
+      "authors_text": "Nguyen, Ngoc Khanh and O'Rourke, George and Zhang, Jiapeng",
+      "doi": "",
+      "entry_type": "misc",
+      "fields": {
+        "author": "Nguyen, Ngoc Khanh and O'Rourke, George and Zhang, Jiapeng",
+        "howpublished": "Cryptology ePrint Archive, Paper 2026/156",
+        "title": "Hachi: Efficient Lattice-Based Multilinear Polynomial Commitments over Extension Fields",
+        "url": "https://eprint.iacr.org/2026/156",
+        "year": "2026"
+      },
+      "key": "NOZ26",
+      "title": "Hachi: Efficient Lattice-Based Multilinear Polynomial Commitments over Extension Fields",
+      "url": "https://eprint.iacr.org/2026/156",
+      "venue": "",
+      "year": "2026"
+    },
+    "NS24": {
+      "authors": [
+        "Nguyen, Ngoc Khanh",
+        "Seiler, Gregor"
+      ],
+      "authors_text": "Nguyen, Ngoc Khanh and Seiler, Gregor",
+      "doi": "",
+      "entry_type": "inproceedings",
+      "fields": {
+        "author": "Nguyen, Ngoc Khanh and Seiler, Gregor",
+        "booktitle": "Advances in Cryptology -- CRYPTO 2024",
+        "pages": "243--275",
+        "publisher": "Springer",
+        "series": "Lecture Notes in Computer Science",
+        "title": "Greyhound: Fast Polynomial Commitments from Lattices",
+        "volume": "14929",
+        "year": "2024"
+      },
+      "key": "NS24",
+      "title": "Greyhound: Fast Polynomial Commitments from Lattices",
+      "url": "",
+      "venue": "Advances in Cryptology -- CRYPTO 2024",
+      "year": "2024"
     },
     "PS94": {
       "authors": [
@@ -817,6 +1026,30 @@
       "url": "",
       "venue": "Annual International Conference on the Theory and Applications of Cryptographic Techniques",
       "year": "2025"
+    },
+    "WW23": {
+      "authors": [
+        "Wee, Hoeteck",
+        "Wu, David J."
+      ],
+      "authors_text": "Wee, Hoeteck and Wu, David J.",
+      "doi": "",
+      "entry_type": "inproceedings",
+      "fields": {
+        "author": "Wee, Hoeteck and Wu, David J.",
+        "booktitle": "Advances in Cryptology -- EUROCRYPT 2023",
+        "pages": "385--416",
+        "publisher": "Springer",
+        "series": "Lecture Notes in Computer Science",
+        "title": "Succinct Vector, Polynomial, and Functional Commitments from Lattices",
+        "volume": "14006",
+        "year": "2023"
+      },
+      "key": "WW23",
+      "title": "Succinct Vector, Polynomial, and Functional Commitments from Lattices",
+      "url": "",
+      "venue": "Advances in Cryptology -- EUROCRYPT 2023",
+      "year": "2023"
     },
     "Wie88": {
       "authors": [
