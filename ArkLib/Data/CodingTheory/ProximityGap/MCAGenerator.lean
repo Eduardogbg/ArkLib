@@ -52,7 +52,7 @@ def matrixMulCodewords (A : Matrix ℓ ℓ' F) (U : ℓ' → (ι → F)) : ℓ �
   fun i k => ∑ j : ℓ', A i j * U j k
 
 /-- Let `G : S → 𝔽^ℓ` be an MCA generator with error `ε_mca`, and `A` a matrix
-with a left  pseudoinverse. Then the generator `G'` obtained from `G` by right multiplication by `A`
+with a left pseudoinverse. Then the generator `G'` obtained from `G` by right multiplication by `A`
 is an MCA generator with the same error `ε_mca` as `G`.
 Lemma 4.1 [BCGM25]. -/
 lemma pseudoinverseGen [DecidableEq ℓ'] [Nonempty S] (G : Generator S ℓ F) (ε_mca : I → ℝ)
