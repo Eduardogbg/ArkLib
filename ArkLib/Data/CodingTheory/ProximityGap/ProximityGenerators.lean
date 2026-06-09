@@ -26,6 +26,9 @@ function is a generator matrix for an MDS code
 probability that the generator satisfies the MCA condition is bounded above by `ε_mca`.
 - `tensor product of generators`: given two generators over a field `F` of output sizes `ℓ` and `ℓ'`
 respectively, we can define their tensor product componentwise. This is a generator on `F^ℓ ⊗ 𝔽^ℓ'`
+- `affine line generator`: A generator of the form `G : F → F²` such that `x ↦ (1,x)`.
+- `affine space generator`: A generator a generator of the form `G : F^ℓ → F^(ℓ + 1)` such that
+ `x ↦ (1,x)`.
 
 ## References
 
@@ -95,7 +98,7 @@ def IsMCA {S : Type} [Nonempty S] [Fintype S] (G : Generator S ℓ F) (LC : Line
 /-- A generator has mutual correlated agreement (MCA) with error `ε_mca` if the probability that the
 generator satisfies the MCA condition is bounded above by `ε_mca`.
 Definition 3.14 [BCGM25]. -/
-def IsMCAGenerator {S : Type} [Nonempty S] [Fintype S] (G : Generator S ℓ F) (ε_mca : I → I)
+def IsMCAGenerator {S : Type} [Nonempty S] [Fintype S] (G : Generator S ℓ F) (ε_mca : I → ℝ)
   (LC : LinearCode ι F) : Prop :=
   ∀ U : ℓ → (ι → F), ∀ γ : I,
     Pr_{let x ←$ᵖ S}[(IsMCA G LC x U γ)] ≤ ENNReal.ofReal (ε_mca γ)
@@ -135,6 +138,17 @@ theorem TensorGenerator_eq_TensorGenerator_Explicit {ℓ' : Type} [Fintype ℓ']
   ext ⟨i, j⟩
   simp only [Module.Basis.tensorProduct_repr_tmul_apply, Pi.basisFun_repr, smul_eq_mul]
   ring
+
+/-- Let `F` be a field.
+The affine line generator is a generator of the form `G : F → F²` such that `x ↦ (1,x)`. -/
+abbrev AffineLineGenerator (F : Type) [Field F] : Generator F (Fin 2) F :=
+  fun x => ![1, x]
+
+/-- Let `F` be a field.
+The affine space generator is a generator of the form `G : F^ℓ → F^(ℓ + 1) ` such that
+`x ↦ (1,x)`. -/
+abbrev AffineSpaceGenerator (F : Type) [Field F] (ℓ : ℕ) : Generator (Fin ℓ → F) (Fin (ℓ + 1)) F :=
+  fun x => Fin.cons 1 x
 
 end CoreDefinitions
 

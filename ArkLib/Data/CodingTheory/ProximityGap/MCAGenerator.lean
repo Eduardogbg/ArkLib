@@ -55,7 +55,7 @@ def matrixMulCodewords (A : Matrix ℓ ℓ' F) (U : ℓ' → (ι → F)) : ℓ �
 with a left  pseudoinverse. Then the generator `G'` obtained from `G` by right multiplication by `A`
 is an MCA generator with the same error `ε_mca` as `G`.
 Lemma 4.1 [BCGM25]. -/
-lemma pseudoinverseGen [DecidableEq ℓ'] [Nonempty S] (G : Generator S ℓ F) (ε_mca : I → I)
+lemma pseudoinverseGen [DecidableEq ℓ'] [Nonempty S] (G : Generator S ℓ F) (ε_mca : I → ℝ)
   (LC : LinearCode ι F) (hGMCA : IsMCAGenerator G ε_mca LC)
   (A : Matrix ℓ ℓ' F) (hA : HasLeftPseudoInverse A) :
     IsMCAGenerator (generatorByRightMul G A) ε_mca LC := by
@@ -106,7 +106,7 @@ lemma isMCA_projectedGenerator_of_isMCA (LC : LinearCode ι F) [Nonempty S] (G :
 /-- Let `G : S → 𝔽^ℓ` be an MCA generator with error `ε_mca`, and `κ` a
 subset of `ℓ`. Then the projected generator over `κ` is an MCA generator with the same error as `G`.
 Corollary 4.2 [BCGM25]. -/
-lemma generatorSubset [Nonempty S] (G : Generator S ℓ F) (ε_mca : I → I) (LC : LinearCode ι F)
+lemma generatorSubset [Nonempty S] (G : Generator S ℓ F) (ε_mca : I → ℝ) (LC : LinearCode ι F)
 (hGMCA : IsMCAGenerator G ε_mca LC) (κ : Set ℓ) [Fintype κ] :
   IsMCAGenerator (projectedGenerator G κ) ε_mca LC := by
   intro U γ
