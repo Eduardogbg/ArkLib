@@ -164,8 +164,8 @@ lemma error_in_unit_interval (d : ℕ) (m : ℕ) (hm_pos : 0 < m) (hdm : d ≤ m
     have hm_pos' : (0 : ℝ) < m := by exact_mod_cast hm_pos
     exact (div_le_one hm_pos').mpr hdm'
 
-/-- The minimum of the cardinality of a family of sets nonempty sets, indexed by a possibly empty
-set. Returns 1 if the indexing set is empty. -/
+/-- The minimum of the cardinality of a family of nonempty sets, indexed by a possibly empty set.
+Returns `1` if the indexing set is empty. -/
 def minSeedCard {F : Type} {s : ℕ} (S : Fin s → Set F) [∀ i, Fintype ↥(S i)] : ℕ :=
   if h : 0 < s then
     Finset.inf' Finset.univ (Finset.univ_nonempty_iff.mpr (Fin.pos_iff_nonempty.mp h))
