@@ -67,14 +67,14 @@ open ToyProblem
 def myLowerBound : SecurityLowerBound koalaIRS where
   bits  := 70
   proof := by
-    -- show  bestProvableError koalaIRS ≤ (2 : ℝ≥0) ^ (-(70 : ℝ))
+    -- show  bestProvableError koalaIRS ≤ ↑((2 : ℝ≥0) ^ (-(70 : ℝ)))
     sorry
 
 -- "No δ-relaxation analysis can prove > 110 bits."
 def myAttack : SecurityUpperBound koalaIRS where
   bits  := 110
   proof := by
-    -- show  (2 : ℝ≥0) ^ (-(110 : ℝ)) ≤ bestProvableError koalaIRS
+    -- show  ↑((2 : ℝ≥0) ^ (-(110 : ℝ))) ≤ bestProvableError koalaIRS
     sorry
 ```
 
@@ -105,7 +105,12 @@ Notes:
 - `bits : ℝ` (not `ℕ`) because the security level *is* `-log₂(error)`, a real
   for any error in `(0,1)` — ABF26's own §6.3 figures are fractional (the
   attack is `2^(-116.49)`, the MCA branch `≈ 2^(-71.5)`).
-- `(2 : ℝ≥0) ^ (-bits)` is `NNReal.rpow` (real exponent).
+- `(2 : ℝ≥0) ^ (-bits)` is `NNReal.rpow` (real exponent), coerced into
+  `ℝ≥0∞`: `bestProvableError` lives in `ℝ≥0∞` so that a degenerate parameter
+  point with an *empty* admissible δ-range gives `⊤` (no lower bound
+  certifiable — the conservative direction). In `ℝ≥0` the binder infimum
+  collapses to `0` on empty inner sets, which made every lower bound trivially
+  inhabitable (2026-06-10 review finding C1, fixed).
 - A better lower-bound submission *raises* `X`; a better attack *lowers* `Y`.
 
 ## The metric
@@ -124,17 +129,17 @@ of `x ↦ 2^(-x)`), and `securityGap_nonneg` packages it. Both are
 `Quot.sound`, no `sorryAx`) — the honesty of the metric does not depend on any
 owed §6 proof.
 
-## Current anchors (the 64 / 116 frontier)
+## Current anchors (the 63.99 / 117 honest frontier)
 
 At the KoalaBear-sextic regime (`q = 2^31 - 2^24 + 1`, sextic extension,
 `ρ = 1/2`, `t = 128`):
 
 | Anchor | `bits` | Basis |
 |---|---|---|
-| `arklib_lowerBound_irs_t128 : SecurityLowerBound koalaIRS` | ≈ **64** | ABF26 Lemmas 6.10 / 6.6 / 6.8 at `δ = 1 − 1/√2 − η`, `η ≈ 2^-18…2^-21` (`.tex` 2798–2825, `tab:interleaved-security-analysis`; spot-check-limited, MCA branch ≈ `2^-71.5`) |
-| `listDecoding_upperBound_attack : SecurityUpperBound koalaIRS` | ≈ **116** | ABF26 Lemma 6.12 + Elias/[KKH26] at `δ* = 0.468` (`tab:elias-lowerbound-thresholds`, `2^-116.49`), spot-check floor `(0.532)^128 ≈ 2^-116.6` for `δ ≤ δ*` (cf. Fenzi–Sanso 2025/2197 Lemma 4.4) |
+| `arklib_lowerBound_irs_t128 : SecurityLowerBound koalaIRS` | **63.99** | ABF26 Lemmas 6.10 / 6.6 / 6.8 at `δ = 1 − 1/√2 − η`, `η ≈ 2^-18…2^-21` (`.tex` 2798–2825, `tab:interleaved-security-analysis`; spot-check-limited, MCA branch ≈ `2^-71.5`) |
+| `listDecoding_upperBound_attack : SecurityUpperBound koalaIRS` | **117** | ABF26 Lemma 6.12 + Elias/[KKH26] at `δ* = 0.468` (`tab:elias-lowerbound-thresholds`, `2^-116.49`), spot-check floor `(0.532)^128 ≈ 2^-116.6` for `δ ≤ δ*` (cf. Fenzi–Sanso 2025/2197 Lemma 4.4) |
 
-so `securityGap = 116 − 64 = 52` (the lemma `securityGap_koalaIRS_anchors`
+so `securityGap = 117 − 63.99 = 53.01` (the lemma `securityGap_koalaIRS_anchors`
 evaluates this). Both anchors are `sorry`-tagged by design (`ABF26-§6.3.1` /
 `ABF26-§6.3.1-lowerbound`) — the §6.3.1 numeric evaluations are Phase-5-owed.
 Notes:
@@ -145,9 +150,14 @@ Notes:
   and both are hosted on the leaderboard as the proven hooks
   `listDecoding_le_winningSetSoundness` / `epsCA_le_winningSetSoundness`.
   Only the Phase-5 *numerics* (and the genuine KoalaBear encoder) remain owed.
-- The Y anchor's currently certified floor is `≈ 2^(-116.6)` (a ceiling of
-  ≈116.5–116.6 bits); `bits := 116` is the paper's headline integer and owes
-  the ≈0.5-bit sharpening to Phase 5 (flagged in the anchor's docstring).
+- Honest rounding (2026-06-10 review, M1/M2): the X route certifies an
+  infimum `≈ 2^(-63.9998)` — the paper notes `(1/√2+η)^128 > 2^(-64)` strictly
+  for every `η > 0`, so `64.00` is unreachable and the anchor is `63.99`. The
+  Y side is a *ceiling* and must round **up**: the certified sweep floor is
+  `≈ 2^(-116.6) < 2^(-116)` (and the band `δ ∈ (0.46604, 0.468)` is covered by
+  neither branch at `116`), so the anchor is `117`. (The earlier `64`/`116`
+  pair deferred this rounding to Phase 5; the review showed no numeric
+  sharpening can close it, so the anchors now carry the honest values.)
 - The anchor carrier is `GaloisField 2 128` (size `2^128`), a same-*order*
   stand-in for the `≈2^186`-element KoalaBear-sextic field, with an **opaque**
   placeholder encoding `koalaEnc` (injectivity is a tagged Phase-5 sorry). The

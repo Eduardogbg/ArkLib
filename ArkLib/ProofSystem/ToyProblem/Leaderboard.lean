@@ -292,7 +292,8 @@ This is *only* the error bound; the full knowledge-soundness *game* of L6.10
 `Spec/SimplifiedIOR.lean` — cross-reference it (an earlier revision mislabeled
 this inequality itself as "L6.10"). Paper-proof-owed (ABF26's own §6.4
 result). -/
-theorem winningSetSoundness_le_epsMCA_add {k : ℕ} {C : Set (ι → F)} (δ : ℝ≥0)
+theorem winningSetSoundness_le_epsMCA_add {k : ℕ} [Nonempty ι] {C : Set (ι → F)} (δ : ℝ≥0)
+    (_hδ : δ ∈ Set.Ioo (0 : ℝ≥0) ((minRelHammingDistCode C : ℝ≥0)))
     (enc : (Fin k → F) →ₗ[F] (ι → F)) (henc_range : Set.range enc = C) :
     winningSetSoundness enc δ
       ≤ (epsMCA (F := F) (A := F) C δ).toNNReal
@@ -307,11 +308,12 @@ theorem winningSetSoundness_le_epsMCA_add {k : ℕ} {C : Set (ι → F)} (δ : �
 /-- **The simplified-IOR soundness is below the full-protocol RBR bound**
 (corollary of the L6.10 bridge `winningSetSoundness_le_epsMCA_add` of [ABF26];
 the bridge's `ε_mca + |Λ|/|F|` term is the first branch of the `max`). -/
-theorem winningSetSoundness_le_toySoundnessError {k : ℕ} {C : Set (ι → F)}
+theorem winningSetSoundness_le_toySoundnessError {k : ℕ} [Nonempty ι] {C : Set (ι → F)}
     (δ : ℝ≥0) (t : ℕ)
+    (hδ : δ ∈ Set.Ioo (0 : ℝ≥0) ((minRelHammingDistCode C : ℝ≥0)))
     (enc : (Fin k → F) →ₗ[F] (ι → F)) (henc_range : Set.range enc = C) :
     winningSetSoundness enc δ ≤ toySoundnessError C δ t :=
-  le_trans (winningSetSoundness_le_epsMCA_add δ enc henc_range) (le_max_left _ _)
+  le_trans (winningSetSoundness_le_epsMCA_add δ hδ enc henc_range) (le_max_left _ _)
 
 /-! ## Bits of security -/
 
@@ -319,7 +321,7 @@ theorem winningSetSoundness_le_toySoundnessError {k : ℕ} {C : Set (ι → F)}
 (perfect soundness) `Real.logb 2 0 = 0`, so `bitsOfSecurity 0 = 0`; callers
 exhibiting genuine perfect soundness should special-case it. For the prize
 regime `e ∈ (0, 1)` so `bitsOfSecurity e > 0`. -/
-noncomputable def bitsOfSecurity (e : ℝ≥0) : ℝ := -Real.logb 2 (e : ℝ)
+noncomputable def bitsOfSecurity (e : ℝ≥0∞) : ℝ := -Real.logb 2 e.toReal
 
 /-! ## Parameter record (KoalaBear-sextic regime)
 
@@ -395,10 +397,24 @@ X-side submissions bound it from above via `bestProvableError_le` at one
 chosen δ; Y-side submissions bound it from below by flooring the `max` at
 *every* admissible δ (attack hooks `epsCA_le_winningSetSoundness`,
 `listDecoding_le_winningSetSoundness` for the first branch; the spot-check
-term floors the second). -/
-noncomputable def bestProvableError (p : ToyParams) : ℝ≥0 :=
+term floors the second).
+
+**Two adopted conventions** (flagged by the 2026-06-10 second adversarial
+review):
+1. The value lives in `ℝ≥0∞` (complete lattice), so a *degenerate* parameter
+   point with an empty admissible range (`δ_min(C) = 0`, e.g. `k = 0`) gives
+   `⊤` — the conservative direction: no lower bound is certifiable there,
+   and any ceiling is vacuous. (In `ℝ≥0` the `⨅ δ ∈ …` binder collapses to
+   `0` via the empty inner infimum — `sInf ∅ = 0` — which made *every* lower
+   bound trivially inhabitable; CRITICAL finding C1, fixed.)
+2. The round-2 branch is floored by `(1-δ)^t` as a **convention**: the paper
+   proves the analysis error `≤ (1-δ)^t` (lemma:toy-soundness), while the
+   exact per-δ round-2 error is `sup_{Δ > δ} (1-Δ)^t`, marginally smaller
+   (one grid step `1/n`; ≈`2^(-14)` bits at `n = 2^21`). Only the round-1
+   branch carries Definition 6.11's "exactly". -/
+noncomputable def bestProvableError (p : ToyParams) : ℝ≥0∞ :=
   ⨅ δ ∈ Set.Ioo (0 : ℝ≥0) ((minRelHammingDistCode p.code : ℝ≥0)),
-    max (winningSetSoundness p.enc δ) ((1 - δ) ^ p.t)
+    (max (winningSetSoundness p.enc δ) ((1 - δ) ^ p.t) : ℝ≥0∞)
 
 /-- **The X-side entry point** (cf. [ABF26] §6.3): for any admissible
 `δ ∈ (0, δ_min(C))`, the δ-swept `bestProvableError` is at most that δ's
@@ -408,8 +424,9 @@ via the L6.10 bridge `winningSetSoundness_le_epsMCA_add` + an `ε_mca`/`Λ`
 analysis), and concludes through this lemma. Axiom-clean. -/
 theorem bestProvableError_le (p : ToyParams) {δ : ℝ≥0}
     (hδ : δ ∈ Set.Ioo (0 : ℝ≥0) ((minRelHammingDistCode p.code : ℝ≥0))) :
-    bestProvableError p ≤ max (winningSetSoundness p.enc δ) ((1 - δ) ^ p.t) :=
-  le_trans (ciInf_le' _ δ) (ciInf_le' _ hδ)
+    bestProvableError p
+      ≤ (max (winningSetSoundness p.enc δ) ((1 - δ) ^ p.t) : ℝ≥0∞) :=
+  iInf₂_le δ hδ
 
 /-! ## The two leaderboard interfaces
 
@@ -430,7 +447,7 @@ structure SecurityLowerBound (p : ToyParams) where
   /-- The provable security level, in bits. -/
   bits : ℝ
   /-- The δ-swept analysis frontier is at most `2^(-bits)`. -/
-  proof : bestProvableError p ≤ (2 : ℝ≥0) ^ (-bits)
+  proof : bestProvableError p ≤ (↑((2 : ℝ≥0) ^ (-bits)) : ℝ≥0∞)
 
 /-- **Provable security upper bound** at parameter point `p`: a number `bits`
 and a proof that the δ-swept analysis frontier is `≥ 2^(-bits)` — i.e. "no
@@ -443,14 +460,15 @@ structure SecurityUpperBound (p : ToyParams) where
   /-- The provable security ceiling, in bits. -/
   bits : ℝ
   /-- The δ-swept analysis frontier is at least `2^(-bits)`. -/
-  proof : (2 : ℝ≥0) ^ (-bits) ≤ bestProvableError p
+  proof : (↑((2 : ℝ≥0) ^ (-bits)) : ℝ≥0∞) ≤ bestProvableError p
 
 /-! ## The leaderboard metric -/
 
 /-- **The leaderboard metric.** The scalar gap `Y − X` between the best known
 attack (`hi`) and the best provable security (`lo`), both bounds on
 `bestProvableError` (cf. [ABF26] §6.3 Tables 2–5). Contestants minimise this
-— at the KoalaBear-sextic regime it is the ≈116 − 64 = 52-bit frontier. -/
+— at the KoalaBear-sextic regime it is the `117 − 63.99 = 53.01`-bit honest
+frontier (informally "≈116 vs ≈64"). -/
 def securityGap {p : ToyParams} (lo : SecurityLowerBound p) (hi : SecurityUpperBound p) : ℝ :=
   hi.bits - lo.bits
 
@@ -463,9 +481,9 @@ never divided by the error. Axiom-clean. -/
 theorem SecurityLowerBound.bits_le_of {p : ToyParams}
     (lo : SecurityLowerBound p) (hi : SecurityUpperBound p) :
     lo.bits ≤ hi.bits := by
-  -- `2^(-hi.bits) ≤ bestProvableError ≤ 2^(-lo.bits)` in `ℝ≥0`.
+  -- `2^(-hi.bits) ≤ bestProvableError ≤ 2^(-lo.bits)` in `ℝ≥0∞`, then drop to `ℝ≥0`.
   have hchain : (2 : ℝ≥0) ^ (-hi.bits) ≤ (2 : ℝ≥0) ^ (-lo.bits) :=
-    le_trans hi.proof lo.proof
+    ENNReal.coe_le_coe.mp (le_trans hi.proof lo.proof)
   -- Cast to `ℝ` and use strict monotonicity of `2^(·)`.
   have hchainR : (2 : ℝ) ^ (-hi.bits) ≤ (2 : ℝ) ^ (-lo.bits) := by
     have := (NNReal.coe_le_coe.mpr hchain)
@@ -495,18 +513,22 @@ the [ABF26] §6.3 frontier (equivalently to `lo.proof`, when the error is
 positive). -/
 theorem SecurityLowerBound.le_bitsOfSecurity {p : ToyParams} (lo : SecurityLowerBound p)
     (h : 0 < bestProvableError p) : lo.bits ≤ bitsOfSecurity (bestProvableError p) := by
-  rw [bitsOfSecurity, le_neg, Real.logb_le_iff_le_rpow (by norm_num) (by exact_mod_cast h)]
-  have := NNReal.coe_le_coe.mpr lo.proof
-  rwa [NNReal.coe_rpow, NNReal.coe_ofNat] at this
+  have htop : bestProvableError p ≠ ⊤ := ne_top_of_le_ne_top ENNReal.coe_ne_top lo.proof
+  rw [bitsOfSecurity, le_neg,
+    Real.logb_le_iff_le_rpow (by norm_num) (ENNReal.toReal_pos h.ne' htop)]
+  have := ENNReal.toReal_mono ENNReal.coe_ne_top lo.proof
+  rwa [ENNReal.coe_toReal, NNReal.coe_rpow, NNReal.coe_ofNat] at this
 
 /-- A provable upper bound's `bits` is at least the true bits-of-security of
 the [ABF26] §6.3 frontier (equivalently to `hi.proof`, when the error is
 positive). -/
 theorem SecurityUpperBound.bitsOfSecurity_le {p : ToyParams} (hi : SecurityUpperBound p)
-    (h : 0 < bestProvableError p) : bitsOfSecurity (bestProvableError p) ≤ hi.bits := by
-  rw [bitsOfSecurity, neg_le, Real.le_logb_iff_rpow_le (by norm_num) (by exact_mod_cast h)]
-  have := NNReal.coe_le_coe.mpr hi.proof
-  rwa [NNReal.coe_rpow, NNReal.coe_ofNat] at this
+    (h : 0 < bestProvableError p) (htop : bestProvableError p ≠ ⊤) :
+    bitsOfSecurity (bestProvableError p) ≤ hi.bits := by
+  rw [bitsOfSecurity, neg_le,
+    Real.le_logb_iff_rpow_le (by norm_num) (ENNReal.toReal_pos h.ne' htop)]
+  have := ENNReal.toReal_mono htop hi.proof
+  rwa [ENNReal.coe_toReal, NNReal.coe_rpow, NNReal.coe_ofNat] at this
 
 /-! ## Anchor parameter point and the two current entries
 
@@ -588,18 +610,25 @@ point.** Cites **Lemmas 6.10 / 6.6 / 6.8 of [ABF26]** and the §6.3.1
 `η = 1/|L| ≈ 2^(-18)…2^(-21)` (the tables' minimizing slack), apply
 `bestProvableError_le` at that δ, bound the first `max`-branch by the L6.10
 bridge + the Johnson-regime `ε_mca`/`Λ` numerics (`≈ 2^(-71.5)`), and the
-spot-check branch by `(1/√2 + η)^128 ≈ 2^(-64.00)`. The binding cap is the
-spot-check, so the analysis certifies ≈64 bits; `bits := 64` is the headline
-integer (the certified value is marginally below 64.00 — Phase 5's numeric
-chain pins it down). `sorry`-backed: the §6.3.1 numeric evaluation is
-Phase-5-owed. -/
+spot-check branch by `(1/√2 + η)^128`. The binding cap is the spot-check.
+
+**Why `bits := 63.99`, not 64** (2026-06-10 second adversarial review, M1):
+the paper itself notes (`.tex` 2817–2819) that `(1/√2 + η)^128 > 2^(-64)`
+*strictly* for every `η > 0` — the tables' `2^(-64.00)` entries are rounding
+(at the minimizing `η = 2^(-21)` the value is `≈ 2^(-63.9998)`). Since the
+`ε_mca` chain controls the first branch only for `η ≳ 2^(-21.7)`, the route
+certifies an infimum `≈ 2^(-63.9998)`, and no numeric refinement of the
+§6.3.1 chain reaches `64.00` exactly. `bits := 63.99` is the honest certified
+anchor (`2^(-63.9998) ≤ 2^(-63.99)` ✓). `sorry`-backed: the §6.3.1 numeric
+evaluation is Phase-5-owed. -/
 noncomputable def arklib_lowerBound_irs_t128 : SecurityLowerBound koalaIRS where
-  bits := 64
+  bits := 63.99
   proof := by
     -- ABF26-§6.3.1; Phase-5-owed numerics. Route: `bestProvableError_le` at
-    -- `δ := 1 - 1/√2 - η` (η ≈ 2^-18…2^-21, tab:interleaved-security-analysis),
+    -- `δ := 1 - 1/√2 - η` (η ≈ 2^-21, tab:interleaved-security-analysis),
     -- then `winningSetSoundness_le_epsMCA_add` (L6.10 bridge) + Johnson `ε_mca`/`Λ`
-    -- numerics on the first branch and `(1/√2 + η)^128 ≤ 2^(-64)` on the second.
+    -- numerics on the first branch (≈2^-71.5) and `(1/√2 + η)^128 ≈ 2^(-63.9998)
+    -- ≤ 2^(-63.99)` on the second.
     sorry
 
 /-- **List-decoding attack upper bound (≈116 bits) at the IRS/KoalaBear/`t=128`
@@ -608,38 +637,46 @@ bounds, cf. Fenzi–Sanso eprint 2025/2197 Lemma 4.4 (the paper's §6.4.1
 footnote). The two-branch floor over the δ sweep:
 
 * for `δ ≤ δ* = 0.468` the spot-check branch dominates:
-  `(1-δ)^128 ≥ (0.532)^128 ≈ 2^(-116.6)`;
+  `(1-δ)^128 ≥ (0.532)^128 ≈ 2^(-116.6) ≥ 2^(-117)`;
 * for `δ ∈ [δ*, δ_min)` the L6.12 + Elias attack
   (`listDecoding_le_winningSetSoundness` at the §6.3 numerics) floors round 1
-  at `≈ 2^(-116.49)` (`tab:elias-lowerbound-thresholds`, `.tex` ~2925).
+  at `≈ 2^(-116.49) ≥ 2^(-117)` (`tab:elias-lowerbound-thresholds`, `.tex`
+  ~2925).
 
-The certified min over the sweep is `≈ 2^(-116.6)`, i.e. a ceiling of
-`≈116.5–116.6` bits; `bits := 116` is the headline integer anchor (matching
-the paper's ≈116-bit frontier) pending the Phase-5 sharpening that closes the
-fractional overhang at the genuine KoalaBear code. `sorry`-backed: the §6.3.1
-numeric evaluation (and the overhang) is Phase-5-owed. -/
+**Why `bits := 117`, not 116** (2026-06-10 second adversarial review, M2): a
+*ceiling* must round **up**. The certified sweep floor is the spot/attack
+crossing `≈ 2^(-116.6)`, which is `< 2^(-116)`: at `bits := 116` the
+inequality `2^(-116) ≤ bestProvableError` fails on the band
+`δ ∈ (0.46604, 0.468)` where neither branch reaches `2^(-116)` (the spot
+branch needs `δ ≤ 1 - 2^(-116/128) ≈ 0.46604`; the Elias floor only ignites
+at `δ* = 0.468`) — and no Phase-5 sharpening closes that band (the true list
+size there is exactly what the Elias bound says it isn't). At `bits := 117`
+both branches cover the whole sweep. The paper's `2^(-116.49)` is the per-δ*
+attack value, not the sweep floor. `sorry`-backed: the §6.3.1 numeric
+evaluation is Phase-5-owed. -/
 noncomputable def listDecoding_upperBound_attack : SecurityUpperBound koalaIRS where
-  bits := 116
+  bits := 117
   proof := by
     -- ABF26-§6.3.1-lowerbound; Phase-5-owed numerics. Route: for every admissible
-    -- δ floor `max (winningSetSoundness koalaEnc δ) ((1-δ)^128)`: spot-check branch
-    -- `(1-δ)^128 ≥ 0.532^128 ≈ 2^-116.6` for δ ≤ δ* = 0.468; attack branch via the
-    -- PROVEN hook `listDecoding_le_winningSetSoundness` + Elias/[KKH26] list-size
-    -- numerics (tab:elias-lowerbound-thresholds, ≈ 2^-116.49) for δ ≥ δ*. The
-    -- integer anchor 116 additionally owes the ≈0.5-bit sharpening (certified
-    -- floor ≈ 2^-116.6 < 2^-116) at the genuine Phase-5 code.
+    -- δ floor `max (winningSetSoundness koalaEnc δ) ((1-δ)^128) ≥ 2^(-117)`:
+    -- spot-check branch `(1-δ)^128 ≥ 0.532^128 ≈ 2^-116.6 ≥ 2^-117` for
+    -- δ ≤ δ* = 0.468; attack branch via the PROVEN hook
+    -- `listDecoding_le_winningSetSoundness` + Elias/[KKH26] list-size numerics
+    -- (tab:elias-lowerbound-thresholds, ≈ 2^-116.49 ≥ 2^-117) for δ ≥ δ*.
     sorry
 
 /-- **The current leaderboard frontier.** At the KoalaBear-sextic anchor the
-provable security is ≈64 bits and the best known attack ceiling is ≈116 bits,
-so the gap the prize asks contestants to close is `116 − 64 = 52` bits (see
-[ABF26] §6.3 Tables 2–5). The value is a pure arithmetic readoff of the two
-`bits` fields — it does not depend on the anchors' owed §6 *proofs* being
-correct (though, naming the anchor defs, this lemma inherits their tagged
-`sorry`; the metric lemma `bits_le_of` is the anchor-independent, axiom-clean
-guarantee). -/
+honest certified anchors are `63.99` provable bits and a `117`-bit attack
+ceiling, so the gap the prize asks contestants to close is
+`117 − 63.99 = 53.01` bits (the paper's informal "≈116 − 64 = 52" rounds both
+sides toward each other; see [ABF26] §6.3 Tables 2–5 and the anchor
+docstrings for the honest-rounding analysis). The value is a pure arithmetic
+readoff of the two `bits` fields — it does not depend on the anchors' owed §6
+*proofs* being correct (though, naming the anchor defs, this lemma inherits
+their tagged `sorry`; the metric lemma `bits_le_of` is the anchor-independent,
+axiom-clean guarantee). -/
 theorem securityGap_koalaIRS_anchors :
-    securityGap arklib_lowerBound_irs_t128 listDecoding_upperBound_attack = 52 := by
+    securityGap arklib_lowerBound_irs_t128 listDecoding_upperBound_attack = 53.01 := by
   simp only [securityGap, arklib_lowerBound_irs_t128, listDecoding_upperBound_attack]
   norm_num
 
