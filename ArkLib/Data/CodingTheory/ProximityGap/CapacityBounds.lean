@@ -22,7 +22,7 @@ April 8, 2026), §§4.2.2 and 4.3.
 These theorems sit immediately above the Grand MCA Challenge in ABF26 §1: each one
 either produces a witness `δ_C*` for `ε_mca(C, δ_C*) ≤ ε*` (upper bounds), or rules out
 witnesses above a given threshold (lower bounds). They are mostly cited from external
-papers ([GKL24], [BGKS20], [BCHKS25], [KK25], [CS25], [DG25], etc.); we state them
+papers ([GKL24], [BGKS20], [BCHKS25], [KKH26], [CS25], [DG25], etc.); we state them
 here in ArkLib's `ε_ca` / `ε_mca` form and admit the proofs as external results.
 
 ## Numeric bounds in `ENNReal`
@@ -62,10 +62,10 @@ is either:
 
 ### Lower bounds near capacity
 
-- `rs_epsCA_lower_capacity_bchks25_kk25` — ABF26 Theorem 4.16 [BCHKS25, KK25]:
+- `rs_epsCA_lower_capacity_kkh26` — ABF26 Theorem 4.16 [KKH26]:
   existence of RS codes for which `ε_ca` at distance `1 - ρ - slack` is at
-  least `n^c / |F|` (where the `slack` is an existentially-bound `Θ(1/log n)`-shaped
-  parameter; we expose it explicitly because Lean lacks a generic `Θ` notation).
+  least `n^c / |F|`, with the `slack` pinned to `Θ(1/log₂ n)` via explicit uniform
+  constants (Lean lacks a generic `Θ` notation).
 - `rs_epsCA_breakdown_cs25` — ABF26 Theorem 4.17 [CS25 Cor 1]: complete CA breakdown
   for RS codes when the rate sits inside an entropy-defined band.
 - `rs_epsCA_johnson_jump_bchks25` — ABF26 Theorem 4.18 [BCHKS25 Cor 1.7]: jump in
@@ -95,7 +95,8 @@ code-family definitions in Phase 3.
 - [GKL24] Theorem 3 in their paper.
 - [BGKS20] Lemma 3.2 in their paper.
 - [BCHKS25] Theorem 4.6 / Corollary 1.7 in their paper.
-- [KK25] (cited alongside BCHKS25 in Theorem 4.16).
+- [KKH26] Krachun-Kazanin-Haböck (source of Theorem 4.16; proved the bound that
+  [BCHKS25]/[KK25] had under a conjecture).
 - [CS25] Corollary 1, source of Theorem 4.17.
 - [DG25] Theorem 2.5, source of Lemma 4.19.
 -/
@@ -171,16 +172,21 @@ variable {ι : Type} [Fintype ι] [Nonempty ι] [DecidableEq ι]
 variable {F : Type} [Field F] [Fintype F] [DecidableEq F]
 
 /-- **ABF26 Theorem 4.9 Item 2 [BCHKS25 Theorem 1.3].** Reed-Solomon CA bound in the
-`δ_min/3`-to-Johnson regime. Let `C := RS[F, L, k]` with rate `ρ`. For
-`δ_min(C)/3 ≤ δ_fld < δ_int`:
+`δ_min/3`-to-Johnson regime. Let `C := RS[F, L, k]` with rate `ρ`. The paper's
+`thm:ud-rs` scopes **both** items under the unique-decoding-regime hypothesis
+`δ_fld ≤ (1-ρ)/2` ("Then, for δ_fld ≤ (1−ρ)/2 < δ_min(C)/2"); Item 2 additionally
+requires `δ_min(C)/3 ≤ δ_fld < δ_int`:
 
   `ε_ca(C, δ_fld, δ_int) ≤`
   `  max{ (1-ρ-δ_fld) / (δ_fld·(1-ρ-2·δ_fld)·|F|), δ_int / ((δ_int-δ_fld)·|F|) }`
 
+Without `δ_fld ≤ (1-ρ)/2` the first max-branch's factor `1-ρ-2·δ_fld` goes negative
+and the claimed bound is likely false in the breakdown band (cf. T4.17 [CS25]).
 Tighter than T4.8 (AHIV17) in the regime `δ_fld ≥ δ_min/3`. Admitted as an external
 result. -/
 theorem rs_epsCA_bchks25_item2
     (domain : ι ↪ F) (k : ℕ) (δ_fld δ_int : ℝ≥0)
+    (_h_ud : (δ_fld : ℝ) ≤ (1 - (k : ℝ) / Fintype.card ι) / 2)
     (_h_dmin : (Code.minDist ((ReedSolomon.code domain k : Set (ι → F))) : ℝ)
                 / Fintype.card ι / 3 ≤ δ_fld)
     (_h_lt : δ_fld < δ_int) :
@@ -203,10 +209,15 @@ For `δ_int - δ_fld = γ/n` with `γ ∈ (0, 1)` (so that `R4.2` collapses `ε_
 The `(n·δ_fld + γ) / γ` term dominates the original `δ_int / (δ_int - δ_fld)` term
 once `δ_int - δ_fld` is below `1/n`. We state the resulting bound on
 `ε_ca(C, δ_fld, δ_fld)`; the equality with `ε_mca` follows from L4.6 in the
-unique-decoding regime, which is itself an external admit. Admitted as a derived
+unique-decoding regime, which is itself an external admit.
+
+As with T4.9.2 (`rs_epsCA_bchks25_item2`), this inherits the paper `thm:ud-rs`
+enclosing hypothesis `δ_fld ≤ (1-ρ)/2` — the remark is a specialisation of Item 2
+and is only asserted inside that unique-decoding scope. Admitted as a derived
 result from R4.2 + T4.9.2. -/
 theorem rs_epsCA_small_loss_r4_10
     (domain : ι ↪ F) (k : ℕ) (δ_fld : ℝ≥0) (γ : ℝ≥0)
+    (_h_ud : (δ_fld : ℝ) ≤ (1 - (k : ℝ) / Fintype.card ι) / 2)
     (_h_dmin : (Code.minDist ((ReedSolomon.code domain k : Set (ι → F))) : ℝ)
                 / Fintype.card ι / 3 ≤ δ_fld)
     (_hγ_pos : 0 < γ) (_hγ_lt : (γ : ℝ) < 1) :
@@ -252,29 +263,60 @@ theorem rs_epsMCA_johnson_range_bchks25
            / (Fintype.card F : ℝ)) := by
   sorry -- ABF26-T4.12; external admit [BCHKS25 Thm 4.6].
 
-/-- **ABF26 Theorem 4.16 [BCHKS25, KK25].** Existence: for every `c > 0` and rate
-`ρ ∈ (0, 1/2)` there exists a power-of-two `n ∈ ℕ` and a Reed-Solomon code
-`C := RS[F, L, k]` of rate `ρ` over a prime field `F` with `|F| = poly(n)` and smooth
-`L` of size `n` such that
+/-- **ABF26 Theorem 4.16 (`thm:ca-lower-bound`) [KKH26].** Existence: for every `c > 0`
+and rate `ρ ∈ (0, 1/2)` there exist arbitrarily large powers of two `n ∈ ℕ` and
+Reed-Solomon codes `C := RS[F, L, k]` of rate `ρ` over a prime field `F` with
+`|F| = poly(n)` and smooth `L` of size `n` such that
 
-  `ε_ca(C, 1 - ρ - slack) ≥ n^c / |F|`
+  `ε_ca(C, 1 - ρ - Θ(1/log n)) ≥ n^c / |F|`
 
-for some `slack` of order `Θ(1/log n)`. We existentially bind the slack parameter as a
-real-valued knob rather than encoding `Θ` directly. -/
-theorem rs_epsCA_lower_capacity_bchks25_kk25
+**Attribution.** The canonical `.tex` (≈ lines 1847–1857) now attributes this theorem
+to [KKH26] (Krachun–Kazanin–Haböck), which *proved* (and improved) the variant that
+[BCHKS25] had shown under a conjecture (see also [CGHLL26], [Kambire26]); the earlier
+"BCHKS25 + KK25 under conjecture" citation is stale.
+
+**Encoding of the asymptotics.** Three knobs are pinned so the statement keeps the
+paper's content (none of them can be vacuously discharged):
+
+- *Rate band.* `ρ ≤ k/n ≤ ρ + 1/n` rather than the exact `k/n = ρ` (unsatisfiable
+  for irrational `ρ`); the band admits exactly `k = ⌈ρ·n⌉`-style witnesses.
+- *Slack `Θ(1/log n)`.* Uniform constants `K₁, K₂` are fixed *before* the code family,
+  with `K₁/log₂ n ≤ slack ≤ K₂/log₂ n` per instance. The lower side is load-bearing:
+  without it, a witness with `slack = Θ(1/n)` sits inside the CA-breakdown band of
+  T4.17 [CS25] and trivialises the claim; the upper side keeps the advertised
+  "distance `Θ(1/log n)` from capacity" scale. Logs are base 2 (`Real.logb 2`),
+  matching the paper's convention.
+- *Family, not a single code.* The paper's `∃ n` plus `Θ(1/log n)` is only meaningful
+  for an infinite family, so we quantify `∀ n₀, ∃ … n₀ ≤ n` (arbitrarily large
+  witnesses) with the `Θ`-constants and the `|F| = poly(n)` exponents `(a, b)` shared
+  across the family — for a single instance both would be vacuous.
+
+The power-of-two/smoothness of `L` is carried by the `ReedSolomon.Smooth domain`
+instance. Admitted as an external result. -/
+theorem rs_epsCA_lower_capacity_kkh26
     (c : ℝ≥0) (_hc : 0 < c) (ρ : ℝ≥0) (_hρ_pos : 0 < ρ) (_hρ_lt : ρ < (1 / 2 : ℝ≥0)) :
+    ∃ K₁ K₂ : ℝ, 0 < K₁ ∧ K₁ ≤ K₂ ∧
+    ∃ a b : ℕ,
+    ∀ n₀ : ℕ,
     ∃ (ιC : Type) (_ : Fintype ιC) (_ : Nonempty ιC) (_ : DecidableEq ιC)
       (FC : Type) (_ : Field FC) (_ : Fintype FC) (_ : DecidableEq FC)
       (domain : ιC ↪ FC) (_ : ReedSolomon.Smooth domain) (k : ℕ) (slack : ℝ≥0),
+      -- arbitrarily large block length:
+      n₀ ≤ Fintype.card ιC ∧
       -- `F` is a prime field (paper's "prime field" claim):
       (∃ p : ℕ, p.Prime ∧ CharP FC p ∧ Fintype.card FC = p) ∧
-      -- `|F| = poly(n)` — polynomially bounded in `n = |L|`:
-      (∃ a b : ℕ, Fintype.card FC ≤ a * (Fintype.card ιC) ^ b) ∧
-      (k : ℝ) / Fintype.card ιC = ρ ∧
+      -- `|F| = poly(n)` — polynomially bounded in `n = |L|`, uniformly in the family:
+      Fintype.card FC ≤ a * (Fintype.card ιC) ^ b ∧
+      -- rate band `ρ ≤ k/n ≤ ρ + 1/n`:
+      (ρ : ℝ) ≤ (k : ℝ) / Fintype.card ιC ∧
+      (k : ℝ) / Fintype.card ιC ≤ (ρ : ℝ) + 1 / Fintype.card ιC ∧
+      -- slack pinned to `Θ(1/log₂ n)`:
+      K₁ / Real.logb 2 (Fintype.card ιC) ≤ (slack : ℝ) ∧
+      (slack : ℝ) ≤ K₂ / Real.logb 2 (Fintype.card ιC) ∧
       epsCA (F := FC) (A := FC) ((ReedSolomon.code domain k : Set (ιC → FC)))
           (1 - ρ - slack) (1 - ρ - slack) ≥
         ((Fintype.card ιC : ENNReal) ^ (c : ℝ)) / (Fintype.card FC : ENNReal) := by
-  sorry -- ABF26-T4.16; external admit [BCHKS25, KK25].
+  sorry -- ABF26-T4.16; external admit [KKH26].
 
 /-- **ABF26 Theorem 4.17 [CS25 Cor 1].** Complete CA breakdown for Reed-Solomon codes.
 Let `C := RS[F, L, k]` with `q = |F| ≥ 10`, rate `ρ`, and `δ` satisfying:
@@ -295,8 +337,10 @@ theorem rs_epsCA_breakdown_cs25
     epsCA (F := F) (A := F) ((ReedSolomon.code domain k : Set (ι → F))) δ δ = 1 := by
   sorry -- ABF26-T4.17; external admit [CS25 Cor 1].
 
-/-- **ABF26 Theorem 4.18 [BCHKS25 Cor 1.7].** CA jump at the Johnson bound. Fix `ε > 0`,
-let `δ := 15/16`. Then for all `F` of characteristic 2 there exists a Reed-Solomon code
+/-- **ABF26 Theorem 4.18 [BCHKS25 Cor 1.7].** CA jump at the Johnson bound. (In the
+canonical `.tex` this is the unnumbered theorem at ≈ lines 1908–1914; after the 2026-06
+renumbering it sits at position T4.19.) Fix `ε ∈ (0, 1)`, let `δ := 15/16`. Then for
+all sufficiently large `F` of characteristic 2 there exists a Reed-Solomon code
 `C := RS[F, L, k]` with `n ≈ |F|^{(1+ε)/2}` and `δ_min(C) = 15/16` such that:
 
   `ε_ca(C, J(δ_min(C)), J(δ_min(C)) + 1/8 + 1/n) ≥ n^{2(1-ε)} / |F|`
@@ -305,20 +349,30 @@ where `J(δ) := 1 - √(1 - δ)` is the Johnson radius. Witnesses a sharp jump i
 error precisely at the Johnson bound.
 
 **Note on `n ≈ |F|^{(1+ε)/2}`.** Paper writes equality but `|F|^{(1+ε)/2}` is generally
-not a natural number; the intended reading is "for `n` of this order of magnitude". We
-encode this as a two-sided bound `n ≥ |F|^{(1+ε)/2} - 1 ∧ n ≤ |F|^{(1+ε)/2} + 1`,
-which allows witness `n = ⌊|F|^{(1+ε)/2}⌋` or `⌈|F|^{(1+ε)/2}⌉` as appropriate.
+not a natural number; moreover `δ_min(C) = 15/16` forces `16 ∣ n`, so an *additive*
+`±1` window around `|F|^{(1+ε)/2}` is unsatisfiable for almost every characteristic-2
+field. We encode the order-of-magnitude reading as the *multiplicative* window
+`|F|^{(1+ε)/2} / 2 ≤ n ≤ 2 · |F|^{(1+ε)/2}`, which always contains a power of two
+(hence a multiple of 16, once the window sits above 16).
+
+**Satisfiability guards.** `ε < 1` (otherwise the window forces `n > |F|`, impossible
+for an evaluation domain `L ⊆ F`) and `1024 ≤ |F|` (so the window contains a multiple
+of 16 not exceeding `|F|`; with `|F| = 2^m ≥ 2^10` we get `|F|^{(1+ε)/2} > 32`, and
+`[x/2, x]` then contains a power of two `≥ 16`). These mirror the paper's implicit
+"constant `ε`, `F` large" regime — without them the universally-quantified-`F` form
+is falsifiable on small fields.
 
 Admitted as an external result. -/
 theorem rs_epsCA_johnson_jump_bchks25
     {FC : Type} [Field FC] [Fintype FC] [DecidableEq FC] [CharP FC 2]
-    (ε : ℝ≥0) (_hε : 0 < ε) :
+    (ε : ℝ≥0) (_hε : 0 < ε) (_hε_lt : (ε : ℝ) < 1)
+    (_hF_large : 1024 ≤ Fintype.card FC) :
     ∃ (ιC : Type) (_ : Fintype ιC) (_ : Nonempty ιC) (_ : DecidableEq ιC)
       (domain : ιC ↪ FC) (k : ℕ),
-      ((Fintype.card FC : ℝ) ^ (((1 : ℝ) + ε) / 2) - 1
+      ((Fintype.card FC : ℝ) ^ (((1 : ℝ) + ε) / 2) / 2
           ≤ (Fintype.card ιC : ℝ)) ∧
       ((Fintype.card ιC : ℝ)
-          ≤ (Fintype.card FC : ℝ) ^ (((1 : ℝ) + ε) / 2) + 1) ∧
+          ≤ 2 * (Fintype.card FC : ℝ) ^ (((1 : ℝ) + ε) / 2)) ∧
       (Code.minDist ((ReedSolomon.code domain k : Set (ιC → FC))) : ℝ)
           / Fintype.card ιC = (15 : ℝ) / 16 ∧
       epsCA (F := FC) (A := FC) ((ReedSolomon.code domain k : Set (ιC → FC)))
@@ -383,6 +437,10 @@ with `s > 16/η²`. Then:
 
   `ε_mca(C, 1 - ρ - η) ≤ 2n/(η·|F|) + 24/(η³·|F|)`
 
+**Rate convention.** The FRS code `FRS[F, L, k, s, ω] ⊆ (F^s)^n` has rate
+`ρ = k / (s·n)` per ABF26 Definition 2.5 (the alphabet is `F^s`), **not** `k/n` —
+with `k/n` the radius `1 - ρ - η` would undershoot capacity by a factor-`s` error.
+
 A corollary of T4.13 via T2.18 (FRS is τ-subspace-design). Admitted as an external
 result. -/
 theorem frs_epsMCA_capacity_gg25
@@ -392,7 +450,7 @@ theorem frs_epsMCA_capacity_gg25
     (η : ℝ) (_hη_pos : 0 < η) (_hη_lt : η < 1)
     (_hs_gt : (s : ℝ) > 16 / η ^ 2) :
     let n : ℝ := Fintype.card ι
-    let ρ : ℝ := k / n
+    let ρ : ℝ := k / (s * n)
     epsMCA (F := F) (A := Fin s → F)
         ((ReedSolomon.Folded.frsCode domain k s ω : Set (ι → Fin s → F)))
         ((1 - ρ - η).toNNReal) ≤

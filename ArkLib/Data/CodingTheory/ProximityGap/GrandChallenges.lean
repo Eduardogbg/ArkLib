@@ -123,32 +123,40 @@ variable {F ι : Type} [Field F] [Fintype F] [DecidableEq F]
 
 /-! ## Reed-Solomon + rate targets
 
-The grand challenges are posed for `C := RS[F, L, k]`. These specialisations plug the
-Reed-Solomon code directly into the generic predicates; a rate-addressed companion sets
-`k := ⌊ρ · |L|⌋`. -/
+The grand challenges are posed for `C := RS[F, L, k]` **over a smooth evaluation
+domain** `L` — both prize boxes in ABF26 §1 fix "a Reed-Solomon code defined over some
+smooth evaluation domain `L ⊆ F`" (a multiplicative coset of a subgroup of `F*` of
+power-of-two order, ABF26 Definition 2.x / `def:smooth`). We carry this as a
+`ReedSolomon.Smooth domain` instance argument — the same in-tree encoding used by
+`rs_epsCA_lower_capacity_kkh26` in `CapacityBounds` — so a claimed prize resolution
+cannot target a non-smooth domain. These specialisations plug the Reed-Solomon code
+directly into the generic predicates; a rate-addressed companion sets `k := ⌊ρ · |L|⌋`. -/
 
-/-- The **Grand MCA Challenge** for `C := RS[F, domain, k]`. -/
-def grandMCAChallengeRS (domain : ι ↪ F) (k : ℕ) (ε_star : ℝ≥0) : Prop :=
+/-- The **Grand MCA Challenge** for `C := RS[F, domain, k]` over a smooth domain. -/
+def grandMCAChallengeRS (domain : ι ↪ F) [ReedSolomon.Smooth domain]
+    (k : ℕ) (ε_star : ℝ≥0) : Prop :=
   grandMCAChallenge (ReedSolomon.code domain k) ε_star
 
-/-- The **Grand MCA Challenge** for the Reed-Solomon code of rate `ρ`, i.e.
-`k := ⌊ρ · |L|⌋`. -/
-def grandMCAChallengeRSrate (domain : ι ↪ F) (ρ ε_star : ℝ≥0) : Prop :=
+/-- The **Grand MCA Challenge** for the Reed-Solomon code of rate `ρ` over a smooth
+domain, i.e. `k := ⌊ρ · |L|⌋`. -/
+def grandMCAChallengeRSrate (domain : ι ↪ F) [ReedSolomon.Smooth domain]
+    (ρ ε_star : ℝ≥0) : Prop :=
   grandMCAChallengeRS domain ⌊ρ * (Fintype.card ι : ℝ≥0)⌋₊ ε_star
 
-/-- The **Grand List Decoding Challenge** for `C := RS[F, domain, k]`, `m`-fold
-interleaved. -/
-def grandListDecodingChallengeRS (domain : ι ↪ F) (k m : ℕ) (ε_star : ℝ≥0) : Prop :=
+/-- The **Grand List Decoding Challenge** for `C := RS[F, domain, k]` over a smooth
+domain, `m`-fold interleaved. -/
+def grandListDecodingChallengeRS (domain : ι ↪ F) [ReedSolomon.Smooth domain]
+    (k m : ℕ) (ε_star : ℝ≥0) : Prop :=
   grandListDecodingChallenge (ReedSolomon.code domain k : Set (ι → F)) m ε_star
 
-/-- The **ABF26 §1 MCA prize**: resolve the Grand MCA Challenge at *every* prize rate
-`ρ ∈ {1/2,1/4,1/8,1/16}` with `ε* = 2^(-128)`. -/
-def mcaPrize (domain : ι ↪ F) : Prop :=
+/-- The **ABF26 §1 MCA prize**: resolve the Grand MCA Challenge (over a smooth domain)
+at *every* prize rate `ρ ∈ {1/2,1/4,1/8,1/16}` with `ε* = 2^(-128)`. -/
+def mcaPrize (domain : ι ↪ F) [ReedSolomon.Smooth domain] : Prop :=
   ∀ j : Fin 4, grandMCAChallengeRSrate domain (prizeRates j) epsStar
 
 /-- The **ABF26 §1 list-decoding prize** at interleaving `m`: resolve the Grand List
-Decoding Challenge at every prize rate with `ε* = 2^(-128)`. -/
-def listDecodingPrize (domain : ι ↪ F) (m : ℕ) : Prop :=
+Decoding Challenge (over a smooth domain) at every prize rate with `ε* = 2^(-128)`. -/
+def listDecodingPrize (domain : ι ↪ F) [ReedSolomon.Smooth domain] (m : ℕ) : Prop :=
   ∀ j : Fin 4,
     grandListDecodingChallengeRS domain ⌊prizeRates j * (Fintype.card ι : ℝ≥0)⌋₊ m epsStar
 

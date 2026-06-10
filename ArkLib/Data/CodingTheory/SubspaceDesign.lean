@@ -89,6 +89,12 @@ profile `τ` is lower-bounded by `ρ - 1/n` over the paper's range `r ∈ [s] = 
 
   `min_{r ∈ [s]} τ(r) ≥ ρ - 1/n` .
 
+**Rate convention.** Per ABF26 Definition 2.5, the rate of a code over alphabet `Σ` is
+`log_{|Σ|}|C| / n`; for an `F`-additive code `C ⊆ (F^s)^n` this is
+`ρ = dim_F(C) / (s·n)` — the alphabet is `F^s`, so the `finrank` is divided by `s·n`,
+**not** by `n`. The subtracted `1/n` term, by contrast, divides by the block length `n`
+only (paper: `min_r τ(r) ≥ ρ − 1/n`).
+
 The quantifier is restricted to `r ∈ Finset.Icc 1 s` to match the paper's `[s]`
 notation: outside this range the `IsSubspaceDesign` predicate places no
 constraint on `τ`, so the bound is vacuous for `r = 0` (where `A ≤ C` with
@@ -102,7 +108,7 @@ theorem subspaceDesign_tau_lower
     (s : ℕ) (τ : ℕ → ℝ) (C : Submodule F (ι → Fin s → F))
     (_h : IsSubspaceDesign s τ C) :
     ∀ r ∈ Finset.Icc 1 s,
-      τ r ≥ (Module.finrank F C : ℝ) / Fintype.card ι - 1 / Fintype.card ι := by
+      τ r ≥ (Module.finrank F C : ℝ) / (s * Fintype.card ι) - 1 / Fintype.card ι := by
   sorry -- ABF26-L2.17; external admit [GG25].
 
 /-- **ABF26 Theorem 2.18 [GK16].** Both folded Reed-Solomon codes and univariate
@@ -110,9 +116,13 @@ multiplicity codes are τ-subspace-design for an explicit τ:
 
   `τ(r) := s · ρ / (s - r + 1)` for `r ∈ [s] = {1, …, s}`, and `τ(r) := 1` otherwise.
 
+**Rate convention.** As in L2.17, the FRS code `FRS[F, L, k, s, ω] ⊆ (F^s)^n` has rate
+`ρ = k / (s·n)` (alphabet `F^s`, per ABF26 Definition 2.5). Hence the profile simplifies:
+`τ(r) = s·ρ/(s - r + 1) = (k/n) / (s - r + 1)`, which is how it is spelled below.
+
 Note: `[s]` in the paper denotes `{1, …, s}` (one-based), which we encode in Lean as
-`Finset.Icc 1 s`. With this convention `τ(1) = ρ` and `τ(s) = s · ρ`, matching the paper's
-boundary values.
+`Finset.Icc 1 s`. With this convention `τ(1) = s·ρ/s = ρ` and `τ(s) = s·ρ`, matching
+the paper's boundary values.
 
 The FRS case requires `(L, s)`-admissibility of `ω`; the multiplicity case requires
 `|F| > n` and `char(F) > ρ·s·n > s`. We state only the FRS half here; the multiplicity
@@ -126,7 +136,7 @@ theorem frs_is_subspaceDesign_gk16
     (_hω : ReedSolomon.Folded.Admissible L s ω) :
     let τ : ℕ → ℝ := fun r ↦
       if r ∈ Finset.Icc 1 s then
-        (s : ℝ) * (k : ℝ) / Fintype.card ι / (s - r + 1)
+        (k : ℝ) / Fintype.card ι / (s - r + 1)
       else 1
     IsSubspaceDesign s τ (ReedSolomon.Folded.frsCode domain k s ω) := by
   sorry -- ABF26-T2.18 (FRS half); external admit [GK16].

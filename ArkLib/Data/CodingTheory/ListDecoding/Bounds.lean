@@ -205,7 +205,14 @@ prime `q`, `δ ∈ (0, 1 - 1/q)`, and `ε ∈ (0, 1)`. There exists `γ > 0` suc
 
 The paper's full statement gives a `1 - q^{-Ω(n)}` probability over the choice of `C`;
 we existentially package this as "there exists a witness code" since ArkLib does not
-yet have a probability distribution over linear codes. -/
+yet have a probability distribution over linear codes.
+
+**Two-sided rate pin.** The paper's code has rate exactly `ρ` ("a uniformly random
+linear code of rate ρ"). A one-sided `rate ≥ ρ` existential is vacuously witnessed by
+`C = ⊤` (rate 1, `Λ = |C|` huge); an exact equality `finrank/n = ρ` is unsatisfiable
+for irrational `ρ`. We therefore pin the rate two-sidedly into the band
+`ρ ≤ finrank/n ≤ ρ + 1/n` (i.e. `finrank = ⌈ρ·n⌉` up to the boundary case), so the
+witness genuinely sits at the paper's rate. -/
 theorem random_linear_lambda_lower_glmrsw22
     (q : ℕ) (_hq_pp : IsPrimePow q)
     (δ : ℝ) (_hδ_pos : 0 < δ) (_hδ_lt : δ < 1 - 1 / q)
@@ -216,13 +223,13 @@ theorem random_linear_lambda_lower_glmrsw22
           ∀ {ι : Type} [Fintype ι] [Nonempty ι] [DecidableEq ι]
             {F : Type} [Field F] [Fintype F] [DecidableEq F],
             Fintype.card F = q → n₀ ≤ Fintype.card ι →
-            -- Rate `≥ ρ` (not `= ρ`) so the statement is provable for *any* real
-            -- `ρ` in the interval, including irrationals where the rational
-            -- `finrank/|ι|` cannot exactly equal `ρ`. The conclusion's bound is
-            -- monotone in `ρ`, so a code of rate strictly above `ρ` still
-            -- witnesses the `ρ`-indexed bound.
+            -- Two-sided rate pin `ρ ≤ finrank/n ≤ ρ + 1/n`: exact equality is
+            -- unsatisfiable for irrational `ρ`, while a one-sided `≥ ρ` is
+            -- vacuously witnessed by `C = ⊤`. The band admits exactly the
+            -- integer dimension `k = ⌈ρ·n⌉` the paper's random code has.
             ∃ C : Submodule F (ι → F),
-              (Module.finrank F C : ℝ) / Fintype.card ι ≥ ρ ∧
+              ρ ≤ (Module.finrank F C : ℝ) / Fintype.card ι ∧
+              (Module.finrank F C : ℝ) / Fintype.card ι ≤ ρ + 1 / Fintype.card ι ∧
               (Lambda ((C : Set (ι → F))) δ : ENNReal) >
                 ((Nat.floor (qEntropy q δ / (1 - qEntropy q δ - ρ) - ε) : ℕ) : ENNReal) := by
   sorry -- ABF26-T3.11; external admit [GLMRSW22 Thm 4.1].
@@ -235,7 +242,12 @@ section ReedSolomonBounds
 extension fields. Fix `0 < α < β < 1`. For infinitely many prime powers `q` there exists
 a Reed-Solomon code `C := RS[F_q, F_q, ⌊q^α⌋]` and a word `w : F_q → F_q` such that:
 
-  `|Λ(C, 1 - q^{β-1}, w)| ≥ q^{(α - β²) · log q}`
+  `|Λ(C, 1 - q^{β-1}, w)| ≥ q^{(α - β²) · log₂ q}`
+
+**Log base.** The paper's logs are base 2: its display continues
+`q^{(α-β²)·log q} = 2^{(α-β²)·(log q)²}`, which is an identity precisely when
+`log = log₂` (`q^x = 2^{x·log₂ q}`). Encoded as `Real.logb 2 q` (a natural-log
+`Real.log q` here would weaken the exponent by a factor `1/ln 2`).
 
 Admitted as an external result. -/
 theorem rs_lambda_superpoly_extension_bkr06
@@ -255,7 +267,7 @@ theorem rs_lambda_superpoly_extension_bkr06
             let δ : ℝ := 1 - (q : ℝ) ^ (β - 1)
             let C := ReedSolomon.code domain k
             ((closeCodewordsRel ((C : Set (ι → F))) w δ).ncard : ℝ) ≥
-              (q : ℝ) ^ ((α - β ^ 2) * Real.log q) := by
+              (q : ℝ) ^ ((α - β ^ 2) * Real.logb 2 q) := by
   sorry -- ABF26-T3.12; external admit [BKR06 Cor 2.2].
 
 /-- **ABF26 Theorem 3.13 [GHSZ02 Cor 20].** Reed-Solomon large list-size over prime
@@ -282,13 +294,23 @@ theorem rs_lambda_large_prime_ghsz02
 
 /-- **ABF26 Theorem 3.14 [JH01 Thm 2].** Large-rate Reed-Solomon lower bound. Fix an
 integer `j ≥ 2`. For infinitely many prime powers `q` with `q ≡ 1 (mod j+1)`, there
-exists `C := RS[F_q, L, k]` with `|C| = j + 1` and rate `ρ ≈ (j-1)/(j+1)` together
+exists `C := RS[F_q, L, k]` with `|L| = j + 1` and rate `ρ ≈ (j-1)/(j+1)` together
 with a word `w : L → F_q` such that:
 
   `|Λ(C, 1/(j+1), w)| > j`
 
 Witnesses that high-rate RS codes cannot be list-decoded beyond `1/(j+1)` with list
-size `j`. Admitted as an external result. -/
+size `j`.
+
+**Encoding of the paper's parameters.** The paper's `|L| = j + 1` is the *block
+length* (size of the evaluation domain), encoded here as `Fintype.card ι = j + 1`.
+The rate `ρ ≈ (j-1)/(j+1)` pins the message length: with block length `j + 1` the
+natural dimension is `k = j - 1` (rate exactly `(j-1)/(j+1)`), so we fix
+`k := j - 1` rather than leaving `k` existential — an unconstrained `∃ k` would
+let degenerate dimensions (e.g. `k = j + 1`, i.e. `C = F^L`) satisfy the list-size
+conclusion trivially, losing the high-rate content.
+
+Admitted as an external result. -/
 theorem rs_lambda_high_rate_jh01
     (j : ℕ) (_hj_ge : 2 ≤ j) :
     -- Prime-power and modular requirements moved out of `→`-implications
@@ -300,13 +322,8 @@ theorem rs_lambda_high_rate_jh01
         ∀ {ι : Type} [Fintype ι] [Nonempty ι] [DecidableEq ι]
           {F : Type} [Field F] [Fintype F] [DecidableEq F],
           Fintype.card F = qs i → Fintype.card ι = j + 1 →
-          ∃ (domain : ι ↪ F) (k : ℕ) (w : ι → F),
-            let C := ReedSolomon.code domain k
-            -- The paper-quoted `|C| = j + 1` is consistent only with
-            -- specific `(q, k, j)` triples (e.g. `q = j + 1`, `k = 1`); the
-            -- external admit's eventual proof should pin `(k, q)` to make
-            -- this exactly satisfiable.
-            Set.ncard ((C : Set (ι → F))) = j + 1 ∧
+          ∃ (domain : ι ↪ F) (w : ι → F),
+            let C := ReedSolomon.code domain (j - 1)
             (j : ℕ∞) < (closeCodewordsRel ((C : Set (ι → F))) w (1 / (j + 1 : ℝ))).ncard := by
   sorry -- ABF26-T3.14; external admit [JH01 Thm 2].
 
@@ -321,6 +338,16 @@ up to capacity. Let `C : F^k → (F^s)^n` be a τ-subspace-design code. For ever
 
 Combined with `IsSubspaceDesign` (ABF26 D2.16) and `subspaceDesign_tau_lower`
 (L2.17), this gives a list-decoding bound up to capacity for any subspace-design code.
+
+**Integer rounding of `τ(1/η)`.** The paper evaluates the profile `τ : ℕ → ℝ` at the
+*real* argument `1/η`, leaving the rounding implicit. We take the weakest faithful
+integer reading: the **radius** uses `τ(⌈1/η⌉)` (for the non-decreasing profiles of
+interest — e.g. T2.18's FRS profile — this gives the *smaller*, conservative radius)
+while the **list bound** uses `τ(⌊1/η⌋)` (the *larger*, conservative bound). Any
+real-interpolated reading of the paper's statement implies this one for non-decreasing
+`τ`, and the FRS corollary C3.5 (which is where the real-valued `1/η` actually
+matters) recovers the exact interpolated radius directly from the FRS profile.
+
 Admitted as an external result. -/
 theorem subspaceDesign_list_decoding_cz25
     {ι : Type} [Fintype ι] [Nonempty ι] [DecidableEq ι]
@@ -329,7 +356,7 @@ theorem subspaceDesign_list_decoding_cz25
     (_h : IsSubspaceDesign s τ C)
     (η : ℝ) (_hη_pos : 0 < η) :
     (Lambda ((C : Set (ι → Fin s → F)))
-        (1 - τ (Nat.floor (1 / η)) - η) : ENNReal) ≤
+        (1 - τ (Nat.ceil (1 / η)) - η) : ENNReal) ≤
       ENNReal.ofReal ((1 - τ (Nat.floor (1 / η))) / η) := by
   sorry -- ABF26-T3.4; external admit [CZ25 Thm B.5].
 
@@ -340,7 +367,14 @@ rate `ρ`. For any `η > 0` with `1/η < s`:
   `|Λ(C, 1 - ρ·s/(s - 1/η + 1) - η)| ≤ (s·(1-ρ) + 1 - 1/η) / (η·(s + 1 - 1/η))`
 
 When `η ≥ √(3/s)`, the bound simplifies to `|Λ(C, 1 - ρ - η)| ≤ 1/η`. Derives from
-T3.4 + T2.18 (FRS is τ-subspace-design). Admitted as an external result. -/
+T3.4 + T2.18 (FRS is τ-subspace-design).
+
+**Rate convention.** The FRS code `FRS[F, L, k, s, ω] ⊆ (F^s)^n` has rate
+`ρ = k / (s·n)` per ABF26 Definition 2.5 (the alphabet is `F^s`), **not** `k/n`.
+With this `ρ` both the radius and the list bound are the paper's expressions
+verbatim; e.g. the radius numerator `ρ·s = k/n`.
+
+Admitted as an external result. -/
 theorem frs_list_decoding_capacity_cz25
     {ι : Type} [Fintype ι] [Nonempty ι] [DecidableEq ι]
     {F : Type} [Field F] [Fintype F] [DecidableEq F]
@@ -348,7 +382,7 @@ theorem frs_list_decoding_capacity_cz25
     (_hs_pos : 0 < s)
     (η : ℝ) (_hη_pos : 0 < η) (_hη_lt_s : 1 / η < s) :
     let n : ℝ := Fintype.card ι
-    let ρ : ℝ := k / n
+    let ρ : ℝ := k / (s * n)
     let δ : ℝ := 1 - ρ * s / (s - 1 / η + 1) - η
     let bound : ℝ := (s * (1 - ρ) + 1 - 1 / η) / (η * (s + 1 - 1 / η))
     (Lambda ((ReedSolomon.Folded.frsCode domain k s ω : Set (ι → Fin s → F))) δ :

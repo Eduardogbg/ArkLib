@@ -104,11 +104,24 @@ Guruswami–Sudan-style `J_{q,ℓ}`-specific argument is required. Tracked in
 
 **Alphabet generality.** Stated over an arbitrary alphabet `α` (not necessarily a
 field), matching the paper's `Σ`. The Johnson bound is a purely combinatorial fact
-about Hamming distance — it does not need field structure. -/
+about Hamming distance — it does not need field structure.
+
+**Radicand guard (`_h_radicand`).** `Jqℓ` contains
+`√(1 - q/(q-1) · ℓ/(ℓ-1) · δ_min)`. Lean's `Real.sqrt` silently truncates negative
+inputs to `0`, so without a guard the radius would silently inflate to
+`(1 - 1/q) · (1 - 0) = 1 - 1/q` whenever the radicand is negative — at which radius
+the list-size-`ℓ` claim is **false** (e.g. a high-distance code can have more than `ℓ`
+codewords within relative distance `1 - 1/q`). The hypothesis
+`q/(q-1) · ℓ/(ℓ-1) · δ_min ≤ 1` is exactly nonnegativity of the radicand, i.e. the
+regime where the paper's `J_{q,ℓ}` is a real (untruncated) Johnson radius. -/
 theorem johnson_bound_lambda_le_ell
     {ι : Type} [Fintype ι] [Nonempty ι] [DecidableEq ι]
     {α : Type} [Fintype α] [DecidableEq α]
-    (C : Set (ι → α)) (ℓ : ℕ) (_hℓ_ge : 2 ≤ ℓ) :
+    (C : Set (ι → α)) (ℓ : ℕ) (_hℓ_ge : 2 ≤ ℓ)
+    (_h_radicand :
+        ((Fintype.card α : ℚ) / ((Fintype.card α : ℚ) - 1))
+            * ((ℓ : ℚ) / ((ℓ : ℚ) - 1))
+            * ((Code.minDist C : ℚ) / Fintype.card ι) ≤ 1) :
     let q : ℚ := Fintype.card α
     let δ_min : ℚ := Code.minDist C / Fintype.card ι
     Lambda C (Jqℓ q ℓ δ_min) ≤ (ℓ : ℕ∞) := by

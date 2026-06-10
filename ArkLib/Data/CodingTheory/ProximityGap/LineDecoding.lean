@@ -32,7 +32,7 @@ agreement (MCA) bound.
 
 - [ABF26] Arnon, Boneh, Fenzi. *Open Problems in List Decoding and Correlated Agreement*.
   2026. §4.4.
-- [GG25] Guo, Gerbush. Definition 3.1 / Theorem 3.5 (original source).
+- [GG25] Goyal-Guruswami. Definition 3.1 / Theorem 3.5 (original source).
 -/
 
 set_option linter.unusedFintypeInType false
