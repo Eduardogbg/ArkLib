@@ -7,56 +7,53 @@ attack?* — into a single Lean scalar that contestants minimise.
 
 - **Code:** [`ArkLib/ProofSystem/ToyProblem/Leaderboard.lean`](../../ArkLib/ProofSystem/ToyProblem/Leaderboard.lean)
 - **Paper:** Arnon–Boneh–Fenzi, *Open Problems in List Decoding and Correlated
-  Agreement* (eprint 2026/680), §6.2 (Lemma 6.8), §6.4 (Lemmas 6.12, 6.13),
-  §6.3 (Tables 2–5). The attack side is also Fenzi–Sanso, eprint 2025/2197
-  (Construction 4.2 = C6.2, Lemma 4.4 = Lemma 6.12).
+  Agreement* (eprint 2026/680), §6.2 (Lemma 6.8), §6.4 (Lemmas 6.10, 6.12,
+  6.13), §6.3 ("Knowledge soundness upperbound" / "Soundness lowerbound"
+  parheads + Tables 2–5). The attack side is also Fenzi–Sanso, eprint
+  2025/2197 (Construction 4.2 = C6.2, Lemma 4.4 ≈ Lemma 6.12) and the
+  [KKH26]-backed list-size tables.
 
-## The one quantity both sides bound
+## The one quantity both sides bound: a δ-swept frontier
 
-The whole design hinges on a single decision: the two leaderboard sides must
-bound the **same** quantity, or the gap between them is meaningless. That common
-quantity is the protocol's **actual soundness error**
+The two leaderboard sides must bound the **same** scalar or the gap between
+them is meaningless. ABF26's §6.3 analysis is a *sweep over the proximity
+parameter δ*: any round-by-round analysis of Construction 6.2 picks an
+admissible `δ ∈ (0, δ_min(C))` (the L6.8/L6.10 range), after which round 1's
+true error is `winningSetSoundness enc δ` (Definition 6.11 — the paper says
+the simplified IOR's soundness error "is exactly" this) and round 2's is the
+spot-check `(1-δ)^t`. The common quantity is the best error provable by *any*
+such analysis:
 
 ```
-soundnessError := winningSetSoundness C δ
+bestProvableError p
+  = ⨅ δ ∈ (0, δ_min(C)),  max (winningSetSoundness p.enc δ) ((1-δ)^t)
 ```
 
-`winningSetSoundness` is the soundness error of the **simplified IOR** `T'[C]`
-(Construction 6.9, the §6.4 attack target) per ABF26 Definition 6.11: the
-worst-case winning-challenge fraction `|Ω| / |F|` over instances that
-**violate** the relaxed relation `R̃²` (the violating constraint is essential —
-a *valid* instance has `Ω = F`, fraction 1). It is the object the §6.4 attacks
-*directly* lower-bound and Lemma 6.10 upper-bounds. It is **`t`-independent**:
-`T'[C]` is single-round, so there is no `(1-δ)^t` spot-check term — that round
-belongs to the *full* protocol C6.2 and lives only in the X-side vehicle below.
-(Folding `(1-δ)^t` into the common quantity would be unfaithful: at the prize
-regime `(1/√2)^128 = 2^(-64) > 2^(-116)`, so it would make the attack side
-trivial — and at smaller `δ` make the provable side a *falsehood*.)
+Key design points:
+
+- **δ is swept, not pinned.** The two sides certify their bounds at
+  *different* δ — the provable side optimizes near `δ = 1 − √ρ − η` (Johnson
+  regime, `.tex` 2798–2825), the attack side works near `δ* = 0.468`
+  (`tab:elias-lowerbound-thresholds`, `.tex` ~2925). A single shared δ cannot
+  represent the paper's frontier (at the attack's δ the provable side's MCA
+  bound is unavailable; at the provable side's δ the attack is far weaker).
+  The `⨅` makes both legitimate bounds on the same scalar.
+- **Pinned encoding.** All Definition-6.11 objects use the fixed-encoding
+  relations `relaxedRelationFor enc` / `winningSetFor enc` (the paper's code
+  *is* its injective encoding `C : F^k → F^n`). `ToyParams` carries
+  `enc` + `enc_injective` and derives the code as `p.code = Set.range p.enc`.
+  The earlier existential-encoding relations (under which the linear
+  constraint is reparameterisable and the supremum collapses) were deleted.
+- **Honesty.** `bestProvableError` is what δ-relaxation round-by-round
+  analyses can certify; the protocol's *true* security may exceed it. The
+  leaderboard narrows **this** quantity, per §6.3.
 
 Two bounds sandwich it:
 
 ```
-   2^(-Y)  ≤   soundnessError   ≤   2^(-X)
- (attack)     (C6.9 error)       (provable)
+   2^(-Y)  ≤   bestProvableError p   ≤   2^(-X)
+ (attack)      (δ-swept frontier)      (provable)
 ```
-
-- **X side (provable security).** `soundnessError ≤ toySoundnessError ≤ 2^(-X)`,
-  where `toySoundnessError = max (ε_mca(C,δ) + |Λ(C^{≡2},δ)|/|F|) ((1-δ)^t)`
-  reuses the **exact** per-round error terms of the *full*-protocol Lemmas 6.6 /
-  6.8 (`protocol62_knowledgeSound`). It upper-bounds `winningSetSoundness` via
-  Lemma 6.10 (the `ε_mca + |Λ|/|F|` branch already dominates the simplified-IOR
-  error). `toySoundnessError` is the *vehicle*, not the leaderboard quantity; at
-  the prize regime its spot-check branch `(1/√2)^128 = 2^(-64)` is the binding
-  cap, so provable security tops out at 64 bits.
-- **Y side (best attack).** `soundnessError ≥ |Ω|/|F| ≥ 2^(-Y)`, where the
-  winning-set lower bound is the attack of Lemma 6.12 / 6.13.
-
-**Why the upper bound is stated against `soundnessError`, not
-`toySoundnessError`.** If we stated "we can prove X bits" against the RBR bound
-`toySoundnessError`, a contestant could "win" by *inflating* the RBR analysis
-rather than by exhibiting a real attack — unfaithful. Stating both sides against
-the actual `soundnessError` forces the attack side to produce a genuine
-winning-set witness.
 
 ## How to submit
 
@@ -70,20 +67,44 @@ open ToyProblem
 def myLowerBound : SecurityLowerBound koalaIRS where
   bits  := 70
   proof := by
-    -- show  koalaIRS.soundnessError ≤ (2 : ℝ≥0) ^ (-(70 : ℝ))
+    -- show  bestProvableError koalaIRS ≤ (2 : ℝ≥0) ^ (-(70 : ℝ))
     sorry
 
--- "No analysis can prove > 110 bits."
+-- "No δ-relaxation analysis can prove > 110 bits."
 def myAttack : SecurityUpperBound koalaIRS where
   bits  := 110
   proof := by
-    -- show  koalaIRS.soundnessError ≥ (2 : ℝ≥0) ^ (-(110 : ℝ))
+    -- show  (2 : ℝ≥0) ^ (-(110 : ℝ)) ≤ bestProvableError koalaIRS
     sorry
 ```
 
-- `bits : ℝ` (not `ℕ`) because the security level *is* `-log₂(soundness error)`,
-  a real for any error in `(0,1)` — and ABF26's own §6.3 figures are fractional
-  (the attack is `2^(-116.49)`, the MCA branch `≈ 2^(-71.5)`).
+**Lower entry (raise X).** Pick your δ, then:
+
+1. `bestProvableError_le` reduces the goal to
+   `max (winningSetSoundness koalaIRS.enc δ) ((1-δ)^t) ≤ 2^(-bits)`;
+2. bound the first branch via the L6.10 bridge
+   `winningSetSoundness_le_epsMCA_add` (`winningSetSoundness ≤ ε_mca + |Λ|/|F|`)
+   plus your `ε_mca`/list-size analysis — a tighter Phase-1 `MCALowerWitness`
+   feeds in here;
+3. bound the spot-check branch `(1-δ)^t` numerically.
+
+**Upper entry (lower Y).** You must floor the `max` at *every* admissible δ:
+
+- for large δ, exhibit an attack on `winningSetSoundness` — the two **proven,
+  axiom-clean hooks** are
+  - `epsCA_le_winningSetSoundness` (Lemma 6.13): `ε_ca(C,δ) ≤ winningSetSoundness enc δ`,
+  - `listDecoding_le_winningSetSoundness` (Lemma 6.12):
+    `N/(|F|+2N) ≤ winningSetSoundness enc δ` with `N = |Λ(C^{≡2},δ)|`,
+
+  so a numeric `ε_ca` or list-size lower bound plugs straight in;
+- for small δ, the spot-check term `(1-δ)^t ≥ (1-δ₀)^t` floors the max
+  directly.
+
+Notes:
+
+- `bits : ℝ` (not `ℕ`) because the security level *is* `-log₂(error)`, a real
+  for any error in `(0,1)` — ABF26's own §6.3 figures are fractional (the
+  attack is `2^(-116.49)`, the MCA branch `≈ 2^(-71.5)`).
 - `(2 : ℝ≥0) ^ (-bits)` is `NNReal.rpow` (real exponent).
 - A better lower-bound submission *raises* `X`; a better attack *lowers* `Y`.
 
@@ -95,9 +116,10 @@ securityGap (lo : SecurityLowerBound p) (hi : SecurityUpperBound p) : ℝ
 ```
 
 This is the scalar contestants minimise. It is always `≥ 0`:
-`SecurityLowerBound.bits_le_of` proves `lo.bits ≤ hi.bits` directly from the two
-inequalities (`2^(-hi.bits) ≤ soundnessError ≤ 2^(-lo.bits)` and the strict
-antitonicity of `x ↦ 2^(-x)`), and `securityGap_nonneg` packages it. Both are
+`SecurityLowerBound.bits_le_of` proves `lo.bits ≤ hi.bits` by pure
+transitivity through the common scalar
+(`2^(-hi.bits) ≤ bestProvableError ≤ 2^(-lo.bits)` and the strict antitonicity
+of `x ↦ 2^(-x)`), and `securityGap_nonneg` packages it. Both are
 **axiom-clean** (`#print axioms` shows only `propext`/`Classical.choice`/
 `Quot.sound`, no `sorryAx`) — the honesty of the metric does not depend on any
 owed §6 proof.
@@ -109,34 +131,30 @@ At the KoalaBear-sextic regime (`q = 2^31 - 2^24 + 1`, sextic extension,
 
 | Anchor | `bits` | Basis |
 |---|---|---|
-| `arklib_lowerBound_irs_t128 : SecurityLowerBound koalaIRS` | ≈ **64** | ABF26 Lemmas 6.10 / 6.6 RBR bound at §6.3 Tables 2–3 (spot-check-limited) |
-| `fenziSanso_upperBound_attack : SecurityUpperBound koalaIRS` | ≈ **116** | ABF26 Lemma 6.12 (cf. Fenzi–Sanso 2025/2197 Lemma 4.4) |
+| `arklib_lowerBound_irs_t128 : SecurityLowerBound koalaIRS` | ≈ **64** | ABF26 Lemmas 6.10 / 6.6 / 6.8 at `δ = 1 − 1/√2 − η`, `η ≈ 2^-18…2^-21` (`.tex` 2798–2825, `tab:interleaved-security-analysis`; spot-check-limited, MCA branch ≈ `2^-71.5`) |
+| `listDecoding_upperBound_attack : SecurityUpperBound koalaIRS` | ≈ **116** | ABF26 Lemma 6.12 + Elias/[KKH26] at `δ* = 0.468` (`tab:elias-lowerbound-thresholds`, `2^-116.49`), spot-check floor `(0.532)^128 ≈ 2^-116.6` for `δ ≤ δ*` (cf. Fenzi–Sanso 2025/2197 Lemma 4.4) |
 
 so `securityGap = 116 − 64 = 52` (the lemma `securityGap_koalaIRS_anchors`
-evaluates this). Both anchors are `sorry`-tagged by design — the soundness
-*inequalities* are genuine propositions. Notes:
+evaluates this). Both anchors are `sorry`-tagged by design (`ABF26-§6.3.1` /
+`ABF26-§6.3.1-lowerbound`) — the §6.3.1 numeric evaluations are Phase-5-owed.
+Notes:
 
-- **The attack→soundness chain is now real (Phase 3, 2026-06-04).** ABF26 Lemma
-  6.13 is proved sorry-free and axiom-clean (`ToyProblem.simplified_iop_soundness_ca_lb`),
-  and `ToyProblem.epsCA_le_winningSetSoundness` proves `ε_ca(C,δ) ≤ winningSetSoundness C δ`
-  end-to-end (the attack witness's winning fraction genuinely lower-bounds the
-  worst-case soundness, violation certified). So the `fenziSanso_upperBound_attack`
-  ceiling is no longer a bare assertion: its *route* is a real theorem; only the
-  Phase-5 *numeric* `2^(-116) ≤ ε_ca koalaCode` (plus `koalaCode` linearity, which
-  the opaque stand-in cannot yet supply) remains owed. Lemma 6.12's *statement* was
-  also corrected this session (final bound `N/(|F|+2N)`); its proof is Phase 4.
-
-- The **64** is the *full-protocol* (C6.2) provable ceiling — at `t = 128`,
-  `δ ≈ 1-1/√2`, the spot-check term `(1/√2)^128 = 2^(-64)` dominates the RBR
-  bound `max(2^(-71.5), 2^(-64))` (ABF26 §6.3). As a bound on the simplified-IOR
-  `winningSetSoundness` it is *conservative* (the `ε_mca + |Λ|/|F|` branch is the
-  tighter ≈`2^(-71.5)`), hence an improvable leaderboard entry.
+- **The attack→soundness chains are real.** Lemmas 6.12 and 6.13 are proven
+  sorry-free and axiom-clean against the pinned relations
+  (`simplified_iop_soundness_listDecoding_lb`, `simplified_iop_soundness_ca_lb`),
+  and both are hosted on the leaderboard as the proven hooks
+  `listDecoding_le_winningSetSoundness` / `epsCA_le_winningSetSoundness`.
+  Only the Phase-5 *numerics* (and the genuine KoalaBear encoder) remain owed.
+- The Y anchor's currently certified floor is `≈ 2^(-116.6)` (a ceiling of
+  ≈116.5–116.6 bits); `bits := 116` is the paper's headline integer and owes
+  the ≈0.5-bit sharpening to Phase 5 (flagged in the anchor's docstring).
 - The anchor carrier is `GaloisField 2 128` (size `2^128`), a same-*order*
   stand-in for the `≈2^186`-element KoalaBear-sextic field, with an **opaque**
-  placeholder code. The large field is required for the `[2^(-116), 2^(-64)]`
-  window to be representable, and opacity keeps `winningSetSoundness` irreducible
-  so neither anchor is provably true or false. Phase 5 substitutes the genuine
-  RS/IRS KoalaBear-sextic field and code.
+  placeholder encoding `koalaEnc` (injectivity is a tagged Phase-5 sorry). The
+  large field is required for the `[2^(-117), 2^(-64)]` window to be
+  representable, and opacity keeps `bestProvableError` irreducible so neither
+  anchor is provably true or false. Phase 5 substitutes the genuine RS/IRS
+  KoalaBear-sextic field and encoder.
 
 ## Connection to the grand challenges (Phase 1)
 
@@ -144,9 +162,10 @@ The X side improves whenever `ε_mca` or the list size `|Λ|` shrinks. The Phase
 framework in
 [`ArkLib/Data/CodingTheory/ProximityGap/GrandChallenges.lean`](../../ArkLib/Data/CodingTheory/ProximityGap/GrandChallenges.lean)
 captures exactly this: a tighter `MCALowerWitness` (a verified `ε_mca(C,δ) ≤ ε*`)
-shrinks the `ε_mca` term inside `toySoundnessError`, which raises the provable
-lower bound `X` and so narrows `securityGap`. Resolving the Grand MCA / List
-Decoding Challenges feeds the leaderboard's lower side directly.
+shrinks the `ε_mca` term inside the L6.10 bridge
+`winningSetSoundness_le_epsMCA_add`, which raises the provable lower bound `X`
+and so narrows `securityGap`. Resolving the Grand MCA / List Decoding
+Challenges feeds the leaderboard's lower side directly.
 
 ## Prior art
 

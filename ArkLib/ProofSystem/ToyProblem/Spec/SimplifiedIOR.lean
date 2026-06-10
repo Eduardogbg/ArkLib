@@ -57,7 +57,7 @@ open ToyProblem.Spec (Statement OracleStatement Witness)
 
 /-! ### Output types and the output relation
 
-These need only `[Fintype ι]` (for `relaxedRelation`'s `Fintype.card ι`
+These need only `[Fintype ι]` (for `relaxedRelationFor`'s `Fintype.card ι`
 call) and `[Field F]`. The heavier `[DecidableEq ι] [Fintype F]
 [DecidableEq F]` instances come in below for the protocol-object
 definitions. -/

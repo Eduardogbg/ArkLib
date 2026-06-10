@@ -21,10 +21,6 @@ formal protocol object. The three protocol-level soundness lemmas
 
 Items in this file:
 
-* `ToyProblem.additive_code_supports_erasure_correction_grs25`
-   — Lemma 6.5 [GRS25]: every additive code supports erasure correction
-   with correction time `O((s · n)^3)`.
-
 * `ToyProblem.simplified_iop_soundness_listDecoding_lb`
    — Lemma 6.12 [ABF26]: list-decoding-based lower bound on the
    soundness error of the simplified IOR `T'[C, t]` (Construction 6.9).
@@ -34,13 +30,16 @@ Items in this file:
    — Lemma 6.13 [ABF26]: correlated-agreement-based lower bound on the
    soundness error of `T'[C, t]`.
 
+(Lemma 6.5 — every additive code supports erasure correction — is a generic
+coding-theory statement and is **proven** as
+`CodingTheory.additive_code_supports_erasure_correction_grs25` in
+`ArkLib/Data/CodingTheory/Erasure.lean`.)
+
 Proof status:
 
-* **L6.5** is `external admit [GRS25]` — a classical result imported from
-  another work; admitting it is acceptable for a survey formalization.
-* **L6.12 and L6.13** are proved. They are stated in coding-theory form
-  (direct cardinality bounds on `winningSetFor` / `winningSet`); their
-  protocol-level reading bounds the soundness of
+* **L6.12 and L6.13** are proved, sorry-free and axiom-clean. They are stated
+  in coding-theory form (direct cardinality bounds on `winningSetFor enc`);
+  their protocol-level reading bounds the soundness of
   `ToyProblem.SimplifiedIOR.reduction` from below.
 
 **L6.12 status (Phase 4, 2026-06-04).** The list-decoding lower bound is closed
@@ -50,10 +49,13 @@ against the **fixed-encoding** `relaxedRelationFor enc` / `winningSetFor enc`
 violation conjunct against the fixed relation, and lifts affine winning
 challenges into `winningSetFor`.
 
-**L6.13 status (Phase 4, 2026-06-04).** The correlated-agreement lower bound is
-closed against the existential `relaxedRelation` / `winningSet` relation. Its
-line-membership helper `mem_winningSet_zero_of_relClose` uses a linear encoder
-with range `C` to convert line proximity into a winning challenge.
+**L6.13 status (restated 2026-06-10).** The correlated-agreement lower bound is
+now also stated against the fixed-encoding `relaxedRelationFor enc` /
+`winningSetFor enc` (the faithful Definition 6.1/6.3/6.11 objects; the
+existential-encoding family it previously targeted was deleted — see the
+Definitions.lean module docstring). Its line-membership helper
+`mem_winningSetFor_zero_of_relClose` converts line proximity into a winning
+challenge under the pinned encoder.
 
 ## References
 
@@ -68,26 +70,6 @@ open Code InterleavedCode ListDecodable ProximityGap
 open scoped NNReal ENNReal ProbabilityTheory
 
 variable {ι F : Type} [Fintype ι] [Field F] [Fintype F] [DecidableEq F]
-
-omit [Fintype F] in
-/-- **Lemma 6.5 of [ABF26]** (= [GRS25]).
-
-Every `F`-additive code `C : F^k → (F^s)^n` supports erasure correction
-(in the sense of `CodingTheory.SupportsErasureCorrection`) with correction
-time `O((s · n)^3)`. Equivalently: the predicate
-`CodingTheory.SupportsErasureCorrection C ecor` holds for some
-`ecor ≤ K · (s · n)^3`. We state the more permissive
-"some `ecor` works" form here; pinning down the constant `K` requires
-modelling the encoder concretely.
-
-Admitted as an external result. -/
-theorem additive_code_supports_erasure_correction_grs25
-    (C : Set (ι → F)) :
-    ∃ ecor : ℕ, CodingTheory.SupportsErasureCorrection C ecor := by
-  -- ABF26-L6.5; external admit [GRS25]. Polynomial-time erasure-correction
-  -- algorithm via Gaussian elimination on the parity-check matrix of any
-  -- additive code (cf. Guruswami-Rudra-Sudan, *Essential Coding Theory*).
-  sorry
 
 omit [Fintype ι] [Fintype F] [DecidableEq F] in
 /-- **ENNReal → ℝ bridge for the Claim-B.1 output.** Rewrites Claim B.1's image
@@ -188,7 +170,7 @@ lies in `Λ(C^{≡2}, δ, fStar)` exactly when `fStar` agrees with the two colum
 `∈ interleavedCodeSet C` conjunct holds unconditionally (both columns are in
 `C = range enc`); the distance conjunct unfolds to the agreement set via
 `relCloseToWord_iff_exists_agreementCols` + `relDist_floor_bound_iff_complement_bound`,
-following the coercion handling of `mem_winningSet_zero_of_relClose`. -/
+following the coercion handling of `mem_winningSetFor_zero_of_relClose`. -/
 private lemma encStack_mem_closeCodewordsRel_iff [Nonempty ι] {k : ℕ}
     (enc : (Fin k → F) →ₗ[F] (ι → F)) {C : Set (ι → F)} (hC : Set.range enc = C)
     {δ : ℝ≥0} (hδ_lt : δ < 1) {fStar : ι → Fin 2 → F}
@@ -377,7 +359,7 @@ private lemma exists_affine_image_lb (T : Finset (F × F))
 
 omit [Fintype F] [DecidableEq F] in
 /-- **Fixed-encoding winning-set membership (agreement form).** Generalises
-`mem_winningSet_zero_of_relClose` to arbitrary instance data `(v, μ₁, μ₂)`, against
+`mem_winningSetFor_zero_of_relClose` to arbitrary instance data `(v, μ₁, μ₂)`, against
 the *fixed-encoding* winning set `winningSetFor enc` (Definition 6.11 of [ABF26]
 with the code's encoding pinned — the faithful object for the §6.4.1 attack).
 
@@ -474,16 +456,15 @@ The encoding hypothesis is `∃ enc, Function.Injective enc ∧ range enc = C` �
 faithful "linear code of dimension `k`" assumption (an injective `F`-linear
 encoding onto `C`), which is what makes `Λ(C^{≡2}, δ)` enumerable by *message*
 pairs `F^k × F^k` (the inner products `⟨·, v⟩` of paper step 1 live on messages).
-This strengthens L6.13's `range enc = C` and matches the linear `encode` field of
-`ToyProblem.relation`.
+This matches L6.13's hypothesis shape and the pinned `encode` of
+`ToyProblem.relationFor` (Definition 6.1's "code as the injective map").
 
 The statement is against the **fixed-encoding** relation and winning set
 (`relaxedRelationFor enc`, `winningSetFor enc`), with `enc` the code's injective
 `F`-linear encoding (`Set.range enc = C`). This is the paper's `R_C`. (Against
-ArkLib's existential-encoding `relaxedRelation` the violation conjunct is false —
-an adversary reparameterises the constraint through another encoding. The
-quantitative bound transfers to the existential `winningSet` via
-`winningSetFor_subset`.)
+an existential-encoding relaxed relation the violation conjunct is false — an
+adversary reparameterises the constraint through another encoding; that
+defective family has been deleted from `Definitions.lean`.)
 
 The proof decomposes into reusable, separately-verified pieces:
 `exists_dotProduct_image_lb` (first B.1, inner-product collision via
@@ -636,7 +617,7 @@ theorem simplified_iop_soundness_listDecoding_lb {k : ℕ}
       -- `m ∈ Smsg`, is winning via `mem_winningSetFor_of_agree` (message `m.1+γ•m.2`,
       -- constraint `⟨m.1+γ·m.2, v⟩ = a+γb = μ₁+γμ₂`, agreement from `encStack`
       -- closeness + `enc`-linearity). Uses the same agreement-cols reconciliation
-      -- as `mem_winningSet_zero_of_relClose`.
+      -- as `mem_winningSetFor_zero_of_relClose`.
       intro γ hγ
       rw [Finset.coe_image, Set.mem_image] at hγ
       obtain ⟨⟨a, b⟩, hab, hγeq⟩ := hγ
@@ -713,21 +694,21 @@ omit [Fintype F] in
 /-- **Membership helper for the §6.4 attacks.** If `C` is a linear code (the
 range of an `F`-linear encoding `enc` of message dimension `k`) and the line
 `f₁ + γ·f₂` is `δ`-close to `C`, then `γ` is a winning challenge for the
-all-zero instance `(v, μ₁, μ₂) = (0, 0, 0)` (Definition 6.11). This is the
-inclusion `S ⊆ Ω^{f₁,f₂}_{0,0,0}` from the proof of **Lemma 6.13 of [ABF26]**
-(§6.4.2), generalised to any line. -/
-theorem mem_winningSet_zero_of_relClose {k : ℕ} [Nonempty ι] {C : Set (ι → F)}
+all-zero instance `(v, μ₁, μ₂) = (0, 0, 0)` (Definition 6.11, fixed-encoding
+`winningSetFor enc` — the linear constraint `⟨m, 0⟩ = 0 + γ·0` is trivially
+satisfied). This is the inclusion `S ⊆ Ω^{f₁,f₂}_{0,0,0}` from the proof of
+**Lemma 6.13 of [ABF26]** (§6.4.2), generalised to any line. -/
+theorem mem_winningSetFor_zero_of_relClose {k : ℕ} [Nonempty ι] {C : Set (ι → F)}
     {δ : ℝ≥0} (_hδ_lt : δ < 1)
     (enc : (Fin k → F) →ₗ[F] (ι → F)) (hC : Set.range enc = C)
     (f₁ f₂ : ι → F) {γ : F} (hγ : δᵣ(f₁ + γ • f₂, C) ≤ δ) :
-    γ ∈ winningSet C δ (0 : Fin k → F) 0 0 f₁ f₂ := by
+    γ ∈ winningSetFor enc δ (0 : Fin k → F) 0 0 f₁ f₂ := by
   classical
-  rw [winningSet, Set.mem_setOf_eq]
+  rw [winningSetFor, Set.mem_setOf_eq]
   rw [relCloseToCode_iff_relCloseToCodeword_of_minDist] at hγ
   obtain ⟨w, hwC, hwd⟩ := hγ
   obtain ⟨m, hm⟩ : ∃ m, enc m = w := by rw [← hC] at hwC; exact hwC
-  refine ⟨fun _ ↦ w, ⟨fun _ ↦ m, ⟨enc, fun m' ↦ hC ▸ ⟨m', rfl⟩, fun i ↦ by simp [hm]⟩,
-      fun i ↦ by simp⟩, ?_⟩
+  refine ⟨fun _ ↦ w, ⟨fun _ ↦ m, fun i ↦ by simp [hm], fun i ↦ by simp⟩, ?_⟩
   rw [relCloseToWord_iff_exists_agreementCols] at hwd
   obtain ⟨S, hScard, hSagree⟩ := hwd
   refine ⟨S, ?_, ?_⟩
@@ -744,35 +725,42 @@ theorem mem_winningSet_zero_of_relClose {k : ℕ} [Nonempty ι] {C : Set (ι →
 
 /-- **Lemma 6.13 of [ABF26]** (correlated-agreement lower bound on the simplified IOR).
 
-Coding-theory form: if `C` is a linear code (range of an `F`-linear encoding
-`enc` of message dimension `k`) and the correlated-agreement error is positive,
-then there exist `(v, μ_1, μ_2, f_1, f_2)` with `(f_1, f_2)` lying **outside**
-the relaxed relation `R̃_{C,δ}^2` (the `violates` conjunct) whose winning
-challenge set has size at least `ε_ca(C, δ) · |F|`.
+Coding-theory form: if `C` is a linear code, presented by its injective
+`F`-linear encoding `enc` of message dimension `k` (`Set.range enc = C` — the
+paper's "code as the injective map"; same hypothesis shape as L6.12), and the
+correlated-agreement error is positive, then there exist
+`(v, μ_1, μ_2, f_1, f_2)` with `(f_1, f_2)` lying **outside** the relaxed
+relation `R̃_{C,δ}^2` under the pinned encoding (the `violates` conjunct,
+`¬ relaxedRelationFor enc`) whose winning challenge set
+`winningSetFor enc δ v μ₁ μ₂ f₁ f₂` has size at least `ε_ca(C, δ) · |F|`.
 
 Protocol-level reading: the soundness error of the simplified IOR
 `T'[C, t]` (Construction 6.9) is at least `ε_ca(C, δ)`.
 
-Proof (ABF26 §6.4.2, now machine-checked): the CA error is a supremum over a
+Proof (ABF26 §6.4.2, machine-checked): the CA error is a supremum over a
 finite type of word-stacks, hence attained at some `u = (f_1, f_2)`; since the
-error is positive, `u` is *not* jointly `δ`-close to `C^{≡2}` — this is exactly
-the violation `¬ R̃_{C,δ}^2` (via `jointAgreement_iff_jointProximity`). Its
-value is then `Pr_γ[Δ(f_1 + γ·f_2, C) ≤ δ] = |S|/|F|` with `S = {γ : Δ(f_1 +
-γ·f_2, C) ≤ δ}`, and `S ⊆ Ω^{f_1,f_2}_{0,0,0}` (`mem_winningSet_zero_of_relClose`).
-The `0 < ε_ca` hypothesis matches the paper's "if not, the statement holds
-vacuously". The bound is in terms of `ε_ca` (correlated agreement) rather than
+error is positive, `u` is *not* jointly `δ`-close to `C^{≡2}` — this implies
+the violation `¬ R̃_{C,δ}^2` (a fixed-encoding witness is in particular a
+codeword stack, via `jointAgreement_iff_jointProximity`). Its value is then
+`Pr_γ[Δ(f_1 + γ·f_2, C) ≤ δ] = |S|/|F|` with `S = {γ : Δ(f_1 + γ·f_2, C) ≤ δ}`,
+and `S ⊆ Ω^{f_1,f_2}_{0,0,0}` (`mem_winningSetFor_zero_of_relClose` — the
+attack instance is all-zero, so the pinned linear constraint is trivially
+satisfied). The `0 < ε_ca` hypothesis matches the paper's "if not, the
+statement holds vacuously". The injectivity hypothesis is carried to mirror
+L6.12's "code as injective map" reading (Definition 6.1); this proof does not
+consume it. The bound is in terms of `ε_ca` (correlated agreement) rather than
 `ε_mca`; the latter would be qualitatively stronger but no attack reaching
 `ε_mca > ε_ca` is currently known (Remark 6.14). -/
 theorem simplified_iop_soundness_ca_lb {k : ℕ} [Nonempty ι]
     (C : Set (ι → F)) (δ : ℝ≥0) (_hδ_pos : (0 : ℝ≥0) < δ) (_hδ_lt : δ < 1)
-    (hClin : ∃ enc : (Fin k → F) →ₗ[F] (ι → F), Set.range enc = C)
+    (enc : (Fin k → F) →ₗ[F] (ι → F)) (_henc_inj : Function.Injective enc)
+    (hC : Set.range enc = C)
     (hca : 0 < epsCA (F := F) (A := F) C δ δ) :
     ∃ (v : Fin k → F) (μ₁ μ₂ : F) (f₁ f₂ : ι → F),
-      ¬ relaxedRelation (ℓ := 2) C δ v ![μ₁, μ₂] ![f₁, f₂] ∧
-      ((winningSet (k := k) C δ v μ₁ μ₂ f₁ f₂).ncard : ENNReal)
+      ¬ relaxedRelationFor (ℓ := 2) enc δ v ![μ₁, μ₂] ![f₁, f₂] ∧
+      ((winningSetFor enc δ v μ₁ μ₂ f₁ f₂).ncard : ENNReal)
         ≥ epsCA (F := F) (A := F) C δ δ * (Fintype.card F : ENNReal) := by
   classical
-  obtain ⟨enc, hC⟩ := hClin
   -- The CA error is attained at some word-stack `u` (finite supremum).
   obtain ⟨u, hu_max⟩ := Finite.exists_max
     (fun u : WordStack F (Fin 2) ι ↦
@@ -792,13 +780,13 @@ theorem simplified_iop_soundness_ca_lb {k : ℕ} [Nonempty ι]
     intro h; rw [h_eps, if_pos h] at hca; exact lt_irrefl _ hca
   rw [if_neg hjp] at h_eps
   refine ⟨0, 0, 0, u 0, u 1, ?_, ?_⟩
-  · -- Violation: `¬ R̃²`. Else relaxedRelation → jointAgreement → jointProximity.
+  · -- Violation: `¬ R̃²`. Else relaxedRelationFor → jointAgreement → jointProximity.
     intro hrel
     apply hjp
     have hu_eq : u = ![u 0, u 1] := by funext i; fin_cases i <;> rfl
     rw [hu_eq, ← jointAgreement_iff_jointProximity]
-    obtain ⟨Wstar, ⟨M, ⟨encode, hencC, hWstar⟩, _hconstr⟩, S, hScard, hSag⟩ := hrel
-    refine ⟨S, ?_, Wstar, fun i ↦ ⟨hWstar i ▸ hencC (M i), ?_⟩⟩
+    obtain ⟨Wstar, ⟨M, hWstar, _hconstr⟩, S, hScard, hSag⟩ := hrel
+    refine ⟨S, ?_, Wstar, fun i ↦ ⟨hWstar i ▸ (hC ▸ Set.mem_range_self (M i)), ?_⟩⟩
     · -- card bound ℝ → ℝ≥0
       have e : ((1 - δ : ℝ≥0) : ℝ) = 1 - (δ : ℝ) := by rw [NNReal.coe_sub _hδ_lt.le]; simp
       rw [ge_iff_le, ← NNReal.coe_le_coe, NNReal.coe_mul, e]
@@ -809,8 +797,8 @@ theorem simplified_iop_soundness_ca_lb {k : ℕ} [Nonempty ι]
       exact ⟨Finset.mem_univ j, (hSag i j hj).symm⟩
   · -- Cardinality bound: `S ⊆ Ω`, and `Pr·|F| = |S|`.
     rw [h_eps]
-    have hsub : {γ : F | δᵣ(u 0 + γ • u 1, C) ≤ δ} ⊆ winningSet C δ 0 0 0 (u 0) (u 1) :=
-      fun γ hγ ↦ mem_winningSet_zero_of_relClose _hδ_lt enc hC (u 0) (u 1) hγ
+    have hsub : {γ : F | δᵣ(u 0 + γ • u 1, C) ≤ δ} ⊆ winningSetFor enc δ 0 0 0 (u 0) (u 1) :=
+      fun γ hγ ↦ mem_winningSetFor_zero_of_relClose _hδ_lt enc hC (u 0) (u 1) hγ
     have hF0 : (Fintype.card F : ℝ≥0) ≠ 0 := by
       simp [Fintype.card_ne_zero]
     have key : Pr_{ let γ ← $ᵖ F }[δᵣ(u 0 + γ • u 1, C) ≤ δ] * (Fintype.card F : ENNReal)

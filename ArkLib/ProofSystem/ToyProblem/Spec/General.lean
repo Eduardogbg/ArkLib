@@ -70,7 +70,7 @@ open scoped NNReal ENNReal
 
 /-! ### Type-level definitions and relations
 
-The relations need `[Fintype ι]` (for `relaxedRelation`'s
+The relations need `[Fintype ι]` (for `relaxedRelationFor`'s
 `Fintype.card ι` call) and `[Field F]` (for the `→ₗ[F]` encoder). The
 heavier `[DecidableEq ι] [Fintype F] [DecidableEq F]` instances come
 in below for the protocol-object definitions. -/
