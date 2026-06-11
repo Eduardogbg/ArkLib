@@ -303,35 +303,6 @@ lemma simulateQ_liftM_query [LawfulMonad r] {ι' : Type} {spec' : OracleSpec ι'
 
 end simulateQ_liftM_query
 
-/-- `OptionT` companion to `QueryImpl.simulateQ_liftM_eq_of_query`: simulating an
-`OracleComp`-computation `oa` lifted into `OptionT (OracleComp spec₂')` (the shape produced by
-an `OptionT`-monadic verifier's `let _ ← liftM (queryHelper)` binds) agrees, at the run
-(`Option`) level, with `some`-mapping the simulation of `oa` through a per-query-bridged handler
-`impl₁`.
-
-The key step is that the `OptionT.run` of a lifted `OracleComp` is `some <$> (the OracleComp
-lift)` *definitionally* (`hrun` below is `rfl`), which collapses the `OptionT` lift chain to a
-plain `OracleComp` lift; the chain-agnostic `QueryImpl.simulateQ_liftM_eq_of_query` then resolves
-it. This lets verifier-body query helpers be routed through a `simOracle2`-style handler even
-though their lifts go through the composed `MonadLiftT` instance
-`instMonadLiftTOfMonadLift ∘ instMonadLiftOptionTOfOracleQuery`. -/
-lemma simulateQ_optionT_liftM_run_eq_of_query
-    {ι₁' ι₂' : Type} {spec₁' : OracleSpec ι₁'} {spec₂' : OracleSpec ι₂'}
-    {α : Type} {m' : Type → Type} [Monad m'] [LawfulMonad m']
-    [MonadLiftT (OracleComp spec₁') (OracleComp spec₂')]
-    [LawfulMonadLiftT (OracleComp spec₁') (OracleComp spec₂')]
-    (impl : QueryImpl spec₂' m') (impl₁ : QueryImpl spec₁' m')
-    (h : ∀ t, simulateQ impl
-      (liftM (liftM (spec₁'.query t) : OracleComp spec₁' (spec₁'.Range t)) :
-        OracleComp spec₂' (spec₁'.Range t)) = impl₁ t)
-    (oa : OracleComp spec₁' α) :
-    simulateQ impl ((liftM oa : OptionT (OracleComp spec₂') α) :
-        OracleComp spec₂' (Option α))
-      = (some <$> simulateQ impl₁ oa : m' (Option α)) := by
-  have hrun : ((liftM oa : OptionT (OracleComp spec₂') α) : OracleComp spec₂' (Option α))
-      = some <$> (liftM oa : OracleComp spec₂' α) := rfl
-  rw [hrun, simulateQ_map, QueryImpl.simulateQ_liftM_eq_of_query impl impl₁ h oa]
-
 /-- `simulateQ` distributes over an `OptionT`-monadic `forIn` on a list: the `OptionT`-loop
 sibling of `simulateQ_list_forIn`. The body lives in `OptionT (OracleComp spec)`, so the loop
 is decomposed via `simulateQ_optionT_bind` (rather than the `OracleComp`-level `simulateQ_bind`
@@ -480,7 +451,44 @@ lemma simulateQ_add_add_liftM_comp_right (t : spec₂.Domain) :
 
 end QueryImpl
 
-/-! ### ArkLib-local routing lemmas (superseded upstream candidates) -/
+/-! ### ArkLib-local lemmas (upstream candidates; NOT mirrored in VCV-io yet)
+
+Unlike the staged section above, nothing here exists upstream: do NOT delete these
+at the next VCVio bump unless they have been upstreamed by then. -/
+
+/-- `OptionT` companion to `QueryImpl.simulateQ_liftM_eq_of_query`: simulating an
+`OracleComp`-computation `oa` lifted into `OptionT (OracleComp spec₂')` (the shape produced by
+an `OptionT`-monadic verifier's `let _ ← liftM (queryHelper)` binds) agrees, at the run
+(`Option`) level, with `some`-mapping the simulation of `oa` through a per-query-bridged handler
+`impl₁`.
+
+The key step is that the `OptionT.run` of a lifted `OracleComp` is `some <$> (the OracleComp
+lift)` *definitionally* (`hrun` below is `rfl`), which collapses the `OptionT` lift chain to a
+plain `OracleComp` lift; the chain-agnostic `QueryImpl.simulateQ_liftM_eq_of_query` then resolves
+it. This lets verifier-body query helpers be routed through a `simOracle2`-style handler even
+though their lifts go through the composed `MonadLiftT` instance
+`instMonadLiftTOfMonadLift ∘ instMonadLiftOptionTOfOracleQuery`.
+
+Upstream candidate (would sit in VCVio's `SimSemantics/OptionT/Basic.lean`, but needs
+`QueryImpl.simulateQ_liftM_eq_of_query` from `SimSemantics/Append.lean`, so upstreaming
+requires an import restructure there). -/
+lemma simulateQ_optionT_liftM_run_eq_of_query
+    {ι₁' ι₂' : Type} {spec₁' : OracleSpec ι₁'} {spec₂' : OracleSpec ι₂'}
+    {α : Type} {m' : Type → Type} [Monad m'] [LawfulMonad m']
+    [MonadLiftT (OracleComp spec₁') (OracleComp spec₂')]
+    [LawfulMonadLiftT (OracleComp spec₁') (OracleComp spec₂')]
+    (impl : QueryImpl spec₂' m') (impl₁ : QueryImpl spec₁' m')
+    (h : ∀ t, simulateQ impl
+      (liftM (liftM (spec₁'.query t) : OracleComp spec₁' (spec₁'.Range t)) :
+        OracleComp spec₂' (spec₁'.Range t)) = impl₁ t)
+    (oa : OracleComp spec₁' α) :
+    simulateQ impl ((liftM oa : OptionT (OracleComp spec₂') α) :
+        OracleComp spec₂' (Option α))
+      = (some <$> simulateQ impl₁ oa : m' (Option α)) := by
+  have hrun : ((liftM oa : OptionT (OracleComp spec₂') α) : OracleComp spec₂' (Option α))
+      = some <$> (liftM oa : OracleComp spec₂' α) := rfl
+  rw [hrun, simulateQ_map, QueryImpl.simulateQ_liftM_eq_of_query impl impl₁ h oa]
+
 
 /-- Resolve a `simulateQ` over a three-way `addLift impl (impl₁ + impl₂)` applied to a
 computation `x : OracleComp spec₁ α` that has been double-`liftM`'d — first into the inner

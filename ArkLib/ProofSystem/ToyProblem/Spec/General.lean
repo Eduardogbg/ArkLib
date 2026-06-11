@@ -695,8 +695,11 @@ obligation splits into:
      chains and collapsing the spot-check `forIn` — packaged as
      `verifierBody_simulateQ_eq_pure` (above), built on the staged toolkit
      (`simulateQ_optionT_bind`/`_lift`, `simulateQ_optionT_forIn_yield_pure_some`,
-     `OracleComp.monadLift_liftM_OptionT`) plus the `simulateQ_add_add_liftM_*`
-     routing family staged from upstream VCV-io work. The recurrent obstacle —
+     `OracleComp.monadLift_liftM_OptionT`); the query routing itself is done by
+     manual definitional bridges, not by the staged `simulateQ_add_add_liftM_*`
+     simp family (whose `implA + implB` left-hand sides do not match
+     `simOracle2`'s `addLift`/`liftTarget` spelling — that family remains an
+     upstream-candidate for canonically-spelled goals). The recurrent obstacle —
      elaborated `MonadLift`/`ForIn` instance trees that are *definitionally* but
      not *syntactically* equal to the toolkit lemmas' canonical spellings — is
      bridged by `conv … change`/`show … from rfl` steps and a universe-pinned
