@@ -32,13 +32,16 @@ ArkLib's `OracleReduction` framework, following the conventions used by
 * `accepts` — the §6.1 decision predicate (extracted for use by the
   verifier and by completeness proofs).
 
-The `prover` / `verifier` / `oracleReduction` triple is complete. The
-soundness lemmas `protocol62_knowledgeSound` (L6.6) and
-`protocol62_rbrKnowledgeSound` (L6.8) carry the **concrete** paper error
-terms (`max (ε_mca(C,δ) + |Λ(C^{≡2},δ)|/|F|) ((1-δ)^t)` and the
-per-round split); only their *proofs* are admitted as tagged-sorries,
-pending careful threading of the `OptionT (OracleComp …)` extractor
-machinery. The IOR scaffolding is exactly what is needed downstream.
+The `prover` / `verifier` / `oracleReduction` triple is complete.
+Completeness (C6.2, `oracleReduction_perfectCompleteness`) and
+round-by-round knowledge soundness (L6.8,
+`protocol62_rbrKnowledgeSound`) are **fully proven**. The remaining
+soundness lemma `protocol62_knowledgeSound` (L6.6) carries the
+**concrete** paper error term
+(`max (ε_mca(C,δ) + |Λ(C^{≡2},δ)|/|F|) ((1-δ)^t)`); only its *proof* is
+admitted as a tagged sorry — it needs the paper's direct
+conditional-split argument (the generic rbrKS → KS implication yields
+the *sum* of the round errors, which overshoots the `max`).
 
 ## Protocol description
 
@@ -1447,10 +1450,20 @@ Construction 6.2).
 For any `δ ∈ (0, δ_min(C))` and fixed injective linear encoder with
 range `C` (injectivity is implicit in the paper's encoding map and
 load-bearing for the extractor's per-list-pair counting),
-the IOR has round-by-round knowledge soundness (paper Definition A.5 ≡
-ArkLib's `OracleVerifier.rbrKnowledgeSoundness`, definitionally
+the IOR has round-by-round knowledge soundness (ArkLib's
+`OracleVerifier.rbrKnowledgeSoundness`, definitionally
 `toVerifier.rbrKnowledgeSoundness`) against `R̃_{C,δ}^2`, with
 per-round errors
+
+**Quantification note (paper Definition A.5 vs the ArkLib game).** The
+paper's rbr definition bounds the bad-transition probability for *every*
+fixed transcript prefix (worst case); ArkLib's game samples the prefix
+challenges uniformly inside the prover run and bounds the *mixture*. The
+in-tree statement is therefore the averaged form, implied by the paper's.
+The per-round lemmas feeding this proof (`gamma_round_game_bound`,
+`spotcheck_round_game_bound`) hold for every fixed prefix — i.e. they ARE
+the paper-strength worst-case facts — so the paper's mathematical content
+is fully in-tree; only the bundled top-level game statement averages.
 
   * `ε_mca(C, δ) + |Λ(C^{≡2}, δ)| / |F|` after the γ round,
   * `(1 − δ)^t` after the spot-check round.
