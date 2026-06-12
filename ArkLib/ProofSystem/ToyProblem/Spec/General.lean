@@ -6,9 +6,11 @@ Authors: Alexander Hicks
 
 import ArkLib.OracleReduction.Security.RoundByRound
 import ArkLib.ProofSystem.ToyProblem.Definitions
+import ArkLib.ProofSystem.ToyProblem.SoundnessBounds
 import ArkLib.Data.CodingTheory.ListDecodability
 import ArkLib.Data.CodingTheory.ProximityGap.Errors
 import ArkLib.ToVCVio.OracleComp.SimSemantics.SimulateQ
+import ArkLib.ToVCVio.OracleComp.RbrGame
 
 /-!
 # Toy problem oracle reduction (ABF26 Construction 6.2)
@@ -104,7 +106,7 @@ namespace Spec
 
 open OracleSpec OracleComp ProtocolSpec
 open Code InterleavedCode ListDecodable ProximityGap
-open scoped NNReal ENNReal
+open scoped NNReal ENNReal ProbabilityTheory
 
 /-! ### Type-level definitions and relations
 
@@ -1235,6 +1237,209 @@ codeword `u ∈ Λ(C, f₁ + γ·f₂, δ)` decomposes as `u = u₁ + γ·u₂` 
 `(u₁, u₂) ∈ Λ(C^{≡2}, (f₁, f₂), δ)`, so the extractor would fail. MCA
 provides exactly this decomposition with probability `≥ 1 − ε_mca`. -/
 
+/-! ### Lemma 6.8 assembly — extractor, knowledge state function, per-round bounds.
+The post-spot-check state is the §6.1 acceptance predicate itself
+(witness-ignoring) — see PAPER_REVS.md item 10 for the deviation rationale. -/
+
+/-- `Pr_{x ← D}[P x] = 0` for a never-satisfied predicate `P`. -/
+private lemma Pr_eq_zero_of_forall_not {α : Type} (D : PMF α) (P : α → Prop)
+    (h : ∀ x, ¬ P x) : Pr_{let x ← D}[P x] = 0 := by
+  classical rw [prob_tsum_form_singleton]; simp [h]
+
+omit [DecidableEq ι] [Fintype F] [DecidableEq F] in
+/-- The post-`γ` knowledge state of the L6.8 argument ([ABF26] §6.2): `m`
+satisfies the folded linear constraint at `γ`, and `f₁ + γ·f₂` agrees with
+`encode m` on a `≥ (1-δ)`-fraction column set. Shaped to match the event of
+`ToyProblem.gamma_transition_prob_le` exactly. -/
+private def gammaState (encode : (Fin k → F) → (ι → F)) (δ : ℝ≥0)
+    (v : Fin k → F) (μ₁ μ₂ : F) (f₁ f₂ : ι → F) (γ : F) (m : Fin k → F) : Prop :=
+  (∑ j, m j * v j = μ₁ + γ * μ₂) ∧
+  ∃ S : Finset ι, (1 - (δ : ℝ)) * Fintype.card ι ≤ S.card ∧
+    ∀ j ∈ S, f₁ j + γ * f₂ j = encode m j
+
+/-- L6.8 intermediate witness types: input witness at round 0, the γ-round
+candidate message during rounds 1–2, nothing after the spot-check round. -/
+private def rbrWitMid : Fin 4 → Type
+  | ⟨0, _⟩ => Witness (F := F) k
+  | ⟨1, _⟩ => Fin k → F
+  | ⟨2, _⟩ => Fin k → F
+  | ⟨3, _⟩ => PUnit
+
+omit [DecidableEq ι] [Fintype F] [DecidableEq F] in
+open Classical in
+/-- Round-0 extraction for L6.8: if *any* witness completes `stmtIn` in the
+relaxed output relation, return one by choice; otherwise a dummy. -/
+private noncomputable def extractZero (encode : (Fin k → F) → (ι → F)) (δ : ℝ≥0)
+    (stmtIn : Statement (F := F) k × (∀ i, OracleStatement ι F i)) :
+    Witness (F := F) k :=
+  if h : ∃ M, (stmtIn, M) ∈ outputRelationFor k encode δ then h.choose
+  else fun _ _ ↦ 0
+
+omit [DecidableEq ι] [DecidableEq F] in
+/-- If a relaxed-relation witness exists at all, `extractZero` returns one. -/
+private lemma extractZero_mem {encode : (Fin k → F) → (ι → F)} {δ : ℝ≥0}
+    {stmtIn : Statement (F := F) k × (∀ i, OracleStatement ι F i)}
+    (hw : ∃ M, (stmtIn, M) ∈ outputRelationFor k encode δ) :
+    (stmtIn, extractZero k encode δ stmtIn) ∈ outputRelationFor k encode δ := by
+  unfold extractZero; rw [dif_pos hw]; exact hw.choose_spec
+
+omit [DecidableEq ι] in
+/-- The L6.8 round-by-round extractor ([ABF26] §6.2): round 0 extracts a
+relaxed-relation witness by choice, round 1 passes the candidate message
+through, round 2 reads the prover's claim `g` off the transcript. -/
+private noncomputable def rbrExtractor (encode : (Fin k → F) → (ι → F)) (δ : ℝ≥0) :
+    Extractor.RoundByRound []ₒ
+      (Statement (F := F) k × (∀ i, OracleStatement ι F i))
+      (Witness (F := F) k) OutputWitness
+      (pSpec (ι := ι) (F := F) k t) (rbrWitMid (F := F) k) where
+  eqIn := rfl
+  extractMid
+  | ⟨0, _⟩ => fun stmtIn _ _ ↦ extractZero k encode δ stmtIn
+  | ⟨1, _⟩ => fun _ _ w ↦ w
+  | ⟨2, _⟩ => fun _ tr _ ↦ tr ⟨1, Nat.succ_lt_succ (Nat.zero_lt_succ _)⟩
+  extractOut := fun _ _ _ ↦ PUnit.unit
+
+omit [DecidableEq ι] in
+/-- The L6.8 knowledge state function ([ABF26] §6.2): relaxed-relation
+membership at round 0, `gammaState` after rounds 1–2, and the §6.1 acceptance
+predicate after the spot-check round (PAPER_REVS.md item 10). -/
+private noncomputable def rbrKSF (encode : (Fin k → F) → (ι → F)) (δ : ℝ≥0)
+    {σ : Type} (init : ProbComp σ) (impl : QueryImpl []ₒ (StateT σ ProbComp)) :
+    ((oracleVerifier (k := k) (t := t) encode).toVerifier).KnowledgeStateFunction init impl
+      (outputRelationFor k encode δ)
+      (Set.univ : Set ((OutputStatement × ∀ i, OutputOracleStatement i) × OutputWitness))
+      (rbrExtractor k t encode δ) where
+  toFun
+  | ⟨0, _⟩ => fun stmtIn _ w ↦ (stmtIn, w) ∈ outputRelationFor k encode δ
+  | ⟨1, _⟩ => fun stmtIn tr w ↦
+      gammaState k encode δ stmtIn.1.1 stmtIn.1.2.1 stmtIn.1.2.2
+        (stmtIn.2 0) (stmtIn.2 1) (tr ⟨0, Nat.zero_lt_succ _⟩) w
+  | ⟨2, _⟩ => fun stmtIn tr w ↦
+      gammaState k encode δ stmtIn.1.1 stmtIn.1.2.1 stmtIn.1.2.2
+        (stmtIn.2 0) (stmtIn.2 1) (tr ⟨0, Nat.zero_lt_succ _⟩) w
+  | ⟨3, _⟩ => fun stmtIn tr _ ↦
+      accepts (k := k) (t := t) encode stmtIn.1 stmtIn.2
+        (tr ⟨0, Nat.zero_lt_succ _⟩) (tr ⟨1, Nat.succ_lt_succ (Nat.zero_lt_succ _)⟩)
+        (tr ⟨2, Nat.succ_lt_succ (Nat.succ_lt_succ (Nat.zero_lt_succ _))⟩)
+  toFun_empty := fun _ _ ↦ Iff.rfl
+  toFun_next := fun m ↦ match m with
+    | ⟨0, _⟩ => fun hDir ↦ absurd hDir (fun h ↦ Direction.noConfusion h)
+    | ⟨1, _⟩ => fun _ _ _ _ _ h ↦ h
+    | ⟨2, _⟩ => fun hDir ↦ absurd hDir (fun h ↦ Direction.noConfusion h)
+  toFun_full := fun stmtIn tr witOut h ↦
+    accepts_of_probEvent_pos_verifier_run (k := k) (t := t) init impl encode
+      stmtIn tr witOut _ h
+
+omit [DecidableEq ι] [DecidableEq F] in
+/-- `epsMCA` is a supremum of probabilities, hence `≤ 1 < ⊤`. (Candidate for
+relocation to `ProximityGap/Errors.lean`.) -/
+private lemma epsMCA_ne_top [Nonempty ι] (C : Set (ι → F)) (δ : ℝ≥0) :
+    epsMCA (F := F) (A := F) C δ ≠ ⊤ :=
+  ne_top_of_le_ne_top ENNReal.one_ne_top (iSup_le fun _ ↦ PMF.coe_le_one _ _)
+
+omit [DecidableEq ι] in
+/-- Per-transcript γ-round bound for the L6.8 game ([ABF26] §6.2, via
+`ToyProblem.gamma_transition_prob_le`), stated in the definitionally reduced
+form of the game event so the master rbr-game lemma can consume it. -/
+private lemma gamma_round_game_bound [SampleableType F] [Nonempty ι]
+    (C : Set (ι → F)) (δ : ℝ≥0)
+    (encode : (Fin k → F) →ₗ[F] (ι → F))
+    (hinj : Function.Injective encode)
+    (hC : Set.range encode = C)
+    (hδ_pos : 0 < δ) (hδ_lt : δ < (minRelHammingDistCode C : ℝ≥0))
+    (stmtIn : Statement (F := F) k × (∀ i, OracleStatement ι F i)) :
+    Pr[fun γ : F ↦ ∃ w : Fin k → F,
+        (stmtIn, extractZero k (encode : (Fin k → F) → (ι → F)) δ stmtIn) ∉
+            outputRelationFor k (encode : (Fin k → F) → (ι → F)) δ ∧
+          gammaState k (encode : (Fin k → F) → (ι → F)) δ stmtIn.1.1 stmtIn.1.2.1
+            stmtIn.1.2.2 (stmtIn.2 0) (stmtIn.2 1) γ w
+      | $ᵗ F] ≤
+      (((epsMCA (F := F) (A := F) C δ).toNNReal +
+        ((Lambda (interleavedCodeSet (κ := Fin 2) C) (δ : ℝ)).toNat : ℝ≥0)
+          / (Fintype.card F : ℝ≥0) : ℝ≥0) : ℝ≥0∞) := by
+  classical
+  rw [probEvent_uniformSample_eq_prob_uniformOfFintype]
+  by_cases hw : ∃ M, (stmtIn, M) ∈ outputRelationFor k (encode : (Fin k → F) → (ι → F)) δ
+  · refine (Pr_eq_zero_of_forall_not _ _ ?_).trans_le zero_le'
+    rintro γ ⟨w, hne, -⟩
+    exact hne (extractZero_mem k hw)
+  · refine le_trans (Pr_le_Pr_of_implies _ _
+      (fun γ ↦ ∃ m, gammaState k (encode : (Fin k → F) → (ι → F)) δ stmtIn.1.1
+        stmtIn.1.2.1 stmtIn.1.2.2 (stmtIn.2 0) (stmtIn.2 1) γ m) ?_) ?_
+    · rintro γ ⟨w, -, hst⟩
+      exact ⟨w, hst⟩
+    · have hNoWit : ¬ ∃ M : Fin 2 → (Fin k → F),
+          (∀ i : Fin 2, ∑ j, M i j * stmtIn.1.1 j = ![stmtIn.1.2.1, stmtIn.1.2.2] i) ∧
+          ∃ S : Finset ι, (1 - (δ : ℝ)) * Fintype.card ι ≤ S.card ∧
+            ∀ i : Fin 2, ∀ j ∈ S, ![stmtIn.2 0, stmtIn.2 1] i j = encode (M i) j := by
+        rintro ⟨M, h1, S, h2, h3⟩
+        refine hw ⟨M, h1, S, h2, fun i j hj ↦ ?_⟩
+        fin_cases i
+        · simpa using h3 0 j hj
+        · simpa using h3 1 j hj
+      refine le_trans (gamma_transition_prob_le C δ encode hinj hC hδ_pos hδ_lt
+        stmtIn.1.1 stmtIn.1.2.1 stmtIn.1.2.2 (stmtIn.2 0) (stmtIn.2 1) hNoWit)
+        (le_of_eq ?_)
+      rw [ENNReal.coe_add, ENNReal.coe_toNNReal (epsMCA_ne_top C δ),
+        ENNReal.coe_div (Nat.cast_ne_zero.mpr Fintype.card_ne_zero),
+        ENNReal.coe_natCast, ENNReal.coe_natCast]
+
+omit [DecidableEq ι] [Fintype F] in
+-- `[DecidableEq F]` is used in the proof (`by_cases` on the linear constraint, the agreement
+-- filter) but does not surface in the statement; same false-positive pattern as
+-- `ToyProblem.pair_violates` (SoundnessBounds.lean).
+set_option linter.unusedDecidableInType false in
+/-- Per-transcript spot-check-round bound for the L6.8 game ([ABF26] §6.2):
+for any fixed `(γ, g)` with the post-`γ` state false, the probability over
+uniform spot checks that the verifier accepts is at most `(1-δ)^t`. Stated in
+the definitionally reduced form of the game event. -/
+private lemma spotcheck_round_game_bound [Nonempty ι]
+    (encode : (Fin k → F) → (ι → F)) (δ : ℝ≥0)
+    (stmtIn : Statement (F := F) k × (∀ i, OracleStatement ι F i))
+    (γ : F) (g : Fin k → F) [SampleableType (Fin t → ι)] :
+    Pr[fun xs : Fin t → ι ↦ ∃ _w : PUnit,
+        ¬ gammaState k encode δ stmtIn.1.1 stmtIn.1.2.1 stmtIn.1.2.2
+            (stmtIn.2 0) (stmtIn.2 1) γ g ∧
+          accepts (k := k) (t := t) encode stmtIn.1 stmtIn.2 γ g xs
+      | $ᵗ (Fin t → ι)] ≤ (((1 - δ) ^ t : ℝ≥0) : ℝ≥0∞) := by
+  classical
+  rw [probEvent_uniformSample_eq_prob_uniformOfFintype]
+  by_cases hbad : gammaState k encode δ stmtIn.1.1 stmtIn.1.2.1 stmtIn.1.2.2
+      (stmtIn.2 0) (stmtIn.2 1) γ g
+  · refine (Pr_eq_zero_of_forall_not _ _ ?_).trans_le zero_le'
+    rintro xs ⟨-, hne, -⟩
+    exact hne hbad
+  by_cases hlin : ∑ j, g j * stmtIn.1.1 j = stmtIn.1.2.1 + γ * stmtIn.1.2.2
+  swap
+  · refine (Pr_eq_zero_of_forall_not _ _ ?_).trans_le zero_le'
+    rintro xs ⟨-, -, hacc⟩
+    exact hlin (And.left hacc)
+  set A : Finset ι :=
+    Finset.univ.filter (fun j ↦ stmtIn.2 0 j + γ * stmtIn.2 1 j = encode g j) with hA
+  have hι : (0 : ℝ) < Fintype.card ι := by exact_mod_cast Fintype.card_pos
+  have hAcard : (A.card : ℝ) < (1 - (δ : ℝ)) * Fintype.card ι :=
+    not_le.mp fun hge ↦ hbad ⟨hlin, A, hge, fun j hj ↦ (Finset.mem_filter.mp hj).2⟩
+  have hδ1 : δ ≤ 1 := by
+    by_contra hgt
+    have h1δ : (1 : ℝ) - (δ : ℝ) < 0 := sub_neg.mpr (by exact_mod_cast not_le.mp hgt)
+    linarith [mul_neg_of_neg_of_pos h1δ hι, (Nat.cast_nonneg A.card : (0 : ℝ) ≤ A.card)]
+  have hbase : ((A.card : ℝ≥0) / (Fintype.card ι : ℝ≥0)) ≤ 1 - δ := by
+    rw [div_le_iff₀ (by exact_mod_cast Fintype.card_pos : (0 : ℝ≥0) < Fintype.card ι),
+      ← NNReal.coe_le_coe]
+    push_cast [NNReal.coe_sub hδ1]
+    linarith
+  refine le_trans (Pr_le_Pr_of_implies _ _ (fun xs ↦ ∀ j, xs j ∈ A) ?_) ?_
+  · rintro xs ⟨-, -, hacc⟩ j
+    exact Finset.mem_filter.mpr ⟨Finset.mem_univ _, (And.right hacc j).symm⟩
+  · refine le_trans (prob_uniform_pi_mem_finset_le A t) ?_
+    rw [ENNReal.coe_pow]
+    refine pow_le_pow_left' ?_ t
+    rw [show ((A.card : ℝ≥0∞)) = ((A.card : ℝ≥0) : ℝ≥0∞) from (ENNReal.coe_natCast _).symm,
+      show ((Fintype.card ι : ℝ≥0∞)) = ((Fintype.card ι : ℝ≥0) : ℝ≥0∞) from
+        (ENNReal.coe_natCast _).symm,
+      ← ENNReal.coe_div (Nat.cast_ne_zero.mpr Fintype.card_ne_zero)]
+    exact ENNReal.coe_le_coe.mpr hbase
+
 omit [DecidableEq ι] in
 /-- **Lemma 6.8 of [ABF26]** (round-by-round knowledge soundness of
 Construction 6.2).
@@ -1253,18 +1458,24 @@ per-round errors
 The `(Lambda …).toNat` in the γ-round error is faithful: `Lambda` is
 never `⊤` over a finite alphabet (`ListDecodable.Lambda_ne_top`).
 
-The `KnowledgeStateFunction` tracks the largest current agreement set;
-the extractor erasure-decodes against it. Tagged sorry. -/
+**Status: fully proven (sorry-free).** The `KnowledgeStateFunction` is
+`rbrKSF` above (relation membership → `gammaState` → the acceptance
+predicate; the witness-ignoring final state is PAPER_REVS.md item 10),
+the extractor is `rbrExtractor` (round-0 extraction by classical choice),
+and the two per-round bounds are `gamma_round_game_bound` (via
+`ToyProblem.gamma_transition_prob_le`) and `spotcheck_round_game_bound`,
+plugged into the game shape by
+`ProtocolSpec.probEvent_simulateQ_addLift_getChallenge_bind_le`. -/
 theorem protocol62_rbrKnowledgeSound
     [SampleableType F] [SampleableType ι] [Nonempty ι]
     {σ : Type} (init : ProbComp σ)
     (impl : QueryImpl []ₒ (StateT σ ProbComp))
     (C : Set (ι → F)) (δ : ℝ≥0)
     (encode : (Fin k → F) →ₗ[F] (ι → F))
-    (_hinj : Function.Injective encode)
-    (_hC : Set.range encode = C)
-    (_hδ_pos : 0 < δ)
-    (_hδ_lt_min : δ < (minRelHammingDistCode C : ℝ≥0)) :
+    (hinj : Function.Injective encode)
+    (hC : Set.range encode = C)
+    (hδ_pos : 0 < δ)
+    (hδ_lt_min : δ < (minRelHammingDistCode C : ℝ≥0)) :
       (oracleVerifier (k := k) (t := t) (encode : (Fin k → F) → (ι → F))).rbrKnowledgeSoundness
         (WitOut := OutputWitness)
         init impl (outputRelationFor k (encode : (Fin k → F) → (ι → F)) δ)
@@ -1278,13 +1489,32 @@ theorem protocol62_rbrKnowledgeSound
               ((Lambda (interleavedCodeSet (κ := Fin 2) C) (δ : ℝ)).toNat : ℝ≥0)
                 / (Fintype.card F : ℝ≥0)
           else (1 - δ) ^ t) := by
-  -- ABF26-L6.8; paper-proof-owed [ABF26 Lemma 6.8, §6.2]. Paper's OWN result
-  -- (proved in full via a KnowledgeStateFunction in §6.2), not an external
-  -- import. `δ < δ_min(C)` is load-bearing (same forcing step as L6.6).
-  sorry
+  unfold OracleVerifier.rbrKnowledgeSoundness Verifier.rbrKnowledgeSoundness
+  refine ⟨rbrWitMid (F := F) k,
+    rbrExtractor k t (encode : (Fin k → F) → (ι → F)) δ,
+    rbrKSF k t (encode : (Fin k → F) → (ι → F)) δ init impl, ?_⟩
+  intro stmtIn witIn prover i
+  obtain ⟨⟨iv, hi⟩, hdir⟩ := i
+  rcases iv with _ | _ | _ | iv
+  · -- Round 0 (combination randomness γ): the MCA + list-decoding bound.
+    refine probEvent_simulateQ_addLift_getChallenge_bind_le init impl
+      (prover.runWithLogToRound _ stmtIn witIn) ⟨⟨0, hi⟩, hdir⟩
+      (fun x c ↦ (x.1.1, c, x.2)) _ ?_
+    exact fun _ ↦ gamma_round_game_bound k C δ encode hinj hC hδ_pos hδ_lt_min stmtIn
+  · exact absurd hdir (fun h ↦ Direction.noConfusion h)
+  · -- Round 2 (spot checks): the `(1-δ)^t` bound, per fixed `(γ, g)`.
+    refine probEvent_simulateQ_addLift_getChallenge_bind_le init impl
+      (prover.runWithLogToRound _ stmtIn witIn) ⟨⟨2, hi⟩, hdir⟩
+      (fun x c ↦ (x.1.1, c, x.2)) _ ?_
+    exact fun x ↦ spotcheck_round_game_bound k t (encode : (Fin k → F) → (ι → F)) δ
+      stmtIn (x.1.1 ⟨0, Nat.zero_lt_succ _⟩)
+      (x.1.1 ⟨1, Nat.succ_lt_succ (Nat.zero_lt_succ _)⟩)
+  · exact absurd hi (by omega)
 
 end Protocol
 
 end Spec
 
 end ToyProblem
+
+set_option linter.style.longFile 1700
