@@ -453,10 +453,14 @@ lemma simulateQ_add_add_liftM_comp_right (t : spec₂.Domain) :
 
 end QueryImpl
 
-/-! ### ArkLib-local lemmas (upstream candidates; NOT mirrored in VCV-io yet)
+/-! ### Further staged lemmas (mirrored on the VCV-io PR branch 2026-06-12)
 
-Unlike the staged section above, nothing here exists upstream: do NOT delete these
-at the next VCVio bump unless they have been upstreamed by then. -/
+Everything below is now ALSO staged on the VCV-io branch
+`feat/simulateq-routing-lemmas` (commit `01ff338f`), in some cases generalized
+(`ProbComp` → generic monad) — see `ArkLib/ToVCVio/README.md` for the
+disposition table and the three rename-at-deletion cases. Delete here at the
+first VCVio bump past that branch's merge, after confirming the bump carries
+them. -/
 
 /-- `OptionT` companion to `QueryImpl.simulateQ_liftM_eq_of_query`: simulating an
 `OracleComp`-computation `oa` lifted into `OptionT (OracleComp spec₂')` (the shape produced by

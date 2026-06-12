@@ -9,8 +9,28 @@ Workflow: prefer landing general statements upstream in VCV-io under the same
 names and the mirrored path; on the next VCVio bump, delete the corresponding
 declaration here and let references resolve to the upstream version.
 
+## Staging state (2026-06-12)
+
+Everything generic in this directory is staged on the VCV-io branch
+`feat/simulateq-routing-lemmas` (commits `c8e953c2` + `a1e79b1b` + `01ff338f`,
+PR pending). **At the first VCVio bump past that branch's merge, delete the
+mirrored declarations here** — they were verified to be same-name drop-ins
+(some upstream versions are *generalized*: `ProbComp` → generic monad,
+`StateT σ ProbComp` → lawful target; all unify at ArkLib's instantiations).
+Before deleting, confirm the bump actually carries them.
+
+Three local names resolve to pre-existing upstream lemmas instead — at
+deletion time, **rename call sites**:
+
+| ArkLib-local name | upstream replacement |
+|---|---|
+| `OptionT.failure_bind` | `failure_bind` (Batteries, `@[simp]`) |
+| `StateT.run'_map_comm` | `StateT.run'_map'` (note: arg order differs) |
+| `OracleComp.bind_liftComp_map` | `bind_map_left` (Mathlib) |
+
+**Not staged (genuinely ArkLib-specific, keep):**
+`OracleComp/RbrGame.lean` — references ArkLib's `ProtocolSpec`
+(challenge-query resolution + the rbr/KS game master mixture lemmas).
+
 History note: `simulateQ_list_forIn` was staged here and has been deleted —
-the VCVio pin (`5f7707fb`, Lean 4.30 bump) now contains it upstream. The
-`simulateQ_addLift_add_liftM_left/right` routing pair
-(`OracleComp/SimSemantics/SimulateQ.lean`) remains ArkLib-local and is an
-upstream candidate.
+the VCVio pin (`5f7707fb`, Lean 4.30 bump) now contains it upstream.
