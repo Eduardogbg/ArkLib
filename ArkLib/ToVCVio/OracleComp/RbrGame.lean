@@ -220,6 +220,51 @@ lemma probEvent_bind_le_probEvent_add {m : Type → Type} [Monad m]
         rw [ENNReal.tsum_mul_right]
         exact le_trans (mul_le_mul' tsum_probOutput_le_one le_rfl) (one_mul ε).le
 
+/-- **Convex prefix-split for `probEvent` over a bind.** The sharpening of
+`probEvent_bind_le_probEvent_add`: the off-prefix tail bound `ε` is charged only on the mass
+*outside* the prefix event `p`, so the probability of `q` after the bind is at most the convex
+combination `Pr[p | mx]·1 + (1 − Pr[p | mx])·ε` (here written `Pr[p|mx] + (1 − Pr[p|mx])·ε`).
+Requires `ε ≤ 1` (so the bound is a genuine convex combination and the `1 − ·` is exact in
+`ℝ≥0∞`). Dropping the `(1 − Pr[p|mx]) ≤ 1` factor recovers the additive bound
+`Pr[p|mx] + ε`; the two differ by exactly `Pr[p|mx]·ε`. Engine of *convex-form*
+knowledge-soundness errors. Upstream VCV-io candidate. -/
+lemma probEvent_bind_le_probEvent_convex {m : Type → Type} [Monad m]
+    [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] [MonadLiftT m SetM] [EvalDistCompatible m]
+    {α β : Type} {mx : m α} {my : α → m β} {q : β → Prop} {p : α → Prop} {ε : ℝ≥0∞}
+    (h : ∀ x ∈ support mx, ¬ p x → Pr[ q | my x] ≤ ε) :
+    Pr[ q | mx >>= my] ≤ Pr[ p | mx] + (1 - Pr[ p | mx]) * ε := by
+  classical
+  -- First the per-point split, accumulating the off-`p` tail against `Pr[¬p|mx]`.
+  have hsplit : Pr[ q | mx >>= my] ≤ Pr[ p | mx] + Pr[ fun x ↦ ¬ p x | mx] * ε := by
+    rw [probEvent_bind_eq_tsum, probEvent_eq_tsum_indicator (p := p),
+      probEvent_eq_tsum_indicator (p := fun x ↦ ¬ p x)]
+    calc ∑' x, Pr[= x | mx] * Pr[ q | my x]
+        ≤ ∑' x, ({x | p x}.indicator (Pr[= · | mx]) x
+            + {x | ¬ p x}.indicator (fun x ↦ Pr[= x | mx] * ε) x) := by
+          refine ENNReal.tsum_le_tsum fun x ↦ ?_
+          by_cases hp : p x
+          · refine le_trans (mul_le_mul' le_rfl probEvent_le_one) ?_
+            simp [hp]
+          · by_cases hx : x ∈ support mx
+            · refine le_trans (mul_le_mul' le_rfl (h x hx hp)) ?_
+              simp [hp]
+            · simp [probOutput_eq_zero_of_not_mem_support hx]
+      _ = (∑' x, {x | p x}.indicator (Pr[= · | mx]) x)
+            + ∑' x, {x | ¬ p x}.indicator (fun x ↦ Pr[= x | mx] * ε) x := ENNReal.tsum_add
+      _ = (∑' x, {x | p x}.indicator (Pr[= · | mx]) x)
+            + (∑' x, {x | ¬ p x}.indicator (Pr[= · | mx]) x) * ε := by
+          rw [← ENNReal.tsum_mul_right]
+          refine congrArg _ (tsum_congr fun x ↦ ?_)
+          by_cases hp : p x <;> simp [Set.indicator, hp]
+  -- `Pr[p] + Pr[¬p] ≤ 1`, so `Pr[¬p] ≤ 1 − Pr[p]`; multiply by `ε` and combine.
+  have hle_one : Pr[ p | mx] + Pr[ fun x ↦ ¬ p x | mx] ≤ 1 := by
+    rw [probEvent_eq_tsum_indicator (p := p), probEvent_eq_tsum_indicator (p := fun x ↦ ¬ p x),
+      ← ENNReal.tsum_add]
+    refine le_trans (ENNReal.tsum_le_tsum fun x ↦ ?_) (tsum_probOutput_le_one (mx := mx))
+    by_cases hp : p x <;> simp [Set.indicator, hp]
+  refine le_trans hsplit (add_le_add le_rfl (mul_le_mul' ?_ le_rfl))
+  exact ENNReal.le_sub_of_add_le_left probEvent_ne_top hle_one
+
 /-! ### Logging glue
 
 Two generic `loggingOracle` lemmas shared by the knowledge-soundness game reductions (ABF26
@@ -429,5 +474,71 @@ theorem probEvent_optionT_simulateQ_addLift_getChallenge_first_bind_le_add
   rw [hbody s, OptionT.mk_bind]
   refine le_trans (probEvent_bind_le_probEvent_add (p := p) fun c _ hc ↦ h₂ c hc s)
     (add_le_add (le_trans (le_of_eq (OptionT.probEvent_liftM _ _)) h₁) le_rfl)
+
+/-- The two algebraically-equal spellings of a convex combination `λ·1 + (1−λ)·ε` in `ℝ≥0∞`,
+for `λ, ε ≤ 1`. Used to turn the `λ + (1−λ)·ε` shape produced by
+`probEvent_bind_le_probEvent_convex` into the monotone-in-`λ` shape `ε + λ·(1−ε)`. -/
+private lemma enn_convex_symm (a ε : ℝ≥0∞) (ha : a ≤ 1) (hε : ε ≤ 1) :
+    a + (1 - a) * ε = ε + a * (1 - ε) := by
+  have ha' : a ≠ ⊤ := ne_top_of_le_ne_top ENNReal.one_ne_top ha
+  have hε' : ε ≠ ⊤ := ne_top_of_le_ne_top ENNReal.one_ne_top hε
+  have hsub_a : (1 : ℝ≥0∞) - a ≠ ⊤ := ENNReal.sub_ne_top ENNReal.one_ne_top
+  have hsub_ε : (1 : ℝ≥0∞) - ε ≠ ⊤ := ENNReal.sub_ne_top ENNReal.one_ne_top
+  rw [← ENNReal.toReal_eq_toReal_iff'
+        (ENNReal.add_ne_top.mpr ⟨ha', ENNReal.mul_ne_top hsub_a hε'⟩)
+        (ENNReal.add_ne_top.mpr ⟨hε', ENNReal.mul_ne_top ha' hsub_ε⟩),
+    ENNReal.toReal_add ha' (ENNReal.mul_ne_top hsub_a hε'),
+    ENNReal.toReal_add hε' (ENNReal.mul_ne_top ha' hsub_ε),
+    ENNReal.toReal_mul, ENNReal.toReal_mul,
+    ENNReal.toReal_sub_of_le ha ENNReal.one_ne_top,
+    ENNReal.toReal_sub_of_le hε ENNReal.one_ne_top, ENNReal.toReal_one]
+  ring
+
+/-- **Convex master bound for a challenge-first game.** The sharpening of
+`probEvent_optionT_simulateQ_addLift_getChallenge_first_bind_le_add`: instead of the additive
+`ε₁ + ε₂`, the game probability is at most the convex combination `ε₂ + ε₁·(1 − ε₂)` — the
+off-prefix tail bound `ε₂` is charged on the full mass, and the prefix bound `ε₁` only on the
+remaining `(1 − ε₂)` fraction. Requires `ε₂ ≤ 1`. Dropping the `(1 − ε₂) ≤ 1` factor recovers
+the additive bound `ε₂ + ε₁`, so the two differ by exactly `ε₁·ε₂`. Engine of *convex-form*
+knowledge-soundness errors (ABF26 Lemma 6.6). -/
+theorem probEvent_optionT_simulateQ_addLift_getChallenge_first_bind_le_convex
+    {β : Type}
+    (init : ProbComp σ) (impl : QueryImpl oSpec (StateT σ ProbComp))
+    (oa : OracleComp (oSpec + [pSpec.Challenge]ₒ) (Option β)) (i : pSpec.ChallengeIdx)
+    (tail : pSpec.Challenge i → OracleComp (oSpec + [pSpec.Challenge]ₒ) (Option β))
+    (E : β → Prop) (p : pSpec.Challenge i → Prop) {ε₁ ε₂ : ℝ≥0∞}
+    (hε₂ : ε₂ ≤ 1)
+    (hoa : oa = do
+      let c ← liftComp (pSpec.getChallenge i) (oSpec + [pSpec.Challenge]ₒ)
+      tail c)
+    (h₁ : Pr[ p | $ᵗ (pSpec.Challenge i)] ≤ ε₁)
+    (h₂ : ∀ c, ¬ p c → ∀ s : σ,
+      Pr[ E | OptionT.mk
+        ((simulateQ (impl.addLift challengeQueryImpl : QueryImpl _ (StateT σ ProbComp))
+          (tail c)).run' s)] ≤ ε₂) :
+    Pr[ E | OptionT.mk (do
+      (simulateQ (impl.addLift challengeQueryImpl : QueryImpl _ (StateT σ ProbComp))
+        oa).run' (← init))] ≤ ε₂ + ε₁ * (1 - ε₂) := by
+  subst hoa
+  have hbody : ∀ s : σ,
+      (simulateQ (impl.addLift challengeQueryImpl : QueryImpl _ (StateT σ ProbComp))
+        (do
+          let c ← liftComp (pSpec.getChallenge i) (oSpec + [pSpec.Challenge]ₒ)
+          tail c)).run' s
+      = ($ᵗ (pSpec.Challenge i)) >>= fun c ↦
+          (simulateQ (impl.addLift challengeQueryImpl : QueryImpl _ (StateT σ ProbComp))
+            (tail c)).run' s := by
+    intro s
+    rw [simulateQ_bind, simulateQ_addLift_challengeQueryImpl_getChallenge,
+      StateT.run'_bind']
+    simp only [StateT.run_liftM, bind_assoc, pure_bind]
+  rw [OptionT.mk_bind]
+  refine probEvent_bind_le_of_forall_le fun s _ ↦ ?_
+  rw [hbody s, OptionT.mk_bind]
+  -- Convex per-challenge split, then bound `Pr[p]` by `ε₁` inside the monotone-in-`Pr[p]` shape.
+  refine le_trans (probEvent_bind_le_probEvent_convex (p := p) fun c _ hc ↦ h₂ c hc s) ?_
+  rw [enn_convex_symm _ _ probEvent_le_one hε₂]
+  exact add_le_add le_rfl (mul_le_mul' (le_trans (le_of_eq (OptionT.probEvent_liftM _ _)) h₁)
+    le_rfl)
 
 end ProtocolSpec

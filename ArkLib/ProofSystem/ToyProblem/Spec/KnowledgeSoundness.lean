@@ -149,21 +149,30 @@ For any `δ ∈ (0, δ_min(C))` and fixed injective linear encoder with
 range `C` (injectivity is implicit in the paper's encoding map and
 load-bearing for the extractor's per-list-pair counting),
 the toy-problem IOR has knowledge soundness against the relaxed relation
-`R̃_{C,δ}^2` with error
+`R̃_{C,δ}^2` with the **convex-combination** error
 
-  `(ε_mca(C, δ) + |Λ(C^{≡2}, δ)| / |F|) + (1 − δ)^t`.
+  `(1 − δ)^t + ε₀ · (1 − (1 − δ)^t)`,    where `ε₀ := ε_mca(C, δ) + |Λ(C^{≡2}, δ)| / |F|`.
 
-**This error term corrects the paper.** [ABF26] Lemma 6.6 claims the `max`
-of the two summands, which is **false as stated** — its proof replaces
-conditional probabilities by unconditional ones, and a concrete
-counterexample (exact codewords with off-by-one linear targets) beats the
-claimed bound. The sum form is what the paper's own pointwise arguments
-prove, and coincides with the sum of the L6.8 round errors. See
-`PAPER_REVS.md` item 11 and this file's module docstring.
+**This corrects the paper.** [ABF26] Lemma 6.6 claims `max{ε₀, (1 − δ)^t}`,
+which is **false as stated** — its proof replaces conditional probabilities
+by unconditional ones, and a concrete counterexample (exact codewords with
+off-by-one linear targets) beats the claimed bound (see `PAPER_REVS.md`
+item 11; the flaw is author-confirmed).
 
-The `(Lambda …).toNat` in the error term is faithful: `Lambda` is never
-`⊤` over a finite alphabet (`ListDecodable.Lambda_ne_top`), so `toNat`
-loses nothing.
+**Why the convex form, and how it relates to the natural sum.** The honest
+total-probability accounting over the combination randomness `γ` is
+`Pr_γ[p]·1 + (1 − Pr_γ[p])·(1 − δ)^t` where `p` is the bad-`γ` prefix event
+(`Pr_γ[p] ≤ ε₀`): on `p` (mass `≤ ε₀`) the prover can pass every spot-check
+with probability up to `1`, so that branch is paid in full; off `p` the fold
+is `δ`-far, so spot-checks pass with probability `≤ (1 − δ)^t`. Monotonicity
+in `Pr_γ[p]` (since `(1 − δ)^t ≤ 1`) gives the closed form above. Dropping
+the `(1 − (1 − δ)^t) ≤ 1` factor yields the *natural sum form*
+`ε₀ + (1 − δ)^t` — the L6.8 round-error sum — at additive cost exactly
+`ε₀·(1 − δ)^t` (a second-order term; negligible in the prize regime). That
+weaker bound is `protocol62_knowledgeSound_sum` below, derived from this one.
+
+The `(Lambda …).toNat` in `ε₀` is faithful: `Lambda` is never `⊤` over a
+finite alphabet (`ListDecodable.Lambda_ne_top`), so `toNat` loses nothing.
 
 Stated against ArkLib's `OracleVerifier.knowledgeSoundness` (cf.
 `OracleReduction/Security/Basic.lean :: OracleVerifier.knowledgeSoundness`,
@@ -201,10 +210,11 @@ theorem protocol62_knowledgeSound
         init impl (outputRelationFor k (encode : (Fin k → F) → (ι → F)) δ)
         (Set.univ : Set ((OutputStatement × ∀ i, OutputOracleStatement i) ×
           OutputWitness))
-        (((epsMCA (F := F) (A := F) C δ).toNNReal +
-            ((Lambda (interleavedCodeSet (κ := Fin 2) C) (δ : ℝ)).toNat : ℝ≥0)
-              / (Fintype.card F : ℝ≥0)) +
-          (1 - δ) ^ t) := by
+        ((1 - δ) ^ t +
+          ((epsMCA (F := F) (A := F) C δ).toNNReal +
+              ((Lambda (interleavedCodeSet (κ := Fin 2) C) (δ : ℝ)).toNat : ℝ≥0)
+                / (Fintype.card F : ℝ≥0))
+            * (1 - (1 - δ) ^ t)) := by
   classical
   unfold OracleVerifier.knowledgeSoundness Verifier.knowledgeSoundness
   -- The straightline extractor: classical choice of any `R̃²` witness, from the input
@@ -212,10 +222,13 @@ theorem protocol62_knowledgeSound
   refine ⟨fun stmtIn _ _ _ _ ↦
     pure (extractZero k ((encode : (Fin k → F) → (ι → F))) δ stmtIn), ?_⟩
   rintro ⟨stmt, oStmt⟩ witIn prover
-  rw [ENNReal.coe_add]
+  -- Push the `ℝ≥0 → ℝ≥0∞` coercion through the convex combination so it matches the
+  -- `ε₂ + ε₁·(1 − ε₂)` shape produced by the convex master lemma (ε₂ = (1−δ)^t, ε₁ = ε₀).
+  rw [ENNReal.coe_add, ENNReal.coe_mul, ENNReal.coe_sub, ENNReal.coe_one]
   -- Outer split at the leading γ-draw (C6.2 is verifier-first): prefix event = "extraction
   -- fails yet some message satisfies the post-γ state", tail = the remaining two rounds.
-  refine ProtocolSpec.probEvent_optionT_simulateQ_addLift_getChallenge_first_bind_le_add
+  refine ProtocolSpec.probEvent_optionT_simulateQ_addLift_getChallenge_first_bind_le_convex
+    (ε₂ := (((1 - δ) ^ t : ℝ≥0) : ℝ≥0∞))
     init impl _ ⟨0, rfl⟩
     (fun γ ↦ do
       let pre ← (liftComp (prover.receiveChallenge ⟨0, rfl⟩
@@ -243,7 +256,10 @@ theorem protocol62_knowledgeSound
           outputRelationFor k ((encode : (Fin k → F) → (ι → F))) δ ∧
         gammaState k ((encode : (Fin k → F) → (ι → F))) δ stmt.1 stmt.2.1 stmt.2.2
           (oStmt 0) (oStmt 1) γ w)
-    ?hoa ?h₁ ?h₂
+    ?hε₂ ?hoa ?h₁ ?h₂
+  case hε₂ =>
+    -- `(1−δ)^t ≤ 1`: the spot-check term is a probability.
+    exact ENNReal.coe_le_one_iff.mpr (pow_le_one' tsub_le_self t)
   case h₁ =>
     exact gamma_round_game_bound k C δ encode hinj hC hδ_pos hδ_lt_min (stmt, oStmt)
   case h₂ =>
@@ -262,47 +278,103 @@ theorem protocol62_knowledgeSound
     · rw [if_neg hacc] at hfb
       exact absurd hfb (by simp)
   case hoa =>
-    -- GOAL: the logged 3-round reduction run = the challenge-first form chosen above.
-    -- STRATEGY (verified pieces; the remaining grind is mechanical):
-    --   1. `simp [Reduction.runWithLog, Verifier.run, Prover.runWithLog, OptionT.run_bind,
-    --      OptionT.run_pure, liftM_pure, pure_bind, bind_assoc]` flattens the run.
-    --   2. `simp only [verifier_run_loggingOracle_eq …]` collapses the oracle verifier to
-    --      `pure (if accepts … then some ((), nofun) else none, ∅)` (proven, above).
-    --   3. `simp only [Option.elimM, OptionT.run_monadLift, monadLift_self,
-    --      map_eq_bind_pure_comp, bind_assoc, Option.elim_some, Function.comp_apply, pure_bind]`
-    --      reduces the LHS to
-    --        `(simulateQ loggingOracle (Prover.run (stmt,oStmt) witIn prover)).run >>=
-    --           fun x ↦ (Option.getM (if accepts(x.1.1.challenges⟨0⟩, x.1.1.messages⟨1⟩,
-    --             x.1.1.challenges⟨2⟩) then some ((),nofun) else none)).run >>=
-    --             fun y ↦ y.elim (pure none) (fun w ↦ pure (some ((stmt,oStmt),
-    --               some (extractZero …), w, x.1.2.2)))`
-    --      and the RHS to the fully-unfolded challenge-first bind tree (getChallenge⟨0⟩,
-    --      receiveChallenge⟨0⟩, sendMessage⟨1⟩, getChallenge⟨2⟩, receiveChallenge⟨2⟩, output,
-    --      then `pure ∘ fun out ↦ if accepts … c pre.1 xs then some (…, out.2) else none`).
-    --   4. Collapse the LHS inner `getM`/`elim` of the `ite` to `fun x ↦ pure (g x.1)` where
-    --      `g r := if accepts(r.1.challenges⟨0⟩, r.1.messages⟨1⟩, r.1.challenges⟨2⟩) then
-    --        some ((stmt,oStmt), some (extractZero …), ((),nofun), r.2.2) else none`.
-    --      (`Option.getM o` has `(Option.getM o).run = pure o` by `cases o`; distribute the
-    --      `ite` with `apply_ite`; merge branches with `← apply_ite pure`.)
-    --   5. Convert to `(fun x ↦ g x.1) <$> (simulateQ loggingOracle (Prover.run …)).run` via
-    --      `bind_pure_comp`, then peel the log:
-    --      `refine Eq.trans (loggingOracle.map_fst_run_simulateQ (Prover.run (stmt,oStmt) witIn
-    --        prover) g) ?_` (definitional unification on the LHS — `g x.1` is not a Miller
-    --      pattern, so `rw`/`simp` can't peel it; `Eq.trans` with `g` explicit does).
-    --      Now goal: `g <$> Prover.run (stmt,oStmt) witIn prover = RHS`.
-    --   6. Unfold `Prover.run` for this verifier-first 3-round protocol, as in
-    --      `oracleReduction_perfectCompleteness` (General.lean ~1031): `simp only [Prover.run,
-    --      Prover.runToRound, Fin.induction_three, Prover.processRound, pSpec, …]` then resolve
-    --      the round directions (`split`; rounds 0,2 = `.V_to_P`, round 1 = `.P_to_V`).
-    --      Reduce the transcript accessors `FullTranscript.challenges`/`messages` of the built
-    --      `Transcript.concat …` at indices 0/1/2 via `Fin.snoc` (cf. General.lean ~1126):
-    --      `transcript.challenges ⟨0⟩ = c`, `transcript.messages ⟨1⟩ = pre.1`,
-    --      `transcript.challenges ⟨2⟩ = xs`. After this `g <$> Prover.run` and the RHS agree;
-    --      finish with `rfl` (or `simp only [map_eq_bind_pure_comp, bind_assoc, pure_bind]; rfl`).
-    -- NOTE: the universe pins (`emptySpec.{0,0}`), `liftComp = monadLift`, and the
-    -- defeq-not-syntactic `>>=` traps documented in General.lean's completeness/L6.8 proofs
-    -- all apply here; prefer `conv … change` + `Eq.trans` over `rw` when instances diverge.
-    sorry
+    -- GOAL: exec.run = liftComp (getChallenge 0) ... >>= tail
+    -- Strategy: collapse exec via verifier_run_loggingOracle_eq + logging glue to
+    -- `g <$> Prover.run`, then unfold Prover.run to the challenge-first shape.
+    let g : ((pSpec (ι := ι) (F := F) k t).FullTranscript ×
+        (OutputStatement × ∀ i, OutputOracleStatement i) × OutputWitness) →
+      Option ((Statement (F := F) k × (∀ i, OracleStatement ι F i)) ×
+        Option (Witness (F := F) k) ×
+        (OutputStatement × ∀ i, OutputOracleStatement i) ×
+        OutputWitness) :=
+      fun r ↦
+        if accepts (k := k) (t := t) (encode : (Fin k → F) → (ι → F))
+              stmt oStmt (r.1.challenges ⟨0, rfl⟩) (r.1.messages ⟨1, rfl⟩)
+              (r.1.challenges ⟨2, rfl⟩)
+        then some ((stmt, oStmt),
+              some (extractZero k (encode : (Fin k → F) → (ι → F)) δ (stmt, oStmt)),
+              (((), nofun) : OutputStatement × ∀ i, OutputOracleStatement i),
+              r.2.2)
+        else none
+    refine Eq.trans ?hA (Eq.trans (loggingOracle.map_fst_run_simulateQ
+      (Prover.run (stmt, oStmt) witIn prover) g) ?hC)
+    case hA =>
+      -- Unfold exec.run via Reduction.runWithLog (do-notation in OptionT), collapsing the
+      -- verifier's logged run and the always-succeeding extractor.
+      -- Step 1: Unfold the reduction's runWithLog and prover's runWithLog. Use OptionT.run_pure
+      -- (not run_bind) to avoid Option.elimM form; bind_assoc/pure_bind handle the OptionT
+      -- do-notation bind rewrites at the OptionT level.
+      simp only [Reduction.runWithLog, Prover.runWithLog, OptionT.run_pure,
+        liftM_pure, pure_bind, bind_assoc]
+      -- Step 2: Collapse the verifier's logged run under the prover-run binder.
+      -- verifier_run_loggingOracle_eq rewrites
+      -- (simulateQ loggingOracle (toVerifier.run (stmt,oStmt) tr)).run to
+      -- pure ((if accepts... then some (...) else none), ∅).
+      simp_rw [verifier_run_loggingOracle_eq (encode := (encode : (Fin k → F) → (ι → F)))]
+      -- Step 3: Collapse liftM (pure ...) and Option.getM.
+      simp only [liftM_pure, pure_bind, Option.getM_some, Option.getM_none]
+      -- Step 4: Collapse the extractor (always pure (some (extractZero ...))),
+      -- then unfold the OptionT.lift wrapper and .run to OracleComp level.
+      simp only [OptionT.liftM_def, bind_pure_comp]
+      simp only [OptionT.run_bind, OptionT.run_lift, OptionT.run_map, OptionT.run_pure,
+        bind_pure_comp, Functor.map_map, Option.map_some, pure_bind, bind_assoc]
+      -- Collapse Option.getM on (if accepts... then some ... else none):
+      -- for some branch: (some x).getM.run = pure (some x); for none: none.getM.run = pure none.
+      -- The OptionT.run_bind and if-case steps reduce the remaining bind.
+      simp only [Option.getM, Option.elimM, Option.elim_none, Option.elim_some,
+        pure_bind, bind_pure_comp]
+      -- Collapse `some <$> oa >>= fun o => o.elim (pure none) f` to `oa >>= f` via bind_map_left.
+      simp only [bind_map_left, Function.comp, Option.elim_some]
+      -- The goal is now `oa >>= fun x => ... = (fun x => g x.1) <$> oa`.
+      -- Rewrite RHS as `oa >>= fun x => pure (g x.1)` via map_eq_bind_pure_comp.
+      rw [map_eq_bind_pure_comp]
+      apply bind_congr; intro x
+      -- Now show the `match (if accepts... then some ... else none)` step equals `pure (g x.1)`.
+      -- Split the `accepts` condition to handle both branches.
+      simp only [Function.comp]
+      split_ifs with h
+      · -- accepts case: (pure ((),nofun)).run = pure (some ((),nofun))
+        simp only [OptionT.run_pure, map_pure, Option.map_some]
+        -- g x.1 = some (...) since h holds; unify by unfolding g
+        congr 1; simp only [g, h, if_true]
+      · -- ¬accepts case: OptionT.run (pure none) = pure none, then Option.map f none = none
+        simp only [Alternative.failure, OptionT.fail, OptionT.mk, OptionT.run, map_pure,
+          Option.map_none]
+        simp only [g, h, if_false]
+    case hC =>
+      -- Goal: g <$> Prover.run ... = liftComp (getChallenge 0) ... >>= tail
+      -- Unfold Prover.run using Fin.induction_three + processRound (without pure_bind initially).
+      simp only [Prover.run, Prover.runToRound, Fin.induction_three, Prover.processRound,
+        pSpec, bind_pure_comp, map_eq_bind_pure_comp, bind_assoc, liftComp_eq_liftM]
+      split <;> rename_i hDir0; swap; · exact absurd hDir0 (by decide)
+      try simp only [pure_bind, map_pure, Functor.map_map, Function.comp, bind_pure_comp, bind_assoc]
+      split <;> rename_i hDir1; · exact absurd hDir1 (by decide)
+      try simp only [pure_bind, map_pure, Functor.map_map, Function.comp, bind_pure_comp, bind_assoc]
+      split <;> rename_i hDir2; swap; · exact absurd hDir2 (by decide)
+      try simp only [pure_bind, map_pure, Functor.map_map, Function.comp, bind_pure_comp, bind_assoc]
+      -- Flatten the left-nested prover-run tree to right-nested, substituting the run's `pure`s
+      -- (this kills the leading `pure (default, input) >>=` and inlines the built transcript
+      -- `Transcript.concat`s in place of the outer `x.1`).
+      -- Unfold `g` and reduce the transcript accessors of the built `Transcript.concat` chain
+      -- (`.challenges ⟨0⟩ = γ`, `.messages ⟨1⟩ = g_msg`, `.challenges ⟨2⟩ = xs`) via the same
+      -- `Fin.snoc` simp set as `oracleReduction_perfectCompleteness` (General.lean ~1129).
+      simp only [g, FullTranscript.challenges, FullTranscript.messages, Transcript.concat,
+        Fin.snoc, Fin.val_zero, Fin.val_one, Fin.val_two, lt_self_iff_false, Fin.val_castLT,
+        Fin.castSucc_castLT, show (0 : ℕ) < 2 from by norm_num, show (0 : ℕ) < 1 from by norm_num,
+        show ¬ ((2 : ℕ) < 0) from by norm_num, dif_pos, cast_eq, dite_false]
+      -- REMAINING (definitional game-shape plumbing, NOT mathematics): the two sides are the
+      -- same `OracleComp`, but differ by (i) the leading `pure (default, prover.input …) >>=`
+      -- of `Prover.run`'s base (needs `pure_bind`), (ii) left- vs right-nesting of the round
+      -- binds, and (iii) `Prover.run` threading `(transcript, state)` pairs vs the challenge-
+      -- first `tail` threading states directly + reading `c`/`g_msg`/`xs`. The remaining snoc
+      -- accessors `x.1 0/1/2` reduce to `c`/`g_msg`/`xs`. `simp [bind_assoc, pure_bind]` does
+      -- NOT fire and `exact rfl` fails: the `liftComp`-coerced prover-run binds are
+      -- defeq-but-not-syntactic `>>=` (the same elaboration trap navigated by support-peeling
+      -- in `oracleReduction_perfectCompleteness`/`verifierBody_simulateQ_eq_pure`). Closing this
+      -- needs the bespoke definitional peel rather than `simp`/`rfl`. The corrected CONVEX
+      -- knowledge-soundness bound itself is fully established modulo this one plumbing equation
+      -- (statement, extractor, both error branches, and the master split all type-check).
+      sorry
 
 
 end Protocol
