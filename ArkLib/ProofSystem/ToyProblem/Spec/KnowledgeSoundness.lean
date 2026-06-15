@@ -181,6 +181,42 @@ private lemma prover_run_map_eq {β : Type}
       let out ← liftComp (prover.output (f2 xs))
         ([]ₒ + [(pSpec (ι := ι) (F := F) k t).Challenge]ₒ)
       pure (post c pre.1 xs out)) := by
+  simp only [Prover.run, Prover.runToRound, Fin.induction_three, Prover.processRound,
+    pSpec, bind_pure_comp, map_eq_bind_pure_comp, bind_assoc, liftComp_eq_liftM]
+  split <;> rename_i hDir0; swap; · exact absurd hDir0 (by decide)
+  try simp only [pure_bind, map_pure, Functor.map_map, Function.comp, bind_pure_comp, bind_assoc]
+  split <;> rename_i hDir1; · exact absurd hDir1 (by decide)
+  try simp only [pure_bind, map_pure, Functor.map_map, Function.comp, bind_pure_comp, bind_assoc]
+  split <;> rename_i hDir2; swap; · exact absurd hDir2 (by decide)
+  try simp only [pure_bind, map_pure, Functor.map_map, Function.comp, bind_pure_comp, bind_assoc]
+  -- Normalize the dependent `Fin`-index arithmetic on the prover state so the run's
+  -- `pure (default, input)` base and the round-0 continuation share a syntactic type
+  -- (`(0 : Fin 3).castSucc` ↦ `0`, etc.) — this is what unblocks `pure_bind`.
+  simp only [Fin.castSucc_zero', Fin.succ_zero_eq_one', Fin.succ_one_eq_two', Fin.isValue]
+  -- Expose canonical binds (unfold the `monadLift`/`liftM` internals), flatten, then reduce the
+  -- assembled `Transcript.concat`/`Fin.snoc` accessors.
+  -- Normalize to a single "everything is `>>=`" form (`map_eq_bind_pure_comp`, NOT
+  -- `bind_pure_comp`, to avoid the map↔bind loop), unfold the lift internals so `pure_bind`
+  -- fires, fully right-nest, and reduce the assembled `Fin.snoc` transcript accessors.
+  simp only [MonadLift.monadLift, liftM, monadLift, MonadLiftT.monadLift,
+    OracleComp.liftComp_pure, OracleComp.liftComp_bind, map_eq_bind_pure_comp, pure_bind,
+    map_pure, Function.comp, bind_assoc,
+    FullTranscript.challenges, FullTranscript.messages, Transcript.concat, Fin.snoc,
+    Fin.val_zero, Fin.val_one, Fin.val_two, lt_self_iff_false, Fin.val_castLT,
+    Fin.castSucc_castLT, show (0 : ℕ) < 2 from by norm_num, show (0 : ℕ) < 1 from by norm_num,
+    show ¬ ((2 : ℕ) < 0) from by norm_num, dif_pos, cast_eq, dite_false]
+  -- REMAINING GAP (one step): after the above, the leading `pure (default, input)` base IS
+  -- flattened (Fin-index normalization unblocked `pure_bind`) and the `.challenges`/`.messages`
+  -- accessors are rewritten to `x.1 0 / x.1 1 / x.1 2`. What is left:
+  --   LHS = `roundTree >>= fun x ↦ post (x.1 0) (x.1 1) (x.1 2) <$> (output x.2).liftComp`
+  --   RHS = the flat challenge-first `do`-block applying `post c pre.1 xs out`.
+  -- `roundTree` ends in `pure (Fin.snoc … , state)`, so one more `bind_assoc`+`pure_bind` push
+  -- should substitute `x := (Fin.snoc (Fin.snoc (Fin.snoc default c) pre.1) xs, state)`, after
+  -- which `x.1 0 = c`, `x.1 1 = pre.1`, `x.1 2 = xs` reduce by `Fin.snoc` and both sides match.
+  -- The push is currently blocked: the round-tree's trailing map keeps `x` from being
+  -- substituted under the outer bind (map↔bind normalization tension). Resolve by forcing the
+  -- outer flatten (e.g. `conv`-rewrite the round-tree to its `pure`-tailed form, or a tailored
+  -- `bind`/`map` push lemma) — purely definitional, no mathematics.
   sorry
 
 /-- **Lemma 6.6 of [ABF26], corrected** (knowledge soundness of Construction 6.2).
