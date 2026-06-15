@@ -9,204 +9,137 @@ import ArkLib.Interaction.Oracle.Core
 # Oracle Interaction Examples
 
 Small clients of the oracle interaction layer. These examples are intentionally
-minimal: they exercise the protocol shape, role decoration, oracle decoration,
-public transcript projection, and query answering without depending on a larger
-proof system.
+minimal: they exercise the core `Interaction.Spec`/`OracleDecoration` idioms
+used by downstream protocols without depending on a larger proof system.
 -/
 
 open OracleComp OracleSpec
 
 namespace Interaction.Oracle.Examples
 
-namespace TwoRound
+namespace SumcheckStyle
 
-/-! ## Two oracle rounds with public-transcript-dependent continuation -/
+open Interaction.TwoParty
 
-/-- The second-round challenge space depends on the first public challenge. -/
-abbrev RoundTwoChallenge (firstChallenge : Bool) : Type :=
-  Fin (if firstChallenge then 2 else 3)
+/-! ## Two appended oracle rounds in the style used by Sumcheck -/
 
-/-- The second oracle is queried at a `Bool` point and returns a value in the
-challenge-dependent finite space. -/
-abbrev RoundTwoMessage (firstChallenge : Bool) : Type :=
-  Bool → RoundTwoChallenge firstChallenge
+/-- A toy oracle message with the same shape as an evaluation oracle: queries are
+points, and responses are values. -/
+abbrev RoundOracle : Type :=
+  Bool → Nat
 
-/-- The first round: the prover sends one `Nat` as an oracle message, then the
-verifier sends one public `Bool` challenge. -/
-abbrev roundOneSpec : Spec :=
-  .oracle Nat (.public Bool (fun _ => .done))
+abbrev Challenge : Type :=
+  Bool
 
-/-- The second round depends on the public transcript of the first round. The
-oracle payload is a function so queries have nontrivial inputs. -/
-abbrev roundTwoSpec : roundOneSpec.PublicTranscript → Spec
-  | ⟨firstChallenge, ⟨⟩⟩ =>
-      .oracle (RoundTwoMessage firstChallenge)
-        (.public (RoundTwoChallenge firstChallenge) (fun _ => .done))
+/-- One round: prover sends an oracle message, verifier sends a public challenge. -/
+abbrev roundSpec : Interaction.Spec :=
+  .node RoundOracle fun _ =>
+    .node Challenge fun _ =>
+      .done
 
-/-- The composed two-round protocol. -/
-abbrev protocolSpec : Spec :=
-  roundOneSpec.append roundTwoSpec
+/-- Same sender-then-receiver role pattern as `Sumcheck.roundRoles`. -/
+abbrev roundRoles : RoleDecoration roundSpec :=
+  ⟨.sender, fun _ => ⟨.receiver, fun _ => ⟨⟩⟩⟩
 
-/-- Round one has a receiver public message. The oracle node is implicitly a
-sender message. -/
-abbrev roundOneRoles : roundOneSpec.RoleDeco :=
-  ⟨.receiver, fun _ => ⟨⟩⟩
+/-- Same oracle-decoration pattern as `Sumcheck.roundOracleDecoration`: attach
+an oracle interface to the sender's round message and skip receiver nodes. -/
+abbrev roundOracleDecoration :
+    Interaction.OracleDecoration roundSpec roundRoles :=
+  ⟨inferInstanceAs (OracleInterface RoundOracle), fun _ => fun _ => ⟨⟩⟩
 
-/-- Round two also has a receiver public message, with its type selected by the
-first public challenge. -/
-abbrev roundTwoRoles : (pt : roundOneSpec.PublicTranscript) → (roundTwoSpec pt).RoleDeco
-  | ⟨_, ⟨⟩⟩ => ⟨.receiver, fun _ => ⟨⟩⟩
+/-- The oracle spec that becomes available after the prover sends the round
+oracle message. This is the `oiSpec` idiom used by Sumcheck's verifier step. -/
+abbrev roundOracleSpec : OracleSpec Bool :=
+  @OracleInterface.spec RoundOracle inferInstance
 
-/-- Role decoration for the composed protocol. -/
-abbrev roles : protocolSpec.RoleDeco :=
-  Spec.RoleDeco.append roundOneSpec roundTwoSpec roundOneRoles roundTwoRoles
+/-- A minimal verifier step: after the sender message, query that oracle and
+return a receiver challenge plus an output. -/
+noncomputable def verifierStep
+    {ι : Type} {oSpec : OracleSpec ι}
+    {ιₛᵢ : Type} (OStmtIn : ιₛᵢ → Type) [∀ i, OracleInterface (OStmtIn i)]
+    {ιₐ : Type} (accSpec : OracleSpec ιₐ) :
+    Interaction.OracleDecoration.OracleCounterpart oSpec OStmtIn
+      (fun {ιₐ} (_ : OracleSpec ιₐ) => Nat)
+      roundSpec roundRoles roundOracleDecoration accSpec :=
+  fun _ =>
+    let receiverStep :
+        OracleComp (oSpec + [OStmtIn]ₒ + (accSpec + roundOracleSpec))
+          ((_ : Challenge) × Nat) := do
+      let valueAtFalse : Nat ← liftM <| roundOracleSpec.query false
+      pure ⟨true, valueAtFalse⟩
+    receiverStep
 
-/-- The first oracle uses the default interface: a trivial query returns the
-entire `Nat` payload. -/
-abbrev roundOneOracleDeco : roundOneSpec.OracleDeco :=
-  ⟨OracleInterface.instDefault, fun _ => ⟨⟩⟩
+/-- Two rounds composed by the same `Spec.append` surface used in Sumcheck. -/
+abbrev protocolSpec : Interaction.Spec :=
+  roundSpec.append fun _ => roundSpec
 
-/-- The second oracle uses the function interface: a `Bool` query evaluates the
-function payload at that point. -/
-abbrev roundTwoOracleDeco :
-    (pt : roundOneSpec.PublicTranscript) → (roundTwoSpec pt).OracleDeco
-  | ⟨firstChallenge, ⟨⟩⟩ =>
-      ⟨inferInstanceAs (OracleInterface (RoundTwoMessage firstChallenge)), fun _ => ⟨⟩⟩
+abbrev protocolRoles : RoleDecoration protocolSpec :=
+  Interaction.Spec.Decoration.append roundRoles (fun _ => roundRoles)
 
-/-- Oracle decoration for the composed protocol. -/
-abbrev oracleDeco : protocolSpec.OracleDeco :=
-  Spec.OracleDeco.append roundOneSpec roundTwoSpec roundOneOracleDeco roundTwoOracleDeco
+abbrev protocolOracleDecoration :
+    Interaction.OracleDecoration protocolSpec protocolRoles :=
+  Role.Refine.append roundOracleDecoration (fun _ => roundOracleDecoration)
 
-/-- Full transcript of the first round. -/
-abbrev roundOneTranscript (firstMessage : Nat) (firstChallenge : Bool) :
-    Interaction.Spec.Transcript roundOneSpec.toInteractionSpec :=
-  ⟨firstMessage, ⟨firstChallenge, ⟨⟩⟩⟩
+abbrev roundTranscript (oracle : RoundOracle) (challenge : Challenge) :
+    Interaction.Spec.Transcript roundSpec :=
+  ⟨oracle, ⟨challenge, ⟨⟩⟩⟩
 
-/-- Public transcript of the first round. -/
-abbrev roundOnePublicTranscript (firstChallenge : Bool) : roundOneSpec.PublicTranscript :=
-  ⟨firstChallenge, ⟨⟩⟩
+abbrev protocolTranscript (oracle1 : RoundOracle) (challenge1 : Challenge)
+    (oracle2 : RoundOracle) (challenge2 : Challenge) :
+    Interaction.Spec.Transcript protocolSpec :=
+  Interaction.Spec.Transcript.append roundSpec (fun _ => roundSpec)
+    (roundTranscript oracle1 challenge1)
+    (roundTranscript oracle2 challenge2)
 
-/-- Full transcript of the second round after the first public challenge has
-selected the finite challenge space. -/
-abbrev roundTwoTranscript (firstChallenge : Bool)
-    (secondMessage : RoundTwoMessage firstChallenge)
-    (secondChallenge : RoundTwoChallenge firstChallenge) :
-    Interaction.Spec.Transcript
-      (roundTwoSpec (roundOnePublicTranscript firstChallenge)).toInteractionSpec :=
-  ⟨secondMessage, ⟨secondChallenge, ⟨⟩⟩⟩
-
-/-- Public transcript of the second round. -/
-abbrev roundTwoPublicTranscript (firstChallenge : Bool)
-    (secondChallenge : RoundTwoChallenge firstChallenge) :
-    (roundTwoSpec (roundOnePublicTranscript firstChallenge)).PublicTranscript :=
-  ⟨secondChallenge, ⟨⟩⟩
-
-/-- A full transcript of the composed protocol is assembled from the two phase
-transcripts. -/
-abbrev transcript (firstMessage : Nat) (firstChallenge : Bool)
-    (secondMessage : RoundTwoMessage firstChallenge)
-    (secondChallenge : RoundTwoChallenge firstChallenge) :
-    Interaction.Spec.Transcript protocolSpec.toInteractionSpec :=
-  Spec.transcriptAppend roundOneSpec roundTwoSpec
-    (roundOneTranscript firstMessage firstChallenge)
-    (roundTwoTranscript firstChallenge secondMessage secondChallenge)
-
-/-- The public transcript contains both verifier messages and forgets both
-oracle payloads. -/
-abbrev publicTranscript (firstChallenge : Bool)
-    (secondChallenge : RoundTwoChallenge firstChallenge) :
-    protocolSpec.PublicTranscript :=
-  Spec.PublicTranscript.append roundOneSpec roundTwoSpec
-    (roundOnePublicTranscript firstChallenge)
-    (roundTwoPublicTranscript firstChallenge secondChallenge)
-
-/-- Projection from the full transcript keeps only the public messages from both
-rounds. -/
-theorem projectPublic_eq (firstMessage : Nat) (firstChallenge : Bool)
-    (secondMessage : RoundTwoMessage firstChallenge)
-    (secondChallenge : RoundTwoChallenge firstChallenge) :
-    protocolSpec.projectPublic
-      (transcript firstMessage firstChallenge secondMessage secondChallenge) =
-        publicTranscript firstChallenge secondChallenge :=
-  rfl
-
-/-- Splitting the composed public transcript recovers the per-round public
-transcripts. -/
-theorem splitPublicTranscript_eq (firstChallenge : Bool)
-    (secondChallenge : RoundTwoChallenge firstChallenge) :
-    Spec.PublicTranscript.split roundOneSpec roundTwoSpec
-      (publicTranscript firstChallenge secondChallenge) =
-        ⟨roundOnePublicTranscript firstChallenge,
-          roundTwoPublicTranscript firstChallenge secondChallenge⟩ :=
-  rfl
-
-/-- Query handle for the first-round oracle before it is embedded into the
-composed protocol. -/
-abbrev roundOneMessageQuery (firstChallenge : Bool) :
-    roundOneSpec.QueryHandle roundOneOracleDeco (roundOnePublicTranscript firstChallenge) :=
-  .inl ()
-
-/-- Query handle for the second-round function oracle before it is embedded into
-the composed protocol. -/
-abbrev roundTwoMessageQuery (firstChallenge : Bool)
-    (secondChallenge : RoundTwoChallenge firstChallenge) (query : Bool) :
-    (roundTwoSpec (roundOnePublicTranscript firstChallenge)).QueryHandle
-      (roundTwoOracleDeco (roundOnePublicTranscript firstChallenge))
-      (roundTwoPublicTranscript firstChallenge secondChallenge) :=
+abbrev roundQuery (oracle : RoundOracle) (challenge query : Bool) :
+    Interaction.OracleDecoration.QueryHandle
+      roundSpec roundRoles roundOracleDecoration (roundTranscript oracle challenge) :=
   .inl query
 
-/-- The first-round query handle embedded into the composed protocol. -/
-abbrev firstRoundQuery (firstChallenge : Bool)
-    (secondChallenge : RoundTwoChallenge firstChallenge) :
-    protocolSpec.QueryHandle oracleDeco (publicTranscript firstChallenge secondChallenge) :=
-  Spec.QueryHandle.appendLeft roundOneSpec roundTwoSpec roundOneOracleDeco roundTwoOracleDeco
-    (roundOnePublicTranscript firstChallenge)
-    (roundTwoPublicTranscript firstChallenge secondChallenge)
-    (roundOneMessageQuery firstChallenge)
+/-- Embed a first-round query into the composed protocol. -/
+abbrev firstRoundQuery (oracle1 : RoundOracle) (challenge1 : Challenge)
+    (oracle2 : RoundOracle) (challenge2 : Challenge) (query : Bool) :
+    Interaction.OracleDecoration.QueryHandle
+      protocolSpec protocolRoles protocolOracleDecoration
+      (protocolTranscript oracle1 challenge1 oracle2 challenge2) :=
+  Interaction.OracleDecoration.QueryHandle.appendLeft
+    roundSpec (fun _ => roundSpec)
+    roundRoles (fun _ => roundRoles)
+    roundOracleDecoration (fun _ => roundOracleDecoration)
+    (roundTranscript oracle1 challenge1)
+    (roundTranscript oracle2 challenge2)
+    (roundQuery oracle1 challenge1 query)
 
-/-- The second-round query handle embedded into the composed protocol. -/
-abbrev secondRoundQuery (firstChallenge : Bool)
-    (secondChallenge : RoundTwoChallenge firstChallenge) (query : Bool) :
-    protocolSpec.QueryHandle oracleDeco (publicTranscript firstChallenge secondChallenge) :=
-  Spec.QueryHandle.appendRight roundOneSpec roundTwoSpec roundOneOracleDeco roundTwoOracleDeco
-    (roundOnePublicTranscript firstChallenge)
-    (roundTwoPublicTranscript firstChallenge secondChallenge)
-    (roundTwoMessageQuery firstChallenge secondChallenge query)
+/-- Embed a second-round query into the composed protocol. -/
+abbrev secondRoundQuery (oracle1 : RoundOracle) (challenge1 : Challenge)
+    (oracle2 : RoundOracle) (challenge2 : Challenge) (query : Bool) :
+    Interaction.OracleDecoration.QueryHandle
+      protocolSpec protocolRoles protocolOracleDecoration
+      (protocolTranscript oracle1 challenge1 oracle2 challenge2) :=
+  Interaction.OracleDecoration.QueryHandle.appendRight
+    roundSpec (fun _ => roundSpec)
+    roundRoles (fun _ => roundRoles)
+    roundOracleDecoration (fun _ => roundOracleDecoration)
+    (roundTranscript oracle1 challenge1)
+    (roundTranscript oracle2 challenge2)
+    (roundQuery oracle2 challenge2 query)
 
-/-- Querying the first-round oracle through the composed handle returns the
-first oracle payload. -/
-theorem answerQuery_firstRound (firstMessage : Nat) (firstChallenge : Bool)
-    (secondMessage : RoundTwoMessage firstChallenge)
-    (secondChallenge : RoundTwoChallenge firstChallenge) :
-    protocolSpec.answerQuery oracleDeco
-      (transcript firstMessage firstChallenge secondMessage secondChallenge)
-      (firstRoundQuery firstChallenge secondChallenge) = firstMessage :=
+theorem answerQuery_firstRound (oracle1 : RoundOracle) (challenge1 : Challenge)
+    (oracle2 : RoundOracle) (challenge2 : Challenge) (query : Bool) :
+    Interaction.OracleDecoration.answerQuery
+      protocolSpec protocolRoles protocolOracleDecoration
+      (protocolTranscript oracle1 challenge1 oracle2 challenge2)
+      (firstRoundQuery oracle1 challenge1 oracle2 challenge2 query) = oracle1 query :=
   rfl
 
-/-- Querying the second-round oracle through the composed handle evaluates the
-function payload at the requested point. -/
-theorem answerQuery_secondRound (firstMessage : Nat) (firstChallenge : Bool)
-    (secondMessage : RoundTwoMessage firstChallenge)
-    (secondChallenge : RoundTwoChallenge firstChallenge) (query : Bool) :
-    protocolSpec.answerQuery oracleDeco
-      (transcript firstMessage firstChallenge secondMessage secondChallenge)
-      (secondRoundQuery firstChallenge secondChallenge query) = secondMessage query :=
+theorem answerQuery_secondRound (oracle1 : RoundOracle) (challenge1 : Challenge)
+    (oracle2 : RoundOracle) (challenge2 : Challenge) (query : Bool) :
+    Interaction.OracleDecoration.answerQuery
+      protocolSpec protocolRoles protocolOracleDecoration
+      (protocolTranscript oracle1 challenge1 oracle2 challenge2)
+      (secondRoundQuery oracle1 challenge1 oracle2 challenge2 query) = oracle2 query :=
   rfl
 
-/-- The first-round query has a `Nat` response. -/
-example (firstChallenge : Bool) (secondChallenge : RoundTwoChallenge firstChallenge) :
-    protocolSpec.toOracleSpec oracleDeco (publicTranscript firstChallenge secondChallenge)
-      (firstRoundQuery firstChallenge secondChallenge) = Nat :=
-  rfl
-
-/-- The second-round query response type depends on the first public challenge. -/
-example (firstChallenge : Bool) (secondChallenge : RoundTwoChallenge firstChallenge)
-    (query : Bool) :
-    protocolSpec.toOracleSpec oracleDeco (publicTranscript firstChallenge secondChallenge)
-      (secondRoundQuery firstChallenge secondChallenge query) =
-        RoundTwoChallenge firstChallenge :=
-  rfl
-
-end TwoRound
+end SumcheckStyle
 
 end Interaction.Oracle.Examples
