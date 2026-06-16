@@ -25,7 +25,7 @@ open Interaction.TwoParty
 
 abbrev RoundOneQuery := Bool
 abbrev RoundTwoQuery := Bool × Bool
-abbrev Response := Nat
+abbrev Response := Nat /- can also vary per round -/
 abbrev Challenge := Nat
 
 /-- Toy oracle message type: just send the function. -/
@@ -43,27 +43,27 @@ abbrev roundTwoOracleSpec : OracleSpec RoundTwoQuery :=
 
 /-! ### Round one -/
 /-- Round one: prover sends an oracle message, verifier sends a public challenge. -/
-abbrev roundOneSpec : Interaction.Spec :=
+abbrev roundOneTranscriptSpec : Interaction.Spec :=
   .node RoundOneOracle fun _ =>
     .node Challenge fun _ =>
       .done
 
 /-- Round one has a sender message followed by a receiver message. -/
-abbrev roundOneRoles : RoleDecoration roundOneSpec :=
+abbrev roundOneRoles : RoleDecoration roundOneTranscriptSpec :=
   ⟨.sender, fun _ => ⟨.receiver, fun _ => ⟨⟩⟩⟩
 
 /-- Attach an oracle interface to the sender's round message and skip receiver nodes. -/
 abbrev roundOneOracleDecoration :
-    Interaction.OracleDecoration roundOneSpec roundOneRoles :=
+    Interaction.OracleDecoration roundOneTranscriptSpec roundOneRoles :=
   ⟨inferInstanceAs (OracleInterface RoundOneOracle), fun _ => fun _ => ⟨⟩⟩
 
 abbrev roundOneTranscript (oracle : RoundOneOracle) (challenge : Challenge) :
-    Interaction.Spec.Transcript roundOneSpec :=
+    Interaction.Spec.Transcript roundOneTranscriptSpec :=
   ⟨oracle, ⟨challenge, ⟨⟩⟩⟩
 
 abbrev roundOneQuery (oracle : RoundOneOracle) (challenge : Challenge) (query : RoundOneQuery) :
     Interaction.OracleDecoration.QueryHandle
-      roundOneSpec roundOneRoles roundOneOracleDecoration
+      roundOneTranscriptSpec roundOneRoles roundOneOracleDecoration
       (roundOneTranscript oracle challenge) :=
   .inl query
 
@@ -75,7 +75,7 @@ noncomputable def roundOneVerifierStep
     {ιₐ : Type} (accSpec : OracleSpec ιₐ) :
     Interaction.OracleDecoration.OracleCounterpart oSpec OStmtIn
       (fun {ιₐ} (_ : OracleSpec ιₐ) => Response)
-    roundOneSpec roundOneRoles roundOneOracleDecoration accSpec :=
+    roundOneTranscriptSpec roundOneRoles roundOneOracleDecoration accSpec :=
   fun _ =>
     let receiverStep :
         OracleComp (oSpec + [OStmtIn]ₒ + (accSpec + roundOneOracleSpec))
@@ -88,28 +88,28 @@ noncomputable def roundOneVerifierStep
 
 /-- Round two has the same local shape, but is presented as the continuation
 expected by `Spec.append`. -/
-abbrev roundTwoSpec (_ : Interaction.Spec.Transcript roundOneSpec) : Interaction.Spec :=
+abbrev roundTwoTranscriptSpec (_ : Interaction.Spec.Transcript roundOneTranscriptSpec) : Interaction.Spec :=
   .node RoundTwoOracle fun _ =>
     .node Challenge fun _ =>
       .done
 
-abbrev roundTwoRoles (tr₁ : Interaction.Spec.Transcript roundOneSpec) :
-    RoleDecoration (roundTwoSpec tr₁) :=
+abbrev roundTwoRoles (tr₁ : Interaction.Spec.Transcript roundOneTranscriptSpec) :
+    RoleDecoration (roundTwoTranscriptSpec tr₁) :=
   ⟨.sender, fun _ => ⟨.receiver, fun _ => ⟨⟩⟩⟩
 
-abbrev roundTwoOracleDecoration (tr₁ : Interaction.Spec.Transcript roundOneSpec) :
-    Interaction.OracleDecoration (roundTwoSpec tr₁) (roundTwoRoles tr₁) :=
+abbrev roundTwoOracleDecoration (tr₁ : Interaction.Spec.Transcript roundOneTranscriptSpec) :
+    Interaction.OracleDecoration (roundTwoTranscriptSpec tr₁) (roundTwoRoles tr₁) :=
   ⟨inferInstanceAs (OracleInterface RoundTwoOracle), fun _ => fun _ => ⟨⟩⟩
 
-abbrev roundTwoTranscript (tr₁ : Interaction.Spec.Transcript roundOneSpec)
+abbrev roundTwoTranscript (tr₁ : Interaction.Spec.Transcript roundOneTranscriptSpec)
     (oracle : RoundTwoOracle) (challenge : Challenge) :
-    Interaction.Spec.Transcript (roundTwoSpec tr₁) :=
+    Interaction.Spec.Transcript (roundTwoTranscriptSpec tr₁) :=
   ⟨oracle, ⟨challenge, ⟨⟩⟩⟩
 
-abbrev roundTwoQuery (tr₁ : Interaction.Spec.Transcript roundOneSpec)
+abbrev roundTwoQuery (tr₁ : Interaction.Spec.Transcript roundOneTranscriptSpec)
     (oracle : RoundTwoOracle) (challenge : Challenge) (query : RoundTwoQuery) :
     Interaction.OracleDecoration.QueryHandle
-      (roundTwoSpec tr₁) (roundTwoRoles tr₁) (roundTwoOracleDecoration tr₁)
+      (roundTwoTranscriptSpec tr₁) (roundTwoRoles tr₁) (roundTwoOracleDecoration tr₁)
       (roundTwoTranscript tr₁ oracle challenge) :=
   .inl query
 
@@ -117,7 +117,7 @@ abbrev roundTwoQuery (tr₁ : Interaction.Spec.Transcript roundOneSpec)
 
 /-- Two rounds composed by the core `Spec.append` surface. -/
 abbrev protocolSpec : Interaction.Spec :=
-  roundOneSpec.append roundTwoSpec
+  roundOneTranscriptSpec.append roundTwoTranscriptSpec
 
 abbrev protocolRoles : RoleDecoration protocolSpec :=
   Interaction.Spec.Decoration.append roundOneRoles roundTwoRoles
@@ -129,7 +129,7 @@ abbrev protocolOracleDecoration :
 abbrev protocolTranscript (oracle1 : RoundOneOracle) (challenge1 : Challenge)
     (oracle2 : RoundTwoOracle) (challenge2 : Challenge) :
     Interaction.Spec.Transcript protocolSpec :=
-  Interaction.Spec.Transcript.append roundOneSpec roundTwoSpec
+  Interaction.Spec.Transcript.append roundOneTranscriptSpec roundTwoTranscriptSpec
     (roundOneTranscript oracle1 challenge1)
     (roundTwoTranscript (roundOneTranscript oracle1 challenge1) oracle2 challenge2)
 
@@ -140,7 +140,7 @@ abbrev firstRoundQuery (oracle1 : RoundOneOracle) (challenge1 : Challenge)
       protocolSpec protocolRoles protocolOracleDecoration
       (protocolTranscript oracle1 challenge1 oracle2 challenge2) :=
   Interaction.OracleDecoration.QueryHandle.appendLeft
-    roundOneSpec roundTwoSpec
+    roundOneTranscriptSpec roundTwoTranscriptSpec
     roundOneRoles roundTwoRoles
     roundOneOracleDecoration roundTwoOracleDecoration
     (roundOneTranscript oracle1 challenge1)
@@ -154,7 +154,7 @@ abbrev secondRoundQuery (oracle1 : RoundOneOracle) (challenge1 : Challenge)
       protocolSpec protocolRoles protocolOracleDecoration
       (protocolTranscript oracle1 challenge1 oracle2 challenge2) :=
   Interaction.OracleDecoration.QueryHandle.appendRight
-    roundOneSpec roundTwoSpec
+    roundOneTranscriptSpec roundTwoTranscriptSpec
     roundOneRoles roundTwoRoles
     roundOneOracleDecoration roundTwoOracleDecoration
     (roundOneTranscript oracle1 challenge1)
