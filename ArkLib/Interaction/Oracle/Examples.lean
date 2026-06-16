@@ -1,7 +1,7 @@
 /-
 Copyright (c) 2026 ArkLib Contributors. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: ArkLib Contributors
+Authors : ArkLib Contributors
 -/
 import ArkLib.Interaction.Oracle.Core
 
@@ -9,7 +9,7 @@ import ArkLib.Interaction.Oracle.Core
 # Oracle Interaction Examples
 
 Small clients of the oracle interaction layer. These examples are intentionally
-minimal: they exercise the core `Interaction.Spec`/`OracleDecoration` idioms
+minimal : they exercise the core `Interaction.Spec`/`OracleDecoration` idioms
 used by downstream protocols without depending on a larger proof system.
 -/
 
@@ -17,27 +17,31 @@ open OracleComp OracleSpec
 
 namespace Interaction.Oracle.Examples
 
-namespace TwoRound
+namespace TwoRoundExample
 
 open Interaction.TwoParty
 
 /-! ## Two appended oracle rounds -/
 
-/-- A toy oracle message with the same shape as an evaluation oracle: queries are
-points, and responses are values. -/
-abbrev RoundOracle : Type :=
-  Bool → Nat
+abbrev Query := Bool
+abbrev RoundTwoQuery := Bool × Bool
+abbrev Response := Bool
+abbrev Challenge := Bool
 
-abbrev Challenge : Type :=
-  Bool
+/-- Toy oracle message type: just send the function. -/
+abbrev RoundOracle := Query → Response
+abbrev RoundTwoOracle := RoundTwoQuery → Response
 
-/-- The oracle spec that becomes available after the prover sends a round oracle
-message. -/
-abbrev roundOracleSpec : OracleSpec Bool :=
+/-- How to query the oracle. In our case, we already have a recipe that says "just
+  evaluate the function". -/
+abbrev roundOracleSpec : OracleSpec Query :=
   @OracleInterface.spec RoundOracle inferInstance
 
-/-! ### Round one -/
+abbrev roundTwoOracleSpec : OracleSpec RoundTwoQuery :=
+  @OracleInterface.spec RoundTwoOracle inferInstance
 
+
+/-! ### Round one -/
 /-- Round one: prover sends an oracle message, verifier sends a public challenge. -/
 abbrev roundOneSpec : Interaction.Spec :=
   .node RoundOracle fun _ =>
@@ -70,13 +74,13 @@ noncomputable def roundOneVerifierStep
     {ιₛᵢ : Type} (OStmtIn : ιₛᵢ → Type) [∀ i, OracleInterface (OStmtIn i)]
     {ιₐ : Type} (accSpec : OracleSpec ιₐ) :
     Interaction.OracleDecoration.OracleCounterpart oSpec OStmtIn
-      (fun {ιₐ} (_ : OracleSpec ιₐ) => Nat)
+      (fun {ιₐ} (_ : OracleSpec ιₐ) => Response)
       roundOneSpec roundOneRoles roundOneOracleDecoration accSpec :=
   fun _ =>
     let receiverStep :
         OracleComp (oSpec + [OStmtIn]ₒ + (accSpec + roundOracleSpec))
-          ((_ : Challenge) × Nat) := do
-      let valueAtFalse : Nat ← liftM <| roundOracleSpec.query false
+          ((_ : Challenge) × Response) := do
+      let valueAtFalse : Response ← liftM <| roundOracleSpec.query false
       pure ⟨true, valueAtFalse⟩
     receiverStep
 
@@ -85,7 +89,7 @@ noncomputable def roundOneVerifierStep
 /-- Round two has the same local shape, but is presented as the continuation
 expected by `Spec.append`. -/
 abbrev roundTwoSpec (_ : Interaction.Spec.Transcript roundOneSpec) : Interaction.Spec :=
-  .node RoundOracle fun _ =>
+  .node RoundTwoOracle fun _ =>
     .node Challenge fun _ =>
       .done
 
@@ -95,15 +99,15 @@ abbrev roundTwoRoles (tr₁ : Interaction.Spec.Transcript roundOneSpec) :
 
 abbrev roundTwoOracleDecoration (tr₁ : Interaction.Spec.Transcript roundOneSpec) :
     Interaction.OracleDecoration (roundTwoSpec tr₁) (roundTwoRoles tr₁) :=
-  ⟨inferInstanceAs (OracleInterface RoundOracle), fun _ => fun _ => ⟨⟩⟩
+  ⟨inferInstanceAs (OracleInterface RoundTwoOracle), fun _ => fun _ => ⟨⟩⟩
 
 abbrev roundTwoTranscript (tr₁ : Interaction.Spec.Transcript roundOneSpec)
-    (oracle : RoundOracle) (challenge : Challenge) :
+    (oracle : RoundTwoOracle) (challenge : Challenge) :
     Interaction.Spec.Transcript (roundTwoSpec tr₁) :=
   ⟨oracle, ⟨challenge, ⟨⟩⟩⟩
 
 abbrev roundTwoQuery (tr₁ : Interaction.Spec.Transcript roundOneSpec)
-    (oracle : RoundOracle) (challenge query : Bool) :
+    (oracle : RoundTwoOracle) (challenge : Challenge) (query : RoundTwoQuery) :
     Interaction.OracleDecoration.QueryHandle
       (roundTwoSpec tr₁) (roundTwoRoles tr₁) (roundTwoOracleDecoration tr₁)
       (roundTwoTranscript tr₁ oracle challenge) :=
@@ -123,7 +127,7 @@ abbrev protocolOracleDecoration :
   Role.Refine.append roundOneOracleDecoration roundTwoOracleDecoration
 
 abbrev protocolTranscript (oracle1 : RoundOracle) (challenge1 : Challenge)
-    (oracle2 : RoundOracle) (challenge2 : Challenge) :
+    (oracle2 : RoundTwoOracle) (challenge2 : Challenge) :
     Interaction.Spec.Transcript protocolSpec :=
   Interaction.Spec.Transcript.append roundOneSpec roundTwoSpec
     (roundOneTranscript oracle1 challenge1)
@@ -131,7 +135,7 @@ abbrev protocolTranscript (oracle1 : RoundOracle) (challenge1 : Challenge)
 
 /-- Embed a first-round query into the composed protocol. -/
 abbrev firstRoundQuery (oracle1 : RoundOracle) (challenge1 : Challenge)
-    (oracle2 : RoundOracle) (challenge2 : Challenge) (query : Bool) :
+    (oracle2 : RoundTwoOracle) (challenge2 : Challenge) (query : Query) :
     Interaction.OracleDecoration.QueryHandle
       protocolSpec protocolRoles protocolOracleDecoration
       (protocolTranscript oracle1 challenge1 oracle2 challenge2) :=
@@ -145,7 +149,7 @@ abbrev firstRoundQuery (oracle1 : RoundOracle) (challenge1 : Challenge)
 
 /-- Embed a second-round query into the composed protocol. -/
 abbrev secondRoundQuery (oracle1 : RoundOracle) (challenge1 : Challenge)
-    (oracle2 : RoundOracle) (challenge2 : Challenge) (query : Bool) :
+    (oracle2 : RoundTwoOracle) (challenge2 : Challenge) (query : RoundTwoQuery) :
     Interaction.OracleDecoration.QueryHandle
       protocolSpec protocolRoles protocolOracleDecoration
       (protocolTranscript oracle1 challenge1 oracle2 challenge2) :=
@@ -158,7 +162,7 @@ abbrev secondRoundQuery (oracle1 : RoundOracle) (challenge1 : Challenge)
     (roundTwoQuery (roundOneTranscript oracle1 challenge1) oracle2 challenge2 query)
 
 theorem answerQuery_firstRound (oracle1 : RoundOracle) (challenge1 : Challenge)
-    (oracle2 : RoundOracle) (challenge2 : Challenge) (query : Bool) :
+    (oracle2 : RoundTwoOracle) (challenge2 : Challenge) (query : Query) :
     Interaction.OracleDecoration.answerQuery
       protocolSpec protocolRoles protocolOracleDecoration
       (protocolTranscript oracle1 challenge1 oracle2 challenge2)
@@ -166,13 +170,13 @@ theorem answerQuery_firstRound (oracle1 : RoundOracle) (challenge1 : Challenge)
   rfl
 
 theorem answerQuery_secondRound (oracle1 : RoundOracle) (challenge1 : Challenge)
-    (oracle2 : RoundOracle) (challenge2 : Challenge) (query : Bool) :
+    (oracle2 : RoundTwoOracle) (challenge2 : Challenge) (query : RoundTwoQuery) :
     Interaction.OracleDecoration.answerQuery
       protocolSpec protocolRoles protocolOracleDecoration
       (protocolTranscript oracle1 challenge1 oracle2 challenge2)
       (secondRoundQuery oracle1 challenge1 oracle2 challenge2 query) = oracle2 query :=
   rfl
 
-end TwoRound
+end TwoRoundExample
 
 end Interaction.Oracle.Examples
