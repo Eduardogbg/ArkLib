@@ -53,7 +53,7 @@ def quotientOfBadSeedSet (LC : Submodule F (ι → F)) (T : Finset ι) :=
   (T → F) ⧸ LinearCode.projectedCode_submod LC T
 
 /-- Lemma 7.1. in [BCGM25]. -/
-theorem AffineLine_MCA_AffineSpaceMCA {ℓ : ℕ} (ε_mca : I → ℝ) (LC : LinearCode ι F)
+theorem AffineLine_MCA_AffineSpaceMCA {ℓ : ℕ} (hℓ : ℓ ≥ 2) (ε_mca : I → ℝ) (LC : LinearCode ι F)
 (hGMCA : IsMCAGenerator (AffineLineGenerator F) ε_mca LC) :
   let a := (1 - 1 / Fintype.card F : ℝ)
   let ε_mca' := a • ε_mca
