@@ -92,8 +92,8 @@ def IsMCA {S : Type} [Nonempty S] [Fintype S] (G : Generator S ℓ F) (LC : Line
   (x : S) (U : ℓ → (ι → F)) (γ : I) : Prop :=
   let v := Matrix.vecMul (G x) (U)
   ∃ (T : Finset ι), (T.card : ℝ) ≥ (Fintype.card ι) * (1 - γ) ∧
-  projectedWord v T ∈ projectedCode LC T ∧
-  ∃ j : ℓ, projectedWord (U j) T ∉ projectedCode LC T
+  projectedWord v T ∈ projectedCode_submod LC T ∧
+  ∃ j : ℓ, projectedWord (U j) T ∉ projectedCode_submod LC T
 
 /-- A generator has mutual correlated agreement (MCA) with error `ε_mca` if the probability that the
 generator satisfies the MCA condition is bounded above by `ε_mca`.
