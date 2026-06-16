@@ -33,7 +33,26 @@ variable {ι : Type} [Fintype ι]
         --  {S : Type} [Fintype S]
 
 
+noncomputable instance {ℓ : Type} [Fintype ℓ] : Fintype (ℓ → F) := Fintype.ofFinite (ℓ → F)
 
+-- def badSeed {s : ℕ} (G : Generator (Fin s → F) (Fin (s + 1)) F) (LC : LinearCode ι F)
+--   (U : Fin (s + 1) → (ι → F)) (γ : I) : Type :=
+--   {x : Fin s → F // ∃ y : Fin s → F, (CoreDefinitions.IsMCA G LC y U γ) ∧ x = y}
+
+def badSeed {s : ℕ} (LC : LinearCode ι F) (U : Fin (s + 1) → (ι → F)) (γ : I) : Type :=
+  {x : Fin s → F // ∃ y : Fin s → F,
+                    (CoreDefinitions.IsMCA (AffineSpaceGenerator F s) LC y U γ) ∧ x = y}
+
+noncomputable def badSeedSet {ι : Type} [Fintype ι]
+  {s : ℕ} (LC : LinearCode ι F) (U : Fin (s + 1) → (ι → F))
+  (γ : I) (B : badSeed LC U γ) (h : CoreDefinitions.IsMCA (AffineSpaceGenerator F s) LC (B.1) U γ)
+      : Finset ι :=
+  Classical.choose h
+
+def quotientOfBadSeedSet (LC : Submodule F (ι → F)) (T : Finset ι) :=
+  (T → F) ⧸ LinearCode.projectedCode_submod LC T
+
+/-- Lemma 7.1. in [BCGM25]. -/
 theorem AffineLine_MCA_AffineSpaceMCA {ℓ : ℕ} (ε_mca : I → ℝ) (LC : LinearCode ι F)
 (hGMCA : IsMCAGenerator (AffineLineGenerator F) ε_mca LC) :
   let a := (1 - 1 / Fintype.card F : ℝ)
