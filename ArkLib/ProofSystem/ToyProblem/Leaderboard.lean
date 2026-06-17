@@ -5,6 +5,7 @@ Authors: Alexander Hicks
 -/
 
 import ArkLib.ProofSystem.ToyProblem.SoundnessBounds
+import ArkLib.ProofSystem.ToyProblem.Spec.General
 import Mathlib.Analysis.SpecialFunctions.Pow.NNReal
 import Mathlib.Analysis.SpecialFunctions.Log.Base
 import Mathlib.FieldTheory.Finite.GaloisField
@@ -29,8 +30,10 @@ is `winningSetSoundness enc δ` (Definition 6.11, "exactly") and round 2's is
 the spot-check `(1-δ)^t`. The best soundness error provable by *any* such
 analysis is therefore
 
-  `bestProvableError p = ⨅ δ ∈ (0, δ_min), max (winningSetSoundness p.enc δ) ((1-δ)^t)`
+  `bestProvableError p = ⨅ δ ∈ (0, δ_min), (1-δ)^t + winningSetSoundness p.enc δ · (1 - (1-δ)^t)`
 
+(the **convex/union combination** of the two round errors — the corrected L6.6
+bound; the paper's printed `max` is false, see `protocol62_knowledgeSound`),
 and that single scalar is what the two leaderboard sides bound (the paper's
 "Knowledge soundness upperbound" / "Soundness lowerbound" parheads, `.tex`
 2798–2825 and 2898–2943). Crucially, the two sides may certify their bounds
@@ -41,15 +44,16 @@ legitimate bounds on the *same* quantity:
 
 * `SecurityLowerBound p` — "we can *prove* `≥ bits` bits":
   `bestProvableError p ≤ 2^(-bits)`. Route: `bestProvableError_le` at your
-  chosen δ + an upper bound on both branches of the `max` (the
-  `winningSetSoundness` branch via the L6.10 bridge
-  `winningSetSoundness_le_epsMCA_add`).
+  chosen δ + an upper bound on both terms of the convex combination (the
+  `winningSetSoundness` term via the L6.10 bridge
+  `winningSetSoundness_le_epsMCA_add`, the spot-check `(1-δ)^t` directly).
 * `SecurityUpperBound p` — "no δ-relaxation analysis can prove `> bits` bits":
-  `2^(-bits) ≤ bestProvableError p`. Route: for every admissible δ, floor one
-  of the two branches (an attack on `winningSetSoundness` for large δ — the
-  **proven** hooks are `epsCA_le_winningSetSoundness` (L6.13) and
-  `listDecoding_le_winningSetSoundness` (L6.12) — and the spot-check term
-  `(1-δ)^t` for small δ).
+  `2^(-bits) ≤ bestProvableError p`. Route: for every admissible δ, floor the
+  convex combination — which dominates both `(1-δ)^t` and (since
+  `winningSetSoundness ≤ 1`) `winningSetSoundness` — via an attack on
+  `winningSetSoundness` for large δ (the **proven** hooks
+  `epsCA_le_winningSetSoundness` (L6.13) and `listDecoding_le_winningSetSoundness`
+  (L6.12)) and the spot-check term `(1-δ)^t` for small δ.
 * `securityGap lo hi := hi.bits - lo.bits` — the scalar contestants minimise.
   `SecurityLowerBound.bits_le_of` proves `lo.bits ≤ hi.bits` (so the gap is
   `≥ 0`) by transitivity through the common scalar, axiom-cleanly.
@@ -262,25 +266,29 @@ theorem listDecoding_le_winningSetSoundness {k : ℕ} [Nonempty ι] {C : Set (ι
 
 /-! ## The X-side vehicle (full protocol C6.2; Lemmas 6.6 / 6.8 / 6.10)
 
-`toySoundnessError` reuses the *exact* per-round error terms of
-`Spec.General.protocol62_knowledgeSound` / `protocol62_rbrKnowledgeSound`
-(Lemmas 6.6 / 6.8): the `γ`-round error `ε_mca(C,δ) + |Λ(C^{≡2},δ)| / |F|` and
-the spot-check error `(1-δ)^t`. The bridge from `winningSetSoundness` to its
-first branch is the error-bound content of Lemma 6.10. -/
+`toySoundnessError` is the *exact* error term of
+`Spec.General.protocol62_knowledgeSound` (Lemma 6.6, corrected): the
+**convex combination** of the spot-check error `(1-δ)^t` and the
+combination-randomness error `ε_mca(C,δ) + |Λ(C^{≡2},δ)| / |F|`. The bridge from
+`winningSetSoundness` to the latter is the error-bound content of Lemma 6.10. -/
 
-/-- The round-by-round soundness upper bound of **Lemmas 6.6 / 6.8 of [ABF26]**
-(the *full* protocol C6.2) at proximity parameter `δ`: the `max` of the
-combination-randomness error `ε_mca(C,δ) + |Λ(C^{≡2},δ)| / |F|` and the
-spot-check error `(1-δ)^t`. These are the *exact* per-round terms of
-`protocol62_knowledgeSound`. The `(Lambda …).toNat` is faithful:
-`ListDecodable.Lambda_ne_top`. It is the X-side proof vehicle: an analysis picks
-an admissible δ and bounds `bestProvableError` through it (via
-`winningSetSoundness_le_toySoundnessError` and `bestProvableError_le`). -/
+/-- The round-by-round soundness upper bound of **Lemma 6.6 of [ABF26]
+(corrected)** (the *full* protocol C6.2) at proximity parameter `δ`: the
+**convex combination** `(1-δ)^t + ε₀·(1 - (1-δ)^t)` of the spot-check error
+`(1-δ)^t` and the combination-randomness error
+`ε₀ = ε_mca(C,δ) + |Λ(C^{≡2},δ)| / |F|`. This is the *exact* error term of
+`protocol62_knowledgeSound`. (The paper's printed `max ε₀ ((1-δ)^t)` is **false**
+— see `protocol62_knowledgeSound`; the honest round-by-round bound is this union
+combination, author-confirmed. It dominates the `max` by `ε₀·(1-δ)^t`, negligible
+in regime.) The `(Lambda …).toNat` is faithful: `ListDecodable.Lambda_ne_top`. It
+is the X-side proof vehicle: an analysis picks an admissible δ and bounds
+`bestProvableError` through it (via `winningSetSoundness_le_toySoundnessError`
+and `bestProvableError_le`). -/
 noncomputable def toySoundnessError (C : Set (ι → F)) (δ : ℝ≥0) (t : ℕ) : ℝ≥0 :=
-  max ((epsMCA (F := F) (A := F) C δ).toNNReal +
+  (1 - δ) ^ t
+    + ((epsMCA (F := F) (A := F) C δ).toNNReal +
         ((Lambda (interleavedCodeSet (κ := Fin 2) C) (δ : ℝ)).toNat : ℝ≥0)
-          / (Fintype.card F : ℝ≥0))
-      ((1 - δ) ^ t)
+          / (Fintype.card F : ℝ≥0)) * (1 - (1 - δ) ^ t)
 
 /-- **Error-bound content of Lemma 6.10 of [ABF26]** (`.tex` 2627–2634:
 Construction 6.9 has knowledge soundness with error `ε_mca(C,δ) + Λ/|F|`).
@@ -295,27 +303,93 @@ This is *only* the error bound; the full knowledge-soundness *game* of L6.10
 this inequality itself as "L6.10"). Paper-proof-owed (ABF26's own §6.4
 result). -/
 theorem winningSetSoundness_le_epsMCA_add {k : ℕ} [Nonempty ι] {C : Set (ι → F)} (δ : ℝ≥0)
-    (_hδ : δ ∈ Set.Ioo (0 : ℝ≥0) ((minRelHammingDistCode C : ℝ≥0)))
-    (enc : (Fin k → F) →ₗ[F] (ι → F)) (henc_range : Set.range enc = C) :
+    (hδ : δ ∈ Set.Ioo (0 : ℝ≥0) ((minRelHammingDistCode C : ℝ≥0)))
+    (enc : (Fin k → F) →ₗ[F] (ι → F)) (henc_inj : Function.Injective enc)
+    (henc_range : Set.range enc = C) :
     winningSetSoundness enc δ
       ≤ (epsMCA (F := F) (A := F) C δ).toNNReal
         + ((Lambda (interleavedCodeSet (κ := Fin 2) C) (δ : ℝ)).toNat : ℝ≥0)
           / (Fintype.card F : ℝ≥0) := by
-  -- ABF26-L6.10; paper-proof-owed. `winningSetSoundness ≤ ε_mca + |Λ|/|F|` is the
-  -- error-bound content of the soundness of Construction 6.9 (the 1-round form of
-  -- the L6.8 γ-round analysis); the KS-game statement is
-  -- `SimplifiedIOR.simplifiedIOR_knowledgeSound`.
-  sorry
+  -- ABF26-L6.10 error bound: the 1-round (γ) form of the L6.8 γ-round analysis. Each
+  -- violating instance's winning fraction `|Ω|/|F|` is exactly the uniform probability of
+  -- the γ-transition event, bounded by `ε_mca + |Λ|/|F|` via `gamma_transition_prob_le`.
+  classical
+  obtain ⟨hδpos, hδlt⟩ := hδ
+  -- `epsMCA` is a supremum of probabilities, hence `≤ 1 < ⊤`.
+  have hMCAtop : epsMCA (F := F) (A := F) C δ ≠ ⊤ := Spec.epsMCA_ne_top C δ
+  -- Coerced bound equals the `ℝ≥0∞` bound produced by `gamma_transition_prob_le`.
+  have hε₀coe : (((epsMCA (F := F) (A := F) C δ).toNNReal +
+        ((Lambda (interleavedCodeSet (κ := Fin 2) C) (δ : ℝ)).toNat : ℝ≥0)
+          / (Fintype.card F : ℝ≥0) : ℝ≥0) : ℝ≥0∞)
+      = epsMCA (F := F) (A := F) C δ +
+        ((Lambda (interleavedCodeSet (κ := Fin 2) C) (δ : ℝ)).toNat : ℝ≥0∞)
+          / (Fintype.card F : ℝ≥0∞) := by
+    rw [ENNReal.coe_add, ENNReal.coe_toNNReal hMCAtop,
+      ENNReal.coe_div (Nat.cast_ne_zero.mpr Fintype.card_ne_zero),
+      ENNReal.coe_natCast, ENNReal.coe_natCast]
+  -- Bound the supremum by bounding each violating instance's winning fraction.
+  refine ciSup_le' (fun x ↦ ?_)
+  obtain ⟨v, μ₁, μ₂, f₁, f₂, hviol⟩ := x
+  -- The violating instance has no `R̃²` witness, in the shape `gamma_transition_prob_le` wants.
+  have hNoWit : ¬ ∃ M : Fin 2 → (Fin k → F),
+      (∀ i : Fin 2, ∑ j, M i j * v j = ![μ₁, μ₂] i) ∧
+      ∃ S : Finset ι, (1 - (δ : ℝ)) * Fintype.card ι ≤ S.card ∧
+        ∀ i : Fin 2, ∀ j ∈ S, ![f₁, f₂] i j = enc (M i) j := by
+    rintro ⟨M, hlin, S, hScard, hagree⟩
+    exact hviol ⟨fun i ↦ enc (M i), ⟨M, fun _ ↦ rfl, hlin⟩, S, hScard, hagree⟩
+  -- `winningSetFor` membership is exactly the γ-transition event (the `ℓ=1` relaxed relation,
+  -- with the codeword witness `Wstar = enc m` eliminated).
+  have hWSeq : winningSetFor enc δ v μ₁ μ₂ f₁ f₂ =
+      {γ : F | ∃ m : Fin k → F, (∑ j, m j * v j = μ₁ + γ * μ₂) ∧
+        ∃ S : Finset ι, (1 - (δ : ℝ)) * Fintype.card ι ≤ S.card ∧
+          ∀ j ∈ S, f₁ j + γ * f₂ j = enc m j} := by
+    ext γ
+    constructor
+    · rintro ⟨Wstar, ⟨M, hWeq, hlin⟩, S, hScard, hagree⟩
+      refine ⟨M 0, by simpa using hlin 0, S, hScard, fun j hj ↦ ?_⟩
+      have h := hagree 0 j hj
+      rw [hWeq 0] at h; simpa using h
+    · rintro ⟨m, hlin, S, hScard, hagree⟩
+      exact ⟨fun _ ↦ enc m, ⟨fun _ ↦ m, fun _ ↦ rfl, fun _ ↦ by simpa using hlin⟩,
+        S, hScard, fun i j hj ↦ by simpa using hagree j hj⟩
+  -- Push to `ℝ≥0∞`: the winning fraction is the uniform probability of the γ-transition event.
+  rw [← ENNReal.coe_le_coe, hε₀coe]
+  refine le_trans (le_of_eq ?_)
+    (gamma_transition_prob_le C δ enc henc_inj henc_range hδpos hδlt v μ₁ μ₂ f₁ f₂ hNoWit)
+  rw [winningSetRatio, prob_uniform_eq_card_filter_div_card, hWSeq,
+    Set.ncard_eq_toFinset_card', Set.toFinset_setOf,
+    ENNReal.coe_div (Nat.cast_ne_zero.mpr Fintype.card_ne_zero), ENNReal.coe_natCast,
+    ENNReal.coe_natCast]
+
+/-- The Definition-6.11 soundness scalar never exceeds `1` (a supremum of
+fractions `|Ω|/|F| ≤ 1`). -/
+theorem winningSetSoundness_le_one {k : ℕ} (enc : (Fin k → F) →ₗ[F] (ι → F)) (δ : ℝ≥0) :
+    winningSetSoundness enc δ ≤ 1 :=
+  ciSup_le' (fun x ↦ winningSetRatio_le_one x)
 
 /-- **The simplified-IOR soundness is below the full-protocol RBR bound**
 (corollary of the L6.10 bridge `winningSetSoundness_le_epsMCA_add` of [ABF26];
-the bridge's `ε_mca + |Λ|/|F|` term is the first branch of the `max`). -/
+the bridge's `ε_mca + |Λ|/|F|` term is the combination-randomness slot of the
+convex `toySoundnessError`). -/
 theorem winningSetSoundness_le_toySoundnessError {k : ℕ} [Nonempty ι] {C : Set (ι → F)}
     (δ : ℝ≥0) (t : ℕ)
     (hδ : δ ∈ Set.Ioo (0 : ℝ≥0) ((minRelHammingDistCode C : ℝ≥0)))
-    (enc : (Fin k → F) →ₗ[F] (ι → F)) (henc_range : Set.range enc = C) :
-    winningSetSoundness enc δ ≤ toySoundnessError C δ t :=
-  le_trans (winningSetSoundness_le_epsMCA_add δ hδ enc henc_range) (le_max_left _ _)
+    (enc : (Fin k → F) →ₗ[F] (ι → F)) (henc_inj : Function.Injective enc)
+    (henc_range : Set.range enc = C) :
+    winningSetSoundness enc δ ≤ toySoundnessError C δ t := by
+  -- `w ≤ ε₀` (bridge) and `w ≤ 1`, so `w = w·(1-a) + w·a ≤ ε₀·(1-a) + 1·a = a + ε₀·(1-a)`
+  -- where `a = (1-δ)^t ≤ 1`.
+  set w := winningSetSoundness enc δ
+  set a : ℝ≥0 := (1 - δ) ^ t with ha
+  have ha1 : a ≤ 1 := pow_le_one' tsub_le_self t
+  have hbridge := winningSetSoundness_le_epsMCA_add δ hδ enc henc_inj henc_range
+  have hw1 := winningSetSoundness_le_one enc δ
+  calc w = w * (1 - a) + w * a := by
+            rw [← mul_add, tsub_add_cancel_of_le ha1, mul_one]
+    _ ≤ ((epsMCA (F := F) (A := F) C δ).toNNReal +
+          ((Lambda (interleavedCodeSet (κ := Fin 2) C) (δ : ℝ)).toNat : ℝ≥0)
+            / (Fintype.card F : ℝ≥0)) * (1 - a) + 1 * a := by gcongr
+    _ = toySoundnessError C δ t := by rw [toySoundnessError, one_mul, add_comm]
 
 /-! ## Bits of security -/
 
@@ -385,21 +459,23 @@ soundness upperbound" and "Soundness lowerbound" parheads, `.tex` 2798–2825
 and 2898–2943): the best soundness error provable by **any** δ-relaxation
 round-by-round analysis of Construction 6.2,
 
-  `⨅ δ ∈ (0, δ_min(C)), max (winningSetSoundness enc δ) ((1-δ)^t)`.
+  `⨅ δ ∈ (0, δ_min(C)), (1-δ)^t + winningSetSoundness enc δ · (1 - (1-δ)^t)`.
 
 Reading: an analysis must pick an admissible `δ ∈ (0, δ_min(C))` (the
 L6.8/L6.10 range); round 1's true error at that δ is `winningSetSoundness enc δ`
 (Definition 6.11, "exactly" per the paper), round 2's is the spot-check
-`(1-δ)^t`; the analysis's error is the `max`, and the best analysis takes the
-infimum over δ. The protocol's *true* security may exceed this quantity (an
-analysis that is not a δ-relaxation round-by-round argument is out of scope) —
-the leaderboard narrows **this** quantity, per §6.3.
+`(1-δ)^t`; the analysis's combined error is their **convex/union combination**
+`(1-δ)^t + winningSetSoundness·(1 - (1-δ)^t)` (the corrected L6.6 bound — the
+paper's printed `max` is false, see `protocol62_knowledgeSound`), and the best
+analysis takes the infimum over δ. The protocol's *true* security may exceed
+this quantity (an analysis that is not a δ-relaxation round-by-round argument is
+out of scope) — the leaderboard narrows **this** quantity, per §6.3.
 
 X-side submissions bound it from above via `bestProvableError_le` at one
-chosen δ; Y-side submissions bound it from below by flooring the `max` at
-*every* admissible δ (attack hooks `epsCA_le_winningSetSoundness`,
-`listDecoding_le_winningSetSoundness` for the first branch; the spot-check
-term floors the second).
+chosen δ; Y-side submissions bound it from below by flooring the convex
+combination (which dominates both terms) at *every* admissible δ (attack hooks
+`epsCA_le_winningSetSoundness`, `listDecoding_le_winningSetSoundness` for the
+`winningSetSoundness` term; the spot-check term `(1-δ)^t` floors it directly).
 
 **Two adopted conventions** (flagged by the 2026-06-10 second adversarial
 review):
@@ -409,25 +485,29 @@ review):
    and any ceiling is vacuous. (In `ℝ≥0` the `⨅ δ ∈ …` binder collapses to
    `0` via the empty inner infimum — `sInf ∅ = 0` — which made *every* lower
    bound trivially inhabitable; CRITICAL finding C1, fixed.)
-2. The round-2 branch is floored by `(1-δ)^t` as a **convention**: the paper
+2. The round-2 term is floored by `(1-δ)^t` as a **convention**: the paper
    proves the analysis error `≤ (1-δ)^t` (lemma:toy-soundness), while the
    exact per-δ round-2 error is `sup_{Δ > δ} (1-Δ)^t`, marginally smaller
    (one grid step `1/n`; ≈`2^(-14)` bits at `n = 2^21`). Only the round-1
-   branch carries Definition 6.11's "exactly". -/
+   term carries Definition 6.11's "exactly".
+3. The two round errors combine by the **convex/union bound** (corrected L6.6),
+   not the paper's printed `max`; the two differ by `winningSetSoundness·(1-δ)^t`
+   (≤ `(1-δ)^t`), negligible in regime, so the anchors are unaffected. -/
 noncomputable def bestProvableError (p : ToyParams) : ℝ≥0∞ :=
   ⨅ δ ∈ Set.Ioo (0 : ℝ≥0) ((minRelHammingDistCode p.code : ℝ≥0)),
-    (max (winningSetSoundness p.enc δ) ((1 - δ) ^ p.t) : ℝ≥0∞)
+    (((1 - δ) ^ p.t + winningSetSoundness p.enc δ * (1 - (1 - δ) ^ p.t) : ℝ≥0) : ℝ≥0∞)
 
 /-- **The X-side entry point** (cf. [ABF26] §6.3): for any admissible
 `δ ∈ (0, δ_min(C))`, the δ-swept `bestProvableError` is at most that δ's
-analysis error `max (winningSetSoundness p.enc δ) ((1-δ)^t)`. A provable-
-security submission picks its δ, bounds both branches of the `max` (the first
-via the L6.10 bridge `winningSetSoundness_le_epsMCA_add` + an `ε_mca`/`Λ`
-analysis), and concludes through this lemma. Axiom-clean. -/
+analysis error `(1-δ)^t + winningSetSoundness p.enc δ · (1 - (1-δ)^t)` (the
+convex/union combination). A provable-security submission picks its δ, bounds
+both terms (the `winningSetSoundness` one via the L6.10 bridge
+`winningSetSoundness_le_epsMCA_add` + an `ε_mca`/`Λ` analysis, the spot-check
+`(1-δ)^t` directly), and concludes through this lemma. Axiom-clean. -/
 theorem bestProvableError_le (p : ToyParams) {δ : ℝ≥0}
     (hδ : δ ∈ Set.Ioo (0 : ℝ≥0) ((minRelHammingDistCode p.code : ℝ≥0))) :
     bestProvableError p
-      ≤ (max (winningSetSoundness p.enc δ) ((1 - δ) ^ p.t) : ℝ≥0∞) :=
+      ≤ (((1 - δ) ^ p.t + winningSetSoundness p.enc δ * (1 - (1 - δ) ^ p.t) : ℝ≥0) : ℝ≥0∞) :=
   iInf₂_le δ hδ
 
 /-! ## The two leaderboard interfaces
@@ -454,8 +534,9 @@ structure SecurityLowerBound (p : ToyParams) where
 /-- **Provable security upper bound** at parameter point `p`: a number `bits`
 and a proof that the δ-swept analysis frontier is `≥ 2^(-bits)` — i.e. "no
 δ-relaxation round-by-round analysis can prove *more* than `bits` bits of
-security" (cf. [ABF26] §6.3–6.4). The witness floors the `max` at every
-admissible δ: winning-set attacks (Lemmas 6.12 / 6.13, hooks
+security" (cf. [ABF26] §6.3–6.4). The witness floors the convex combination
+(which dominates both terms) at every admissible δ: winning-set attacks
+(Lemmas 6.12 / 6.13, hooks
 `listDecoding_le_winningSetSoundness` / `epsCA_le_winningSetSoundness`) for
 large δ, the spot-check term `(1-δ)^t` for small δ. -/
 structure SecurityUpperBound (p : ToyParams) where
@@ -610,15 +691,17 @@ point.** Cites **Lemmas 6.10 / 6.6 / 6.8 of [ABF26]** and the §6.3.1
 "Knowledge soundness upperbound" analysis (`.tex` 2798–2825,
 `tab:interleaved-security-analysis`): pick `δ := 1 - 1/√2 - η` with
 `η = 1/|L| ≈ 2^(-18)…2^(-21)` (the tables' minimizing slack), apply
-`bestProvableError_le` at that δ, bound the first `max`-branch by the L6.10
-bridge + the Johnson-regime `ε_mca`/`Λ` numerics (`≈ 2^(-71.5)`), and the
-spot-check branch by `(1/√2 + η)^128`. The binding cap is the spot-check.
+`bestProvableError_le` at that δ, bound the `winningSetSoundness` term by the
+L6.10 bridge + the Johnson-regime `ε_mca`/`Λ` numerics (`≈ 2^(-71.5)`), and the
+spot-check term by `(1/√2 + η)^128`. The convex combination is dominated by the
+spot-check term (the `≈ 2^(-71.5)·(1 - 2^(-64))` contribution is negligible), so
+the binding cap is the spot-check.
 
 **Why `bits := 63.99`, not 64** (2026-06-10 second adversarial review, M1):
 the paper itself notes (`.tex` 2817–2819) that `(1/√2 + η)^128 > 2^(-64)`
 *strictly* for every `η > 0` — the tables' `2^(-64.00)` entries are rounding
 (at the minimizing `η = 2^(-21)` the value is `≈ 2^(-63.9998)`). Since the
-`ε_mca` chain controls the first branch only for `η ≳ 2^(-21.7)`, the route
+`ε_mca` chain controls the `winningSetSoundness` term only for `η ≳ 2^(-21.7)`, the route
 certifies an infimum `≈ 2^(-63.9998)`, and no numeric refinement of the
 §6.3.1 chain reaches `64.00` exactly. `bits := 63.99` is the honest certified
 anchor (`2^(-63.9998) ≤ 2^(-63.99)` ✓). `sorry`-backed: the §6.3.1 numeric
@@ -629,19 +712,23 @@ noncomputable def arklib_lowerBound_irs_t128 : SecurityLowerBound koalaIRS where
     -- ABF26-§6.3.1; Phase-5-owed numerics. Route: `bestProvableError_le` at
     -- `δ := 1 - 1/√2 - η` (η ≈ 2^-21, tab:interleaved-security-analysis),
     -- then `winningSetSoundness_le_epsMCA_add` (L6.10 bridge) + Johnson `ε_mca`/`Λ`
-    -- numerics on the first branch (≈2^-71.5) and `(1/√2 + η)^128 ≈ 2^(-63.9998)
-    -- ≤ 2^(-63.99)` on the second.
+    -- numerics on the `winningSetSoundness` term (≈2^-71.5) and `(1/√2 + η)^128 ≈
+    -- 2^(-63.9998) ≤ 2^(-63.99)` on the spot-check term; the convex combination is
+    -- dominated by the spot-check term.
     sorry
 
 /-- **List-decoding attack upper bound (≈116 bits) at the IRS/KoalaBear/`t=128`
 point.** Cites **Lemma 6.12 of [ABF26]** (§6.4.1) with the [KKH26]/Elias list
 bounds, cf. Fenzi–Sanso eprint 2025/2197 Lemma 4.4 (the paper's §6.4.1
-footnote). The two-branch floor over the δ sweep:
+footnote). The floor over the δ sweep — the convex combination
+`(1-δ)^t + winningSetSoundness·(1 - (1-δ)^t)` dominates **both** of:
 
-* for `δ ≤ δ* = 0.468` the spot-check branch dominates:
+* for `δ ≤ δ* = 0.468` the spot-check term:
   `(1-δ)^128 ≥ (0.532)^128 ≈ 2^(-116.6) ≥ 2^(-117)`;
 * for `δ ∈ [δ*, δ_min)` the L6.12 + Elias attack
-  (`listDecoding_le_winningSetSoundness` at the §6.3 numerics) floors round 1
+  (`listDecoding_le_winningSetSoundness` at the §6.3 numerics) floors the
+  `winningSetSoundness` term (and the convex combination dominates it,
+  `convex ≥ winningSetSoundness` since `winningSetSoundness ≤ 1`)
   at `≈ 2^(-116.49) ≥ 2^(-117)` (`tab:elias-lowerbound-thresholds`, `.tex`
   ~2925).
 
@@ -649,11 +736,13 @@ footnote). The two-branch floor over the δ sweep:
 *ceiling* must round **up**. The certified sweep floor is the spot/attack
 crossing `≈ 2^(-116.6)`, which is `< 2^(-116)`: at `bits := 116` the
 inequality `2^(-116) ≤ bestProvableError` fails on the band
-`δ ∈ (0.46604, 0.468)` where neither branch reaches `2^(-116)` (the spot
-branch needs `δ ≤ 1 - 2^(-116/128) ≈ 0.46604`; the Elias floor only ignites
-at `δ* = 0.468`) — and no Phase-5 sharpening closes that band (the true list
-size there is exactly what the Elias bound says it isn't). At `bits := 117`
-both branches cover the whole sweep. The paper's `2^(-116.49)` is the per-δ*
+`δ ∈ (0.46604, 0.468)` where the convex combination reaches neither `2^(-116)`
+(the spot-check term needs `δ ≤ 1 - 2^(-116/128) ≈ 0.46604`; the Elias floor on
+the `winningSetSoundness` term only ignites at `δ* = 0.468`, and the convex's
+extra mass is `≤ winningSetSoundness` which is unfloored on the band) — and no
+Phase-5 sharpening closes that band (the true list size there is exactly what
+the Elias bound says it isn't). At `bits := 117` the sweep is covered. The
+paper's `2^(-116.49)` is the per-δ*
 attack value, not the sweep floor. `sorry`-backed: the §6.3.1 numeric
 evaluation is Phase-5-owed. -/
 noncomputable def listDecoding_upperBound_attack : SecurityUpperBound koalaIRS where
