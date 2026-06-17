@@ -20,7 +20,7 @@ affine line generator implies MCA for the affine space generator.
 with Mutual Correlated Agreement*][BCGM25]. Full paper : https://eprint.iacr.org/2025/2051}
 -/
 
-open scoped BigOperators Classical
+open scoped BigOperators
 open CoreDefinitions LinearCode
 
 namespace AffineMCA
@@ -33,40 +33,49 @@ variable {ι : Type} [Fintype ι]
 `U 0 + ∑ i, x i • U (i+1)`, i.e. `vecMul (1, x) U`. -/
 def affineComb {s : ℕ} (U : Fin (s + 1) → (ι → F)) (x : Fin s → F) : ι → F :=
   Matrix.vecMul (Fin.cons 1 x) U
+
+
 /-- The linear combination `∑ i, l i • U (i+1)` of the "direction" codewords. -/
 def linComb {s : ℕ} (U : Fin (s + 1) → (ι → F)) (l : Fin s → F) : ι → F :=
   fun k => ∑ i, l i * U i.succ k
+
 omit [Fintype ι] in
 lemma affineComb_apply {s : ℕ} (U : Fin (s + 1) → (ι → F)) (x : Fin s → F) (k : ι) :
     affineComb U x k = U 0 k + ∑ i, x i * U i.succ k := by
-  unfold affineComb; simp +decide [ Matrix.vecMul, dotProduct, Fin.sum_univ_succ ] ;
-omit [Fintype ι] in
-/-- `affineComb` is `vecMul` of the affine-space generator output (definitional). -/
-lemma affineComb_eq_vecMul {s : ℕ} (U : Fin (s + 1) → (ι → F)) (x : Fin s → F) :
-    affineComb U x = Matrix.vecMul (AffineSpaceGenerator F s x) U := rfl
+  unfold affineComb
+  simp [Matrix.vecMul, dotProduct, Fin.sum_univ_succ]
+
+
 /-
 The affine line combination `vecMul (1, t) W = W 0 + t • W 1`.
 -/
 omit [Fintype ι] in
 lemma line_vecMul (W : Fin 2 → (ι → F)) (t : F) :
     Matrix.vecMul (AffineLineGenerator F t) W = W 0 + t • W 1 := by
-  ext k; exact (by
-  simp +decide [ Matrix.vecMul, AffineLineGenerator ];
+  ext k
+  exact (by
+  simp only [Matrix.vecMul, AffineLineGenerator, Matrix.cons_dotProduct, Matrix.head_val', one_mul,
+    Matrix.tail_val', Matrix.dotProduct_of_isEmpty, add_zero, Fin.isValue, Pi.add_apply,
+    Pi.smul_apply, smul_eq_mul]
   rfl)
+
+
 /-
 Restriction is additive.
 -/
 lemma projectedWord_add (a b : ι → F) (T : Finset ι) :
     projectedWord (a + b) T = projectedWord a T + projectedWord b T := rfl
+
 /-
 The affine combination along the line `x ↦ v + t • lam` in seed space.
 -/
 omit [Fintype ι] in
 lemma affineComb_line {s : ℕ} (U : Fin (s + 1) → (ι → F)) (v lam : Fin s → F) (t : F) :
     affineComb U (v + t • lam) = affineComb U v + t • (linComb U lam) := by
-  simp +decide [ affineComb, linComb, funext_iff ];
-  simp +decide [ Fin.sum_univ_succ, Matrix.vecMul, dotProduct ];
-  simp +decide [ add_mul, mul_assoc, Finset.mul_sum _ _ _, Finset.sum_add_distrib, add_assoc ]
+  simp only [affineComb, funext_iff, Pi.add_apply, Pi.smul_apply, linComb, smul_eq_mul,
+            Matrix.vecMul, dotProduct, Fin.sum_univ_succ, Fin.cons_zero, one_mul, Fin.cons_succ,
+            Pi.add_apply, Pi.smul_apply, smul_eq_mul, add_mul, mul_assoc, Finset.sum_add_distrib,
+            Finset.mul_sum _ _ _, add_assoc, implies_true]
 /-
 **Step 1 of Lemma 7.1.**  If the affine combination restricted to `T` lies in the code, and
 some `U j` restricted to `T` does *not* lie in the code, then some *direction* codeword `U (i+1)`
@@ -80,14 +89,20 @@ lemma exists_succ_not_mem {s : ℕ} (LC : LinearCode ι F) (T : Finset ι)
   contrapose! hj;
   intro j;
   induction j using Fin.inductionOn
-  · sorry
-  · sorry
-  -- have h_sum : projectedWord (linComb U x) T ∈ LC.projectedCode_submod T := by
-  --   convert LinearCode.projectedCode_linearCombination LC T ( fun i => U i.succ ) x ( fun i => hj i ) using 1;
-  -- convert Submodule.sub_mem _ hv h_sum using 1;
-  -- ext; simp +decide ; ring;
-  -- unfold projectedWord affineComb linComb; simp +decide ; ring;
-  -- simp +decide [ Matrix.vecMul, dotProduct, Fin.sum_univ_succ ]
+  · have h_aff : affineComb U x = U 0 + linComb U x := by
+      ext k; simp [affineComb_apply, linComb]
+    have hj' : ∀ i : Fin s, projectedWord (U i.succ) T ∈ projectedCode LC.carrier T := hj
+    have h_linComb : projectedWord (linComb U x) T ∈ projectedCode_submod LC T := by
+      change projectedWord (fun k => ∑ i, x i * U i.succ k) T ∈ projectedCode LC.carrier T
+      exact LinearCode.projectedCode_linearCombination LC T (fun i => U i.succ) x hj'
+    have h_split : projectedWord (affineComb U x) T =
+        projectedWord (U 0) T + projectedWord (linComb U x) T := by
+      rw [h_aff, projectedWord_add]
+    have hmem := Submodule.sub_mem _ (h_split ▸ hv) h_linComb
+    rwa [add_sub_cancel_right] at hmem
+  · exact hj _
+
+open Classical in
 /-
 **Kernel count (Step 2 of Lemma 7.1).**  If some direction codeword `w i` does not project into
 the code on `T`, then the set of coefficient vectors `l` whose combination `∑ i, l i • w i` projects
@@ -117,9 +132,13 @@ lemma proj_lincomb_ker_card_le [Fintype F] {s : ℕ}
                                               exact hcard.symm ▸ pow_le_pow_right₀ ( Fintype.card_pos ) hker;
   convert hcard using 1 ; simp only [LinearMap.mem_ker, LinearMap.coe_comp, Function.comp_apply,
     Submodule.mkQ_apply, Submodule.Quotient.mk_eq_zero] ;
-  rw [ Fintype.card_subtype ] ; congr ; ext ; simp +decide [ Fintype.linearCombination_apply, projectedWord ] ;
-  congr! 1;
-  ext; simp +decide [ Finset.sum_apply, LinearMap.funLeft_apply ] ;
+  rw [Fintype.card_subtype]
+  congr
+  ext
+  simp only [projectedWord, Fintype.linearCombination_apply, map_sum, map_smul]
+  congr! 1
+  ext
+  simp [Finset.sum_apply, LinearMap.funLeft_apply]
 /-
 **Averaging over coefficient vectors (Step 3 of Lemma 7.1).**  A pigeonhole: if a sum of
 nonnegative integer counts over all `|F|^s` coefficient vectors is bounded by `|F|^(s-1) * m`, then
@@ -130,14 +149,19 @@ lemma exists_avg_le [Fintype F] {s : ℕ} (hs : 1 ≤ s) [Nonempty F]
     (f : (Fin s → F) → ℕ) (m : ℕ)
     (hsum : ∑ l, f l ≤ (Fintype.card F) ^ (s - 1) * m) :
     ∃ l, (Fintype.card F : ℝ) * f l ≤ m := by
-  by_contra h_contra;
-  push_neg at h_contra;
-  norm_cast at *;
-  have := Finset.sum_lt_sum_of_nonempty ( Finset.univ_nonempty ) fun l _ => h_contra l;
-  simp_all +decide [ ← Finset.mul_sum _ _ _ ];
-  cases s <;> simp_all +decide [ pow_succ', mul_assoc ] ; nlinarith
+  by_contra h_contra
+  push Not at h_contra
+  norm_cast at *
+  have := Finset.sum_lt_sum_of_nonempty (Finset.univ_nonempty) fun l _ => h_contra l
+  simp_all only [Finset.sum_const, Finset.card_univ, Fintype.card_pi, Finset.prod_const,
+    Fintype.card_fin, smul_eq_mul, ← Finset.mul_sum _ _ _]
+  cases s <;> simp_all [pow_succ', mul_assoc]
+  nlinarith
+
+open Classical in
 /-
-**Averaging over base points (Step 5 of Lemma 7.1).**  For a fixed direction `d`, some base
+**Averaging over base points (Step 5 of Lemma 7.1).**
+For a fixed direction `d`, some base
 point `v` makes the line `t ↦ v + t • d` hit the set `B'` with (normalized) frequency at least the
 density of `B'`.
 -/
@@ -162,6 +186,9 @@ lemma exists_dir_line_ge [Fintype F] [Nonempty F] {s : ℕ}
   have := Finset.sum_lt_sum_of_nonempty ( Finset.univ_nonempty ) fun v _ => h_sum v; simp_all +decide ;
   rw [ mul_div_cancel₀ ] at this <;> simp_all +decide [ ← Finset.sum_div _ _ _ ] ;
   rw [ div_lt_iff₀ ] at this <;> norm_cast at * <;> nlinarith [ show q > 0 from Fintype.card_pos ] ;
+
+
+open Classical in
 /-
 **Core combinatorial content of Lemma 7.1.**  There is a choice of two line-codewords `W` so
 that `(1 - 1/|F|)` times the density of affine-space bad seeds is at most the density of affine-line
@@ -176,41 +203,79 @@ lemma exists_line_bound [Fintype F] {s : ℕ} (hs : 1 ≤ s)
       ≤ ((Finset.univ.filter (fun t : F =>
             IsMCA (AffineLineGenerator F) LC t W γ)).card : ℝ) / (Fintype.card F) := by
   -- Witness function. For each `x` choose `T x : Finset ι` such that `isB x` implies:
-  -- `(T x).card ≥ card ι * (1-γ)`, `projectedWord (affineComb U x) (T x) ∈ projectedCode_submod LC (T x)` (rewriting the `vecMul` form via `affineComb_eq_vecMul`), and `∃ j, projectedWord (U j) (T x) ∉ projectedCode_submod LC (T x)`.
+  -- `(T x).card ≥ card ι * (1-γ)`, `projectedWord (affineComb U x) (T x) ∈ projectedCode_submod
+  -- LC (T x)` (rewriting the `vecMul` form via `affineComb_eq_vecMul`), and `∃ j, projectedWord
+  -- (U j) (T x) ∉ projectedCode_submod LC (T x)`.
   set isB := fun x => IsMCA (AffineSpaceGenerator F s) LC x U γ
   set Bset := Finset.univ.filter isB
   set m := Bset.card
-  obtain ⟨T, hT⟩ : ∃ T : (Fin s → F) → (Finset ι), ∀ x, isB x → (T x).card ≥ (Fintype.card ι) * (1 - (γ : ℝ)) ∧ projectedWord (affineComb U x) (T x) ∈ projectedCode_submod LC (T x) ∧ ∃ j, projectedWord (U j) (T x) ∉ projectedCode_submod LC (T x) := by
-    have hT : ∀ x, isB x → ∃ T : Finset ι, (T.card : ℝ) ≥ (Fintype.card ι) * (1 - (γ : ℝ)) ∧ projectedWord (affineComb U x) T ∈ projectedCode_submod LC T ∧ ∃ j, projectedWord (U j) T ∉ projectedCode_submod LC T := by
-      exact fun x hx => by obtain ⟨ T, hT₁, hT₂, j, hj ⟩ := hx; exact ⟨ T, hT₁, hT₂, j, hj ⟩ ;
-    choose! T hT using hT;
-    use T;
-  obtain ⟨lam, hlam⟩ : ∃ lam : Fin s → F, (Bset.filter (fun x => projectedWord (linComb U lam) (T x) ∈ projectedCode_submod LC (T x))).card ≤ m / (Fintype.card F : ℝ) := by
-    have h_sum : ∑ lam : Fin s → F, (Bset.filter (fun x => projectedWord (linComb U lam) (T x) ∈ projectedCode_submod LC (T x))).card ≤ m * (Fintype.card F) ^ (s - 1) := by
-      have h_sum : ∀ x ∈ Bset, ∑ lam : Fin s → F, (if projectedWord (linComb U lam) (T x) ∈ projectedCode_submod LC (T x) then 1 else 0) ≤ (Fintype.card F) ^ (s - 1) := by
+  obtain ⟨T, hT⟩ :
+    ∃ T : (Fin s → F) → (Finset ι), ∀ x, isB x → (T x).card ≥ (Fintype.card ι) * (1 - (γ : ℝ)) ∧
+      projectedWord (affineComb U x) (T x) ∈ projectedCode_submod LC (T x) ∧
+      ∃ j, projectedWord (U j) (T x) ∉ projectedCode_submod LC (T x) := by
+    have hT : ∀ x, isB x → ∃ T : Finset ι, (T.card : ℝ) ≥ (Fintype.card ι) * (1 - (γ : ℝ)) ∧
+          projectedWord (affineComb U x) T ∈ projectedCode_submod LC T ∧ ∃ j,
+                          projectedWord (U j) T ∉ projectedCode_submod LC T := by
+      exact fun x hx => by obtain ⟨T, hT₁, hT₂, j, hj⟩ := hx; exact ⟨T, hT₁, hT₂, j, hj⟩
+    choose! T hT using hT
+    use T
+  obtain ⟨lam, hlam⟩ : ∃ lam : Fin s → F, (Bset.filter (fun x => projectedWord (linComb U lam) (T x)
+                       ∈ projectedCode_submod LC (T x))).card ≤ m / (Fintype.card F : ℝ) := by
+    have h_sum : ∑ lam : Fin s → F, (Bset.filter (fun x => projectedWord (linComb U lam) (T x) ∈
+                  projectedCode_submod LC (T x))).card ≤ m * (Fintype.card F) ^ (s - 1) := by
+      have h_sum : ∀ x ∈ Bset, ∑ lam : Fin s → F, (if projectedWord (linComb U lam) (T x) ∈
+                  projectedCode_submod LC (T x) then 1 else 0) ≤ (Fintype.card F) ^ (s - 1) := by
         intro x hx
-        have h_ker : ∃ i : Fin s, projectedWord (U i.succ) (T x) ∉ projectedCode_submod LC (T x) := by
-          exact exists_succ_not_mem LC ( T x ) U x ( hT x ( Finset.mem_filter.mp hx |>.2 ) |>.2.1 ) ( hT x ( Finset.mem_filter.mp hx |>.2 ) |>.2.2 );
-        have := proj_lincomb_ker_card_le LC ( T x ) ( fun i => U i.succ ) h_ker; aesop;
-      convert Finset.sum_le_sum h_sum using 1;
-      · rw [ Finset.sum_comm, Finset.sum_congr rfl ] ; aesop;
-      · simp +zetaDelta at *;
-    have := exists_avg_le hs ( fun lam => ( Bset.filter ( fun x => projectedWord ( linComb U lam ) ( T x ) ∈ LC.projectedCode_submod ( T x ) ) |> Finset.card ) ) m ?_;
-    · exact this.imp fun x hx => by rwa [ le_div_iff₀' ( Nat.cast_pos.mpr <| Fintype.card_pos ) ] ;
-    · linarith;
-  obtain ⟨v, hv⟩ : ∃ v : Fin s → F, ((Bset.filter (fun x => ¬projectedWord (linComb U lam) (T x) ∈ projectedCode_submod LC (T x))).card : ℝ) / (Fintype.card F) ^ s ≤ ((Finset.univ.filter (fun t : F => v + t • lam ∈ Bset ∧ ¬projectedWord (linComb U lam) (T (v + t • lam)) ∈ projectedCode_submod LC (T (v + t • lam)))).card : ℝ) / (Fintype.card F) := by
-    have := exists_dir_line_ge lam ( Bset.filter fun x => ¬projectedWord ( linComb U lam ) ( T x ) ∈ LC.projectedCode_submod ( T x ) ) ; aesop;
-  refine' ⟨ ![affineComb U v, linComb U lam], le_trans _ ( hv.trans _ ) ⟩;
-  · convert mul_le_mul_of_nonneg_right ( show ( 1 - 1 / ( Fintype.card F : ℝ ) ) * m ≤ ( Finset.filter ( fun x => ¬projectedWord ( linComb U lam ) ( T x ) ∈ LC.projectedCode_submod ( T x ) ) Bset |> Finset.card : ℝ ) from ?_ ) ( by positivity : 0 ≤ ( Fintype.card F : ℝ ) ⁻¹ ^ s ) using 1;
-    · ring;
-    · ring;
-    · rw [ one_sub_div, div_mul_eq_mul_div, div_le_iff₀ ] <;> norm_cast at * <;> norm_num at *;
-      · rw [ Int.subNatNat_eq_coe ] ; push_cast ; rw [ le_div_iff₀ ( Nat.cast_pos.mpr <| Fintype.card_pos ) ] at hlam ; norm_cast at *;
-        rw [ Int.subNatNat_eq_coe ] ; push_cast ;
-        sorry
-        -- nlinarith [ show Fintype.card F > 1 from Fintype.one_lt_card, show Finset.card ( Finset.filter ( fun x => projectedWord ( linComb U lam ) ( T x ) ∈ projectedCode ( LC : Set ( ι → F ) ) ( T x ) ) Bset ) + Finset.card ( Finset.filter ( fun x => ¬projectedWord ( linComb U lam ) ( T x ) ∈ projectedCode ( LC : Set ( ι → F ) ) ( T x ) ) Bset ) = m from by rw [ Finset.card_filter_add_card_filter_not ] ];
-  · gcongr;
-    intro h;
-    use T (v + ‹_› • lam);
-    simp_all +decide [ line_vecMul ];
-    exact ⟨ hT _ ( Finset.mem_filter.mp h.1 |>.2 ) |>.1, by simpa only [ affineComb_line ] using hT _ ( Finset.mem_filter.mp h.1 |>.2 ) |>.2.1 ⟩
+        have h_ker : ∃ i : Fin s, projectedWord (U i.succ) (T x) ∉ projectedCode_submod LC (T x) :=
+          by
+          exact exists_succ_not_mem LC (T x) U x (hT x (Finset.mem_filter.mp hx |>.2) |>.2.1)
+                (hT x (Finset.mem_filter.mp hx |>.2) |>.2.2)
+        have := proj_lincomb_ker_card_le LC (T x) (fun i => U i.succ) h_ker; aesop
+      convert Finset.sum_le_sum h_sum using 1
+      · rw [Finset.sum_comm, Finset.sum_congr rfl]
+        aesop
+      · simp +zetaDelta
+    have := exists_avg_le hs (fun lam => (Bset.filter (fun x => projectedWord (linComb U lam) (T x)
+          ∈ LC.projectedCode_submod (T x) ) |> Finset.card)) m ?_
+    · exact this.imp fun x hx => by rwa [le_div_iff₀' (Nat.cast_pos.mpr <| Fintype.card_pos)]
+    · linarith
+  obtain ⟨v, hv⟩ : ∃ v : Fin s → F, ((Bset.filter (fun x => ¬projectedWord (linComb U lam) (T x) ∈
+          projectedCode_submod LC (T x))).card : ℝ) / (Fintype.card F) ^ s ≤
+          ((Finset.univ.filter (fun t : F => v + t • lam ∈ Bset ∧
+           ¬projectedWord (linComb U lam) (T (v + t • lam)) ∈
+           projectedCode_submod LC (T (v + t • lam)))).card : ℝ) / (Fintype.card F) := by
+    have := exists_dir_line_ge lam (Bset.filter fun x => ¬projectedWord (linComb U lam) (T x) ∈
+            LC.projectedCode_submod (T x)); aesop
+  refine ⟨![affineComb U v, linComb U lam], le_trans ?_ (hv.trans ?_ )⟩
+  · convert mul_le_mul_of_nonneg_right
+        (show (1 - 1 / (Fintype.card F : ℝ)) * m ≤ (
+          Finset.filter (fun x => ¬projectedWord (linComb U lam ) ( T x ) ∈
+          LC.projectedCode_submod (T x)) Bset |> Finset.card : ℝ) from ?_)
+          (by positivity : 0 ≤ (Fintype.card F : ℝ) ⁻¹ ^ s) using 1
+    · ring
+    · ring
+    · rw [one_sub_div, div_mul_eq_mul_div, div_le_iff₀] <;> norm_cast <;> norm_num
+      · rw [Int.subNatNat_eq_coe]
+        push_cast
+        rw [le_div_iff₀ (Nat.cast_pos.mpr <| Fintype.card_pos)] at hlam
+        norm_cast at *
+        rw [Int.subNatNat_eq_coe]
+        push_cast
+        nlinarith [show Fintype.card F > 1 from Fintype.one_lt_card,
+          show Finset.card (Finset.filter
+              (fun x => projectedWord (linComb U lam) (T x) ∈
+                projectedCode_submod LC (T x)) Bset)
+            + Finset.card (Finset.filter
+              (fun x => ¬projectedWord (linComb U lam) (T x) ∈
+                projectedCode_submod LC (T x)) Bset) = m
+            from by rw [Finset.card_filter_add_card_filter_not]]
+  · gcongr
+    intro h
+    use T (v + ‹_› • lam)
+    simp_all only [ge_iff_le, Finset.mem_univ, line_vecMul, Fin.isValue, Matrix.cons_val_zero,
+      Matrix.cons_val_one, Matrix.cons_val_fin_one, Fin.exists_fin_two, not_false_eq_true, or_true,
+      and_true]
+    exact ⟨hT _ (Finset.mem_filter.mp h.1 |>.2 ) |>.1,
+        by simpa only [affineComb_line] using hT _ (Finset.mem_filter.mp h.1 |>.2 ) |>.2.1⟩
+
+end AffineMCA
