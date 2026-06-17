@@ -42,7 +42,7 @@ proven** in the sibling file `Spec/KnowledgeSoundness.lean`, with the
 `(1-δ)^t + (ε_mca(C,δ) + |Λ(C^{≡2},δ)|/|F|)·(1 - (1-δ)^t)`: the paper's
 claimed `max` of the two terms is **false as stated** (its proof swaps
 conditional for unconditional probabilities; there is a concrete
-counterexample) — see `PAPER_REVS.md` item 11. (The looser sum
+counterexample). (The looser sum
 `(ε_mca + |Λ|/|F|) + (1-δ)^t`, the L6.8 round-error sum, is the documented
 relaxation.) The per-round game bounds proven in this file
 (`gamma_round_game_bound`, `spotcheck_round_game_bound`) are shared by
@@ -1177,7 +1177,14 @@ provides exactly this decomposition with probability `≥ 1 − ε_mca`. -/
 
 /-! ### Lemma 6.8 assembly — extractor, knowledge state function, per-round bounds.
 The post-spot-check state is the §6.1 acceptance predicate itself
-(witness-ignoring) — see PAPER_REVS.md item 10 for the deviation rationale. -/
+(witness-ignoring). This deliberately deviates from the paper's printed
+full-transcript knowledge state: taken literally, the paper's state checks the
+verifier's two conditions against the *state witness* `C(F̄)` rather than the
+prover's claim `ḡ`, which violates the "iff the verifier accepts" requirement of
+its own knowledge-state definition (a witness `F̄ ≠ ḡ` can pass the spot checks
+while the verifier, checking `ḡ`, rejects — and makes the `(1−δ)^t` transition
+bound false). The acceptance predicate is what the transition analysis actually
+uses. -/
 
 /-- `Pr_{x ← D}[P x] = 0` for a never-satisfied predicate `P`. -/
 private lemma Pr_eq_zero_of_forall_not {α : Type} (D : PMF α) (P : α → Prop)
@@ -1248,7 +1255,9 @@ private noncomputable def rbrExtractor (encode : (Fin k → F) → (ι → F)) (
 omit [DecidableEq ι] in
 /-- The L6.8 knowledge state function ([ABF26] §6.2): relaxed-relation
 membership at round 0, `gammaState` after rounds 1–2, and the §6.1 acceptance
-predicate after the spot-check round (PAPER_REVS.md item 10). -/
+predicate after the spot-check round (the witness-ignoring final state is a
+deliberate repair of the paper's printed state — see the §6.8-assembly section
+comment above). -/
 private noncomputable def rbrKSF (encode : (Fin k → F) → (ι → F)) (δ : ℝ≥0)
     {σ : Type} (init : ProbComp σ) (impl : QueryImpl []ₒ (StateT σ ProbComp)) :
     ((oracleVerifier (k := k) (t := t) encode).toVerifier).KnowledgeStateFunction init impl
@@ -1423,7 +1432,8 @@ never `⊤` over a finite alphabet (`ListDecodable.Lambda_ne_top`).
 
 **Status: fully proven (sorry-free).** The `KnowledgeStateFunction` is
 `rbrKSF` above (relation membership → `gammaState` → the acceptance
-predicate; the witness-ignoring final state is PAPER_REVS.md item 10),
+predicate; the witness-ignoring final state is a deliberate repair of the
+paper's printed full-transcript state — see the §6.8-assembly section comment),
 the extractor is `rbrExtractor` (round-0 extraction by classical choice),
 and the two per-round bounds are `gamma_round_game_bound` (via
 `ToyProblem.gamma_transition_prob_le`) and `spotcheck_round_game_bound`,

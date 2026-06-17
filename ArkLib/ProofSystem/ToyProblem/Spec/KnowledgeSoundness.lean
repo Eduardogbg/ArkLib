@@ -22,9 +22,10 @@ conditioning is silently dropped from the collision term), and there is a
 concrete counterexample — take `f₁, f₂` to be exact codewords whose linear
 targets are off by one; at the single `γ*` solving the folded linear
 constraint the prover achieves acceptance probability `1` while no relaxed
-witness exists. See `PAPER_REVS.md` item 11 for the full analysis (both the
-proof-gap reading and the counterexample were independently adversarially
-verified before this file was written).
+witness exists (so the bad event has probability `≥ 1/|F|`, which the `max`
+bound undershoots once `ε₀, (1−δ)^t < 1/|F|`). Both the proof-gap reading and
+the counterexample were independently adversarially verified, and the
+correction (`max` → union bound) is confirmed by a paper author.
 
 What the paper's own pointwise arguments *do* prove — and what this file
 formalizes — is the **sum form**
@@ -229,8 +230,9 @@ the toy-problem IOR has knowledge soundness against the relaxed relation
 **This corrects the paper.** [ABF26] Lemma 6.6 claims `max{ε₀, (1 − δ)^t}`,
 which is **false as stated** — its proof replaces conditional probabilities
 by unconditional ones, and a concrete counterexample (exact codewords with
-off-by-one linear targets) beats the claimed bound (see `PAPER_REVS.md`
-item 11; the flaw is author-confirmed).
+off-by-one linear targets) beats the claimed bound. The correction (`max` →
+union bound) is author-confirmed; see this file's module docstring for the
+full analysis.
 
 **Why the convex form, and how it relates to the natural sum.** The honest
 total-probability accounting over the combination randomness `γ` is
