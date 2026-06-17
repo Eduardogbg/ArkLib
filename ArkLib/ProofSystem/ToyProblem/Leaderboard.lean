@@ -653,30 +653,32 @@ theorem koalaSextic_card : Nat.card KoalaSextic = KoalaBear.fieldSize ^ 6 :=
 
 /-- The `3`-point Reed–Solomon evaluation domain `{0, 1, 2} ⊆ KoalaSextic`.
 Distinctness is injectivity of `Nat.cast` below the characteristic
-(`3 ≤ KoalaBear.fieldSize`). -/
-noncomputable def koalaDomain : Fin 3 ↪ KoalaSextic where
+(`4 ≤ KoalaBear.fieldSize`). The block length `n = |ι| = 4` with message
+dimension `k = 2` realises the prize rate `ρ = k/n = 1/2`. -/
+noncomputable def koalaDomain : Fin 4 ↪ KoalaSextic where
   toFun i := (i.val : KoalaSextic)
   inj' i j hij := by
-    have hfs : (3 : ℕ) ≤ KoalaBear.fieldSize := by norm_num [KoalaBear.fieldSize]
+    have hfs : (4 : ℕ) ≤ KoalaBear.fieldSize := by norm_num [KoalaBear.fieldSize]
     have hi : (i : ℕ) ∈ Set.Iio KoalaBear.fieldSize := Set.mem_Iio.mpr (i.isLt.trans_le hfs)
     have hj : (j : ℕ) ∈ Set.Iio KoalaBear.fieldSize := Set.mem_Iio.mpr (j.isLt.trans_le hfs)
     exact Fin.val_injective
       (CharP.natCast_injOn_Iio KoalaSextic KoalaBear.fieldSize hi hj hij)
 
 /-- The genuine §6.3 encoder: the degree-`< 2` Reed–Solomon evaluation map on the
-`3` points of `koalaDomain`, as an `F`-linear map `(Fin 2 → F) →ₗ (Fin 3 → F)`.
-Built as `evalOnPoints ∘ (degreeLTEquiv).symm` so that injectivity reduces to the
-RS kernel-triviality lemma. ([ABF26] Definition 6.1's "code as the injective
-map"; the code itself is `ToyParams.code = Set.range koalaEnc`.) -/
+`4` points of `koalaDomain` (`k = 2`, `n = |ι| = 4`, rate `ρ = 1/2`), as an
+`F`-linear map `(Fin 2 → F) →ₗ (Fin 4 → F)`. Built as
+`evalOnPoints ∘ (degreeLTEquiv).symm` so that injectivity reduces to the RS
+kernel-triviality lemma. ([ABF26] Definition 6.1's "code as the injective map";
+the code itself is `ToyParams.code = Set.range koalaEnc`.) -/
 noncomputable def koalaEnc :
-    (Fin 2 → KoalaSextic) →ₗ[KoalaSextic] (Fin 3 → KoalaSextic) :=
+    (Fin 2 → KoalaSextic) →ₗ[KoalaSextic] (Fin 4 → KoalaSextic) :=
   (ReedSolomon.evalOnPoints koalaDomain).domRestrict (Polynomial.degreeLT KoalaSextic 2)
     ∘ₗ (Polynomial.degreeLTEquiv KoalaSextic 2).symm.toLinearMap
 
 /-- Injectivity of the genuine KoalaBear-sextic Reed–Solomon encoder
 ([ABF26] Definition 6.1's "code as the injective map"). The encoder is the
 composite of the injective `degreeLTEquiv.symm` and the RS evaluation map
-restricted to degree-`< 2` polynomials, which is injective because `2 ≤ 3 = |ι|`
+restricted to degree-`< 2` polynomials, which is injective because `2 ≤ 4 = |ι|`
 distinct points pin a degree-`< 2` polynomial uniquely
 (`ReedSolomon.evalOnPoints_domRestrict_injective`). -/
 theorem koalaEnc_injective : Function.Injective koalaEnc := by
@@ -690,15 +692,27 @@ pinned δ — δ is swept inside `bestProvableError` per the §6.3 frontier (the
 X side optimizes near `δ = 1 - √ρ - η`, the Y side attacks at `δ* = 0.468`;
 a single shared δ cannot represent the frontier). The carrier is the genuine
 `q^6 ≈ 2^186`-element KoalaBear sextic `KoalaSextic` (`koalaSextic_card`), and
-`koalaEnc` is the genuine degree-`< 2` Reed–Solomon encoder on `3` points
-(`ι = Fin 3`, `k = 2`). The documentary numeric fields `(q, ext, ρ, s, n)`
-record the §6.3 regime (rate `ρ = k/n = 2/4 = 1/2`). -/
+`koalaEnc` is the genuine degree-`< 2` Reed–Solomon encoder on `4` points
+(`ι = Fin 4`, `k = 2`), so the **realised** rate is `ρ = k/|ι| = 2/4 = 1/2` —
+the documentary `n = 4` is now the true block length, not a stand-in fiction.
+
+**Short-length caveat (faithfulness, owed to Sessions 2–3).** §6.3's numerics
+are an *asymptotic* `(n → ∞, ρ = 1/2)` analysis, where the admissible window is
+`δ ∈ (0, δ_min)` with `δ_min → 1 - ρ = 1/2`. At this concrete `n = 4` point the
+code is MDS with relative distance `(n-k+1)/n = 3/4`, so `δ_min = 3/4 > 1/2`:
+the realised sweep `(0, 3/4)` is *wider* than the asymptotic `(0, 1/2)`. The X
+optimum (`≈ 0.293`) and the Y attack (`δ* = 0.468`) both lie inside `(0, 1/2)`,
+so the anchors' optimizing/attack δ are admissible here; but the band
+`δ ∈ (0.5, 0.75)` is an artefact of the short length and must be handled
+explicitly when discharging the upper anchor (Session 3). The toy point thus
+*approximates* but does not asymptotically reproduce §6.3 — by design for a
+single concrete parameter point. -/
 noncomputable def koalaIRS : ToyParams := by
   haveI : Fintype KoalaSextic := Fintype.ofFinite _
   classical
   exact
     { F := KoalaSextic
-      ι := Fin 3
+      ι := Fin 4
       k := 2
       enc := koalaEnc
       enc_injective := koalaEnc_injective
@@ -715,10 +729,17 @@ point.** Cites **Lemmas 6.10 / 6.6 / 6.8 of [ABF26]** and the §6.3.1
 `tab:interleaved-security-analysis`): pick `δ := 1 - 1/√2 - η` with
 `η = 1/|L| ≈ 2^(-18)…2^(-21)` (the tables' minimizing slack), apply
 `bestProvableError_le` at that δ, bound the `winningSetSoundness` term by the
-L6.10 bridge + the Johnson-regime `ε_mca`/`Λ` numerics (`≈ 2^(-71.5)`), and the
-spot-check term by `(1/√2 + η)^128`. The convex combination is dominated by the
-spot-check term (the `≈ 2^(-71.5)·(1 - 2^(-64))` contribution is negligible), so
-the binding cap is the spot-check.
+L6.10 bridge + the `ε_mca`/`Λ` numerics, and the spot-check term by
+`(1/√2 + η)^128`. The convex combination is dominated by the spot-check term, so
+the binding cap is the spot-check. (As an infimum, the lower bound needs only
+*one* admissible δ; `δ ≈ 0.293 < δ_min = 3/4` qualifies.)
+
+**Regime-borrowed figure (owed to Session 2).** The tabulated
+`winningSetSoundness ≈ 2^(-71.5)` is the paper's *asymptotic* large-RS Johnson
+value; at this concrete `n = 4` point the L6.10 term `ε_mca(C,δ) + |Λ|/|F|` is
+governed instead by the `|F| = q^6 ≈ 2^186` denominator (so the term is even
+smaller — the dominance-by-spot-check conclusion is robust, but the specific
+`2^(-71.5)` must be re-derived for the concrete code, not inherited).
 
 **Why `bits := 63.99`, not 64** (2026-06-10 second adversarial review, M1):
 the paper itself notes (`.tex` 2817–2819) that `(1/√2 + η)^128 > 2^(-64)`
@@ -754,6 +775,17 @@ footnote). The floor over the δ sweep — the convex combination
   `convex ≥ winningSetSoundness` since `winningSetSoundness ≤ 1`)
   at `≈ 2^(-116.49) ≥ 2^(-117)` (`tab:elias-lowerbound-thresholds`, `.tex`
   ~2925).
+
+**Short-length band (owed to Session 3).** At this concrete `n = 4` MDS point
+`δ_min = 3/4` (see `koalaIRS`), so the attack branch must floor
+`winningSetSoundness` across the *whole* `[0.468, 0.75)`, not just up to the
+asymptotic `1 - ρ = 1/2`. As `δ → 3/4` the spot-check term collapses
+(`(1/4)^128 ≈ 2^(-256)`), so on the wide band the `≥ 2^(-117)` bound rests
+*entirely* on `winningSetSoundness ≥ 2^(-117)` (plausible — near `δ_min` the
+winning sets `Ω` are large, so the ratio is near `1` — but it is a distinct
+obligation from the `δ*`-attack the table reports, and is the direct cost of the
+short block length). Session 3 must discharge it, not assume the asymptotic
+window.
 
 **Why `bits := 117`, not 116** (2026-06-10 second adversarial review, M2): a
 *ceiling* must round **up**. The certified sweep floor is the spot/attack
