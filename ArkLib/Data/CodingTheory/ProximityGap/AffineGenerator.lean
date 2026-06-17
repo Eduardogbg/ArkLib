@@ -35,8 +35,6 @@ variable {ι : Type} [Fintype ι]
         --  {S : Type} [Fintype S]
 
 
-noncomputable instance {ℓ : Type} [Fintype ℓ] : Fintype (ℓ → F) := Fintype.ofFinite (ℓ → F)
-
 -- def badSeed {s : ℕ} (G : Generator (Fin s → F) (Fin (s + 1)) F) (LC : LinearCode ι F)
 --   (U : Fin (s + 1) → (ι → F)) (γ : I) : Type :=
 --   {x : Fin s → F // ∃ y : Fin s → F, (CoreDefinitions.IsMCA G LC y U γ) ∧ x = y}
@@ -92,28 +90,23 @@ theorem AffineLine_MCA_AffineSpaceMCA {ℓ : ℕ} (hℓ : ℓ ≥ 2) (ε_mca : I
     let ε_mca' := a⁻¹ • ε_mca
     IsMCAGenerator (AffineSpaceGenerator F ℓ) ε_mca' LC := by
   classical
-  show IsMCAGenerator (AffineSpaceGenerator F ℓ)
+  change IsMCAGenerator (AffineSpaceGenerator F ℓ)
         ((1 - 1 / (Fintype.card F : ℝ))⁻¹ • ε_mca) LC
   intro U γ
   set a : ℝ := (1 - 1 / (Fintype.card F : ℝ)) with ha_def
-  have hq1 : (1 : ℝ) < (Fintype.card F : ℝ) := by exact_mod_cast Fintype.one_lt_card
   have ha : 0 < a := by
-    have h1 : (1 : ℝ) / (Fintype.card F : ℝ) < 1 := by
-      rw [div_lt_one (by linarith)]; linarith
-    rw [ha_def]; linarith
+    have hq1 : (1 : ℝ) < (Fintype.card F : ℝ) := by exact_mod_cast Fintype.one_lt_card
+    rw [ha_def, sub_pos, div_lt_one (by linarith)]
+    linarith
   have hs : 1 ≤ ℓ := by omega
   -- Rewrite the affine-space probability as a real density.
   rw [prob_uniform_eq_ofReal]
   have hcard : (Fintype.card (Fin ℓ → F) : ℝ) = (Fintype.card F : ℝ) ^ ℓ := by
-    -- Route through Nat.card which is instance-independent (defined via cardinals).
-    have h : Nat.card (Fin ℓ → F) = Fintype.card F ^ ℓ := by
-      rw [Nat.card_fun, Nat.card_fin, Nat.card_eq_fintype_card]
-    exact_mod_cast (Nat.card_eq_fintype_card (α := Fin ℓ → F)).symm.trans h
+    norm_cast
+    rw [Fintype.card_fun, Fintype.card_fin]
   rw [hcard]
   -- Simplify the right-hand error.
-  have hrhs : ((a⁻¹ • ε_mca) γ) = a⁻¹ * ε_mca γ := by
-    simp [Pi.smul_apply, smul_eq_mul]
-  rw [hrhs]
+  simp only [Pi.smul_apply, smul_eq_mul]
   -- Obtain the line bound and the affine-line MCA hypothesis.
   obtain ⟨W, hW⟩ := AffineMCA.exists_line_bound hs LC U γ
   rw [← ha_def] at hW
@@ -142,8 +135,7 @@ theorem AffineLine_MCA_AffineSpaceMCA {ℓ : ℕ} (hℓ : ℓ ≥ 2) (ε_mca : I
       ENNReal.ofReal_eq_zero.mp (le_antisymm hline (zero_le _))
     have hln_eq : ln / (Fintype.card F : ℝ) = 0 := le_antisymm hln_le hln0
     have hchain : a * (sp / (Fintype.card F : ℝ) ^ ℓ) ≤ 0 := by
-      rw [← hln_eq];
-      sorry
+      rw [← hln_eq]; exact hW
     have hsp_eq : sp / (Fintype.card F : ℝ) ^ ℓ = 0 := by
       by_contra h
       have hpos : 0 < sp / (Fintype.card F : ℝ) ^ ℓ := lt_of_le_of_ne hsp0 (Ne.symm h)
