@@ -35,23 +35,6 @@ variable {ι : Type} [Fintype ι]
         --  {S : Type} [Fintype S]
 
 
--- def badSeed {s : ℕ} (G : Generator (Fin s → F) (Fin (s + 1)) F) (LC : LinearCode ι F)
---   (U : Fin (s + 1) → (ι → F)) (γ : I) : Type :=
---   {x : Fin s → F // ∃ y : Fin s → F, (CoreDefinitions.IsMCA G LC y U γ) ∧ x = y}
-
-def badSeed {s : ℕ} (LC : LinearCode ι F) (U : Fin (s + 1) → (ι → F)) (γ : I) : Type :=
-  {x : Fin s → F // ∃ y : Fin s → F,
-                    (CoreDefinitions.IsMCA (AffineSpaceGenerator F s) LC y U γ) ∧ x = y}
-
-noncomputable def badSeedSet {ι : Type} [Fintype ι]
-  {s : ℕ} (LC : LinearCode ι F) (U : Fin (s + 1) → (ι → F))
-  (γ : I) (B : badSeed LC U γ) (h : CoreDefinitions.IsMCA (AffineSpaceGenerator F s) LC (B.1) U γ)
-      : Finset ι :=
-  Classical.choose h
-
-def quotientOfBadSeedSet (LC : Submodule F (ι → F)) (T : Finset ι) :=
-  (T → F) ⧸ LinearCode.projectedCode_submod LC T
-
 /-
 The uniform probability of `P` as an `ENNReal.ofReal` of the real density.
 -/
