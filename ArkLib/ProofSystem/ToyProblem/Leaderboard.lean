@@ -511,6 +511,20 @@ theorem bestProvableError_le (p : ToyParams) {δ : ℝ≥0}
       ≤ (((1 - δ) ^ p.t + winningSetSoundness p.enc δ * (1 - (1 - δ) ^ p.t) : ℝ≥0) : ℝ≥0∞) :=
   iInf₂_le δ hδ
 
+/-- **The Y-side entry point** (the infimum-`≥` dual of `bestProvableError_le`,
+cf. [ABF26] §6.3–6.4): a number `c` floors the δ-swept `bestProvableError`
+whenever it floors the per-δ analysis error `(1-δ)^t + winningSetSoundness · (1 -
+(1-δ)^t)` at **every** admissible `δ ∈ (0, δ_min(C))`. An attack (Y) submission
+picks, at each δ, whichever attack dominates — the spot-check term `(1-δ)^t` for
+small δ, the winning-set attacks (Lemmas 6.12 / 6.13, hooks
+`listDecoding_le_winningSetSoundness` / `epsCA_le_winningSetSoundness`) for large
+δ — and concludes through this lemma. Axiom-clean (`le_iInf₂`). -/
+theorem le_bestProvableError (p : ToyParams) {c : ℝ≥0∞}
+    (h : ∀ δ ∈ Set.Ioo (0 : ℝ≥0) ((minRelHammingDistCode p.code : ℝ≥0)),
+      c ≤ (((1 - δ) ^ p.t + winningSetSoundness p.enc δ * (1 - (1 - δ) ^ p.t) : ℝ≥0) : ℝ≥0∞)) :
+    c ≤ bestProvableError p :=
+  le_iInf₂ h
+
 /-! ## The two leaderboard interfaces
 
 Both are stated against the **same** common quantity `bestProvableError p`. A
@@ -720,6 +734,23 @@ theorem koala_spotcheck :
     div_le_div_iff₀ (by positivity) (by positivity), one_mul]
   exact_mod_cast (by norm_num : (7 : ℕ) ^ 128 * 2 ^ 65 ≤ 10 ^ 128)
 
+/-- **The spot-check term still clears `2^(-117)` at the crossover `δ* = 117/250 =
+0.468`** (the Y-side dual of `koala_spotcheck`): `(1 - δ*)^128 = (133/250)^128 ≥
+2^(-117)`, reduced to the integer fact `250^128 ≤ 133^128 · 2^117` (`log₁₀`:
+`128·2.39794 = 306.93 ≤ 271.85 + 35.22 = 307.07 = 128·log 133 + 117·log 2`). This
+is *tight* — the `≈ 0.14`-decade (`≈ 0.46-bit`) margin is exactly why the attack
+ceiling rounds **up** to `bits := 117`, not `116` (a 116-bit floor fails on the
+band `(0.46604, 0.468)`; see `listDecoding_upperBound_attack`). A proven integer
+inequality, no float `#eval`. -/
+theorem koala_spotcheck_lb :
+    (2 : ℝ≥0) ^ (-(117 : ℝ)) ≤ ((133 : ℝ≥0) / 250) ^ (128 : ℕ) := by
+  rw [← NNReal.coe_le_coe]
+  push_cast [NNReal.coe_rpow]
+  rw [Real.rpow_neg (by norm_num : (0 : ℝ) ≤ 2),
+    show (117 : ℝ) = ((117 : ℕ) : ℝ) by norm_num, Real.rpow_natCast, div_pow, inv_eq_one_div,
+    div_le_div_iff₀ (by positivity) (by positivity), one_mul]
+  exact_mod_cast (by norm_num : (250 : ℕ) ^ 128 ≤ 133 ^ 128 * 2 ^ 117)
+
 /-- The Proximity-Prize anchor parameter point: the KoalaBear-sextic regime
 (`q = 2^31 - 2^24 + 1`, sextic extension, `ρ = 1/2`, `t = 128`). There is no
 pinned δ — δ is swept inside `bestProvableError` per the §6.3 frontier (the
@@ -869,7 +900,7 @@ noncomputable def arklib_lowerBound_irs_t128 : SecurityLowerBound koalaIRS where
             show (1 : ℝ) + -(65 : ℝ) = -(64 : ℝ) by norm_num]
       _ ≤ (2 : ℝ≥0) ^ (-(63.99 : ℝ)) := hstep
 
-/-- **List-decoding attack upper bound (≈116 bits) at the IRS/KoalaBear/`t=128`
+/-- **List-decoding attack upper bound (≈117 bits) at the IRS/KoalaBear/`t=128`
 point.** Cites **Lemma 6.12 of [ABF26]** (§6.4.1) with the [KKH26]/Elias list
 bounds, cf. Fenzi–Sanso eprint 2025/2197 Lemma 4.4 (the paper's §6.4.1
 footnote). The floor over the δ sweep — the convex combination
@@ -906,18 +937,94 @@ extra mass is `≤ winningSetSoundness` which is unfloored on the band) — and 
 Phase-5 sharpening closes that band (the true list size there is exactly what
 the Elias bound says it isn't). At `bits := 117` the sweep is covered. The
 paper's `2^(-116.49)` is the per-δ*
-attack value, not the sweep floor. `sorry`-backed: the §6.3.1 numeric
-evaluation is Phase-5-owed. -/
+attack value, not the sweep floor.
+
+**Proof shape (Session 3): a full formalized reduction to owed external list-size
+lower bounds** (no longer an opaque `sorry`, mirroring the lower anchor). The
+infimum-`≥` goal is reduced by `le_bestProvableError` to a universal floor `∀ δ ∈
+(0, 3/4), 2^(-117) ≤ (1-δ)^128 + winningSetSoundness · (1-(1-δ)^128)`, split at
+the crossover `δ* = 117/250`:
+
+1. **Small-δ half `δ ≤ δ*` — SORRY-FREE.** The convex combination dominates its
+   spot-check term `(1-δ)^128`, which is `≥ (133/250)^128 ≥ 2^(-117)` by
+   monotonicity (`tsub_le_tsub_left`, `gcongr`) and the proven integer inequality
+   `koala_spotcheck_lb`. This is the clean, achievable half.
+2. **Large-δ half `δ ∈ (δ*, 3/4)` — reduced to two owed external bounds.** The
+   convex combination dominates `winningSetSoundness` (`w ≤ 1`, proven), which the
+   **proven** L6.12 hook `listDecoding_le_winningSetSoundness` floors at
+   `N/(|F| + 2N)`, `N := |Λ(C^{≡2}, δ)|`. Reaching `2^(-117)` then needs (i) the
+   side condition `N < |F|` (true: list size below field size `|F| = q^6 ≈
+   2^186`), and (ii) the numeric `2^(-117) ≤ N/(|F|+2N)`, i.e. `N ≳ 2^69`. Both
+   are **owed external coding-theory lower bounds** on the interleaved list size:
+   on `[δ*, δ_cross ≈ 0.4695)` the Elias/[KKH26] table
+   (`tab:elias-lowerbound-thresholds`, `N ≈ 2^{186-116.49}`); on the short-length
+   band `[δ_cross, 3/4)` — where the spot-check has collapsed and the table is out
+   of range — the near-`δ_min` list-size blow-up (`|Λ| → ∞` as `δ → δ_min`,
+   cf. 2025/2197 Lemma 4.4). No proven `Lambda` lower bound exists in ArkLib
+   (`ListDecodability.lean` has only `Lambda_le_*` upper bounds), so this is
+   irreducibly external — exactly the status of the lower anchor's `ε_mca`
+   ceiling. **Axiom-clean is infeasible by design** (it is the prize's own
+   coding-theory content); the reduction is full down to these named admits. -/
 noncomputable def listDecoding_upperBound_attack : SecurityUpperBound koalaIRS where
   bits := 117
   proof := by
-    -- ABF26-§6.3.1-lowerbound; Phase-5-owed numerics. Route: for every admissible
-    -- δ floor `max (winningSetSoundness koalaEnc δ) ((1-δ)^128) ≥ 2^(-117)`:
-    -- spot-check branch `(1-δ)^128 ≥ 0.532^128 ≈ 2^-116.6 ≥ 2^-117` for
-    -- δ ≤ δ* = 0.468; attack branch via the PROVEN hook
-    -- `listDecoding_le_winningSetSoundness` + Elias/[KKH26] list-size numerics
-    -- (tab:elias-lowerbound-thresholds, ≈ 2^-116.49 ≥ 2^-117) for δ ≥ δ*.
-    sorry
+    -- ABF26 §6.4.1, fully formalized **down to owed external list-size bounds**.
+    -- `le_bestProvableError` reduces to a per-δ floor over the whole window
+    -- `(0, δ_min = 3/4)` (MDS rel-dist of RS[4,2], `koalaIRS_minRelDist`).
+    refine le_bestProvableError koalaIRS (fun δ hδ => ?_)
+    have hmin34 : ((minRelHammingDistCode koalaIRS.code : ℚ≥0) : ℝ≥0) = (3 / 4 : ℝ≥0) := by
+      rw [koalaIRS_minRelDist]; push_cast; norm_num
+    rw [Set.mem_Ioo, hmin34] at hδ
+    obtain ⟨hδpos, hδ34⟩ := hδ
+    rw [ENNReal.coe_le_coe]
+    have ht : koalaIRS.t = 128 := rfl
+    rw [ht]
+    -- Band split at the spot/attack crossover `δ* = 117/250 = 0.468`.
+    rcases le_or_gt δ (117 / 250 : ℝ≥0) with hsmall | hlarge
+    · -- Small-δ half: the convex combination dominates `(1-δ)^128`, which clears
+      -- `2^(-117)` by `koala_spotcheck_lb` and monotonicity. SORRY-FREE.
+      refine le_trans ?_ (le_add_of_nonneg_right zero_le')
+      have h133 : (133 / 250 : ℝ≥0) ≤ 1 - δ := by
+        apply le_tsub_of_add_le_right
+        calc (133 / 250 : ℝ≥0) + δ ≤ 133 / 250 + 117 / 250 := by gcongr
+          _ = 1 := by norm_num
+      exact le_trans koala_spotcheck_lb (by gcongr)
+    · -- Large-δ half: the convex combination dominates `winningSetSoundness`
+      -- (`w ≤ 1`); floor `w` via the PROVEN L6.12 hook + owed external list size.
+      have ha1 : (1 - δ : ℝ≥0) ^ (128 : ℕ) ≤ 1 := pow_le_one' tsub_le_self _
+      have hw1 : winningSetSoundness koalaIRS.enc δ ≤ 1 :=
+        winningSetSoundness_le_one koalaIRS.enc δ
+      have hconvex : winningSetSoundness koalaIRS.enc δ
+          ≤ (1 - δ) ^ (128 : ℕ)
+            + winningSetSoundness koalaIRS.enc δ * (1 - (1 - δ) ^ (128 : ℕ)) := by
+        have hwa : winningSetSoundness koalaIRS.enc δ * (1 - δ) ^ (128 : ℕ)
+            ≤ (1 - δ) ^ (128 : ℕ) := mul_le_of_le_one_left zero_le' hw1
+        calc winningSetSoundness koalaIRS.enc δ
+            = winningSetSoundness koalaIRS.enc δ * (1 - (1 - δ) ^ (128 : ℕ))
+                + winningSetSoundness koalaIRS.enc δ * (1 - δ) ^ (128 : ℕ) := by
+              rw [← mul_add, tsub_add_cancel_of_le ha1, mul_one]
+          _ ≤ winningSetSoundness koalaIRS.enc δ * (1 - (1 - δ) ^ (128 : ℕ))
+                + (1 - δ) ^ (128 : ℕ) := by gcongr
+          _ = (1 - δ) ^ (128 : ℕ)
+                + winningSetSoundness koalaIRS.enc δ * (1 - (1 - δ) ^ (128 : ℕ)) := add_comm _ _
+      refine le_trans ?_ hconvex
+      have hδlt1 : δ < 1 := lt_trans hδ34 (by norm_num)
+      -- ★ Owed external bound (i): the interleaved list size is below the field
+      -- size `|F| = q^6 ≈ 2^186` (true in regime; no proven `Lambda` upper bound
+      -- in ArkLib bridges to the `q^6` numeric — owed external coding-theory).
+      have hF : ((Lambda (interleavedCodeSet (κ := Fin 2) koalaIRS.code) (δ : ℝ)).toNat : ℝ)
+          < Fintype.card koalaIRS.F := by
+        sorry
+      -- The PROVEN L6.12 hook floors `winningSetSoundness` at `N/(|F|+2N)`.
+      refine le_trans ?_ (listDecoding_le_winningSetSoundness (C := koalaIRS.code) δ hδpos hδlt1
+        koalaIRS.enc koalaIRS.enc_injective rfl hF)
+      -- ★ Owed external bound (ii): the interleaved list size lower bound
+      -- `N/(|F|+2N) ≥ 2^(-117)` (`N ≳ 2^69`). On `[δ*, δ_cross)` this is the
+      -- Elias/[KKH26] table (`≈ 2^{186-116.49}`); on the short-length band
+      -- `[δ_cross, 3/4)` it is the near-`δ_min` list-size blow-up (2025/2197 L4.4).
+      -- No proven `Lambda` lower bound exists in ArkLib — irreducibly external,
+      -- exactly as the lower anchor's `ε_mca` ceiling. Phase-5/external-owed.
+      sorry
 
 /-- **The current leaderboard frontier.** At the KoalaBear-sextic anchor the
 honest certified anchors are `63.99` provable bits and a `117`-bit attack
