@@ -265,6 +265,9 @@ the IP SR query log, and (3) calls `E_SR (stmtIn, τ) witOut ip_transcript ip_lo
 theorem theorem_3_19_straightline_ks
     {Salt : Type} [VCVCompatible Salt]
     {κ : Type} (auxSpec : OracleSpec κ) (auxImpl : QueryImpl auxSpec ProbComp)
+    -- The extractor's own helper/sampler oracle (`P`-independent), generic so the caller picks it
+    -- (DSFS passes `(Unit →ₒ U)` for Construction 6.3's D2STrace; the bare FS extractor ignores it).
+    {κE : Type} (auxSpecE : OracleSpec κE) (auxImplE : QueryImpl auxSpecE ProbComp)
     (V : Verifier oSpec StmtIn StmtOut pSpec)
     (relIn : Set (StmtIn × WitIn)) (relOut : Set (StmtOut × WitOut))
     (fsInit : ProbComp (QueryImpl (srChallengeOracle (StmtIn × Salt) pSpec) Id))
@@ -278,7 +281,7 @@ theorem theorem_3_19_straightline_ks
     -- phrased as a property of the NARG verifier `Verifier.singleSaltFiatShamir V`.
     Verifier.adaptiveNARGKnowledgeSoundnessWithCoins (WitIn := WitIn) (WitOut := WitOut)
       (init := fsInit) (impl := fsImpl.addLift srChallengeQueryImpl')
-      auxImpl
+      auxImpl auxImplE
       (verifier := Verifier.singleSaltFiatShamir (Salt := Salt) V)
       relIn relOut (bound := fun _ => True) ε := by
   -- FS↔SR crosswalk for KS: SR straightline extractor ⇒ FS straightline extractor (Construction

@@ -344,44 +344,42 @@ schemes — notably non-interactive arguments in the ideal-permutation model (CO
   Key-Lemma `η★` term grows with the number of permutation/hash queries), so the quantifier must be
   restricted to provers meeting a budget predicate — a single error for *all* provers is impossible.
 
-The two scheme-agnostic definitions below capture exactly this generalization.  They abstract:
-- a prover type `P` and a game `game : P → ProbComp O` whose output `O` encodes the prover-chosen
-  statement and the verifier's accept bit;
-- the soundness-break / extraction-failure event `evt : O → Prop`;
-- a query-budget predicate `bound : P → Prop`;
-- the error `error`.
+Each `adaptiveNARG*` definition below spells this out directly — `∀ P, bound P → Pr[evt | game P] ≤
+error` for soundness, `∃ extractor, ∀ P, bound P → Pr[evt | game extractor P] ≤ error` for knowledge
+soundness — with the extractor type written **explicitly** at the definition, so the straightline
+shape (and its `oSpec + auxSpecE` oracle access — `oSpec` + a `P`-independent helper/sampler, never
+the prover) is visible there rather than hidden behind an abstract extractor-family parameter.
 
-Taking `bound := fun _ => True` recovers an unbounded form; writing `evt` to *read* the
+Taking `bound := fun _ => True` recovers an unbounded form; writing the event to *read* the
 prover-chosen statement off the output (instead of receiving it upfront) is what makes it adaptive.
-DSFS instantiates these directly in `…/DuplexSponge/Security/Soundness.lean` (the conclusions of
-`theorem_6_1_soundness` / `theorem_6_2_straightline`). -/
-section AdaptiveBounded
+DSFS instantiates these in `…/DuplexSponge/Security/Soundness.lean` (the conclusions of
+`theorem_6_1_soundness` / `theorem_6_2_straightline`).
 
-/-- **Adaptive, query-bounded soundness** (generic, scheme-agnostic): every prover `p` meeting the
-query budget `bound` makes the soundness-break event `evt` happen with probability at most `error`
-in its game `game p`. -/
-def adaptiveSoundnessBounded {P O : Type}
-    (game : P → ProbComp O) (evt : O → Prop) (bound : P → Prop) (error : ENNReal) : Prop :=
-  ∀ p : P, bound p → Pr[ evt | game p ] ≤ error
-
-/-- **Adaptive, query-bounded (straightline) knowledge soundness** (generic): there exists an
-extractor (drawn from a family typed `E`, inducing the KS game `game`) such that every prover `p`
-meeting the query budget `bound` makes the extraction-failure event `evt` happen with probability at
-most `error`. -/
-def adaptiveKnowledgeSoundnessBounded {E P O : Type}
-    (game : E → P → ProbComp O) (evt : O → Prop) (bound : P → Prop) (error : ENNReal) : Prop :=
-  ∃ extractor : E, ∀ p : P, bound p → Pr[ evt | game extractor p ] ≤ error
-
-end AdaptiveBounded
+**Why the generic `auxSpecE` can never become a prover oracle (the straightline firewall).** The KS
+extractor lives in `OptionT (OracleComp auxSpecE)` for an *arbitrary* `auxSpecE` (so different
+extractors can name their own helper interface — DSFS uses a sponge sampler `Unit →ₒ U`), yet it
+provably cannot rewind. The firewall is the *interpretation target* + *quantifier order*, never a
+restriction on what `auxSpecE` names: (1) `auxImplE : QueryImpl auxSpecE ProbComp` discharges every
+aux query, via `simulateQ auxImplE`, into `ProbComp = OracleComp unifSpec` — sampling only, no
+prover oracle; (2) `auxImplE` is a *leading* parameter, fixed before `∃extractor, ∀P`, so it has no
+`P` in scope to embed prover runs into that `ProbComp` value (note `P` with its oracles sampled *is*
+itself a `ProbComp` value — only the leading position rules out smuggling it in). Together, a
+malicious
+`auxSpecE := Extractor.OracleSpec.proverOracle …` buys nothing: a prover-shaped query answered by a
+`P`-independent `ProbComp` handler is a meaningless symbol, not a real prover call. Equivalently, a
+legitimate aux oracle (a sampler `Unit →ₒ U`, a random oracle) admits a faithful leading `ProbComp`
+handler, whereas the prover oracle (partial transcript ↦ `P`'s next message) admits none — so naming
+it is useless, not dangerous, and no `[ProverFree auxSpecE]` constraint is needed. Contrast
+`Extractor.Rewinding.runExt`, whose codomain *is* `OracleComp (OracleSpec.proverOracle …)` run with
+the real `P` plugged in — the one shape this straightline definition structurally cannot express. -/
 
 /-! ### Concrete non-interactive (NARG) experiments — CO25 Def 3.5 / Def 3.6
 
-The two combinators above leave the *experiment* (`game`) abstract.  CO25 Defs 3.5/3.6 instead spell
-the experiment out: sample the oracle, run the (adaptive) malicious prover for `(x, π)`, run the
-verifier, and read the predicate off the sampled tuple.  The definitions below encode exactly that
-experiment for a **non-interactive argument in an oracle model**, then phrase soundness / knowledge
-soundness as the corresponding `adaptiveSoundnessBounded` / `adaptiveKnowledgeSoundnessBounded`
-instances.  So the experiment lives here in the library, not at the call site.
+CO25 Defs 3.5/3.6 spell the *experiment* out: sample the oracle, run the (adaptive) malicious prover
+for `(x, π)`, run the verifier, and read the predicate off the sampled tuple.  The definitions below
+encode exactly that experiment for a **non-interactive argument in an oracle model**, then phrase
+soundness / knowledge soundness as the adaptive, query-bounded `∀ P …` / `∃ extractor, ∀ P …`
+statements directly.  So the experiment lives here in the library, not at the call site.
 
 **Oracle access (`P̃^f`, `V^f`).** `oSpec` here is *the random-oracle interface itself* — the FS
 challenge / duplex-sponge oracle — **not** a static side-oracle.  The paper's `f ← 𝒟(λ,n)` is the
@@ -417,6 +415,7 @@ def adaptiveNARGSoundnessExp {ι : Type} {oSpec : OracleSpec ι} {σ StmtIn Proo
     (init : ProbComp σ) (impl : QueryImpl oSpec (StateT σ ProbComp))
     (verify : StmtIn → Proof → OptionT (OracleComp oSpec) StmtOut)
     (P : OracleComp oSpec (StmtIn × Proof)) :
+    -- TODO: maybe consider return type ProbComp (StmtIn x Option StmtOut)?
     ProbComp (Option (StmtIn × StmtOut)) := do
   (simulateQ impl (do
     let ⟨x, π⟩ ← P
@@ -442,10 +441,9 @@ def adaptiveNARGSoundness {ι : Type} {oSpec : OracleSpec ι} {σ StmtIn Proof S
     (verify : StmtIn → Proof → OptionT (OracleComp oSpec) StmtOut)
     (langIn : Set StmtIn) (langOut : Set StmtOut)
     (bound : OracleComp oSpec (StmtIn × Proof) → Prop) (error : ENNReal) : Prop :=
-  adaptiveSoundnessBounded
-    (game := adaptiveNARGSoundnessExp init impl verify)
-    (evt := nargSoundFailEvent langIn langOut)
-    bound error
+  ∀ P : OracleComp oSpec (StmtIn × Proof), bound P →
+    Pr[ nargSoundFailEvent langIn langOut
+      | adaptiveNARGSoundnessExp init impl verify P ] ≤ error
 
 /-- **CO25 Def 3.6 experiment** — the adaptive NARG straightline-KS game: the prover outputs
 `(x, π, witOut)` (statement, proof, and claimed output witness — framework-composable shape), the
@@ -458,18 +456,27 @@ Construction 6.3's `𝓔(𝕩, π, tr, tr_𝒱, 𝓟̃)`, where `𝓔` internall
 `Extractor.Straightline`'s two log slots.  Acceptance / extraction are gated in `nargKSFailEvent`
 via `(stmtOut, witOut) ∈ relOut`. -/
 def adaptiveNARGKnowledgeSoundnessExp
-    {ι : Type} {oSpec : OracleSpec ι} {σ StmtIn Proof StmtOut WitIn WitOut : Type}
+    {ι κE : Type} {oSpec : OracleSpec ι} {auxSpecE : OracleSpec κE}
+    {σ StmtIn Proof StmtOut WitIn WitOut : Type}
     (init : ProbComp σ) (impl : QueryImpl oSpec (StateT σ ProbComp))
+    (auxImplE : QueryImpl auxSpecE ProbComp)
     (verify : StmtIn → Proof → OptionT (OracleComp oSpec) StmtOut)
     (extractor : StmtIn → Proof → QueryLog oSpec → QueryLog oSpec →
-      OptionT (OracleComp oSpec) WitIn)
+      OptionT (OracleComp auxSpecE) WitIn)
     (P : OracleComp oSpec (StmtIn × Proof × WitOut)) :
     ProbComp (StmtIn × Option WitIn × Option StmtOut × WitOut) := do
-  (simulateQ impl (do
-    let ⟨⟨x, π, witOut⟩, tr⟩ ← (simulateQ loggingOracle P).run
-    let ⟨stmtOut?, tr_V⟩ ← (simulateQ loggingOracle (verify x π).run).run
-    let witIn? ← (extractor x π tr tr_V).run
-    pure (x, witIn?, stmtOut?, witOut))).run' (← init)
+  -- Prover + verifier share the sampled oracle `σ` (`impl`); their query logs `tr, tr_V` are read
+  -- out and handed to the extractor as DATA.  Then the extractor runs **separately**, over only its
+  -- own sampler `auxSpecE` (answered by the `P`-independent `auxImplE`) — it does NOT see `σ`, the
+  -- challenge oracle, or `P`; it reads challenges from `tr, tr_V`.  This is CO25 Def 3.14 (the
+  -- straightline extractor is deterministic given the trace) — straightline, not rewinding.
+  let ⟨x, π, witOut, tr, stmtOut?, tr_V⟩ ←
+    (simulateQ impl (do
+      let ⟨⟨x, π, witOut⟩, tr⟩ ← (simulateQ loggingOracle P).run
+      let ⟨stmtOut?, tr_V⟩ ← (simulateQ loggingOracle (verify x π).run).run
+      pure (x, π, witOut, tr, stmtOut?, tr_V))).run' (← init)
+  let witIn? ← simulateQ auxImplE (extractor x π tr tr_V).run
+  pure (x, witIn?, stmtOut?, witOut)
 
 /-- **CO25 Def 3.6 extraction-failure event** on the NARG-KS experiment output
 `StmtIn × Option WitIn × Option StmtOut × WitOut`: the verifier accepted into the **output
@@ -480,8 +487,8 @@ OracleReduction framework convention (matching the library `knowledgeSoundness` 
 `coinKSExperimentProb`), so the DSFS KS guarantee composes with downstream protocols.  A *named*
 event (not an inline `match`) so the same term is shared between
 `adaptiveNARGKnowledgeSoundness(WithCoins)` and downstream game-match lemmas (e.g. DSFS
-`dsfsKSGame_hybFactorization`) — inline `match` lambdas compile to distinct per-declaration aux-defs
-that block `exact`/`rw` unification, which a shared constant avoids. -/
+`dsfsKSGame_hL1`/`dsfsKSGame_hL3`) — inline `match` lambdas compile to distinct per-declaration
+aux-defs that block `exact`/`rw` unification, which a shared constant avoids. -/
 def nargKSFailEvent {StmtIn WitIn StmtOut WitOut : Type}
     (relIn : Set (StmtIn × WitIn)) (relOut : Set (StmtOut × WitOut)) :
     StmtIn × Option WitIn × Option StmtOut × WitOut → Prop
@@ -496,15 +503,18 @@ the extracted witness misses `relIn` (or no witness is produced) — with probab
 (Acceptance is implicit in the game returning `some`, matching CO25 Def 3.6's `V^f(x,π)=1`; no
 output language is needed.) -/
 def adaptiveNARGKnowledgeSoundness
-    {ι : Type} {oSpec : OracleSpec ι} {σ StmtIn Proof StmtOut WitIn WitOut : Type}
+    {ι κE : Type} {oSpec : OracleSpec ι} {auxSpecE : OracleSpec κE}
+    {σ StmtIn Proof StmtOut WitIn WitOut : Type}
     (init : ProbComp σ) (impl : QueryImpl oSpec (StateT σ ProbComp))
+    (auxImplE : QueryImpl auxSpecE ProbComp)
     (verify : StmtIn → Proof → OptionT (OracleComp oSpec) StmtOut)
     (relIn : Set (StmtIn × WitIn)) (relOut : Set (StmtOut × WitOut))
     (bound : OracleComp oSpec (StmtIn × Proof × WitOut) → Prop) (error : ENNReal) : Prop :=
-  adaptiveKnowledgeSoundnessBounded
-    (game := fun extractor P => adaptiveNARGKnowledgeSoundnessExp init impl verify extractor P)
-    (evt := nargKSFailEvent relIn relOut)
-    bound error
+  ∃ extractor : StmtIn → Proof → QueryLog oSpec → QueryLog oSpec →
+      OptionT (OracleComp auxSpecE) WitIn,
+  ∀ P : OracleComp oSpec (StmtIn × Proof × WitOut), bound P →
+    Pr[ nargKSFailEvent relIn relOut
+      | adaptiveNARGKnowledgeSoundnessExp init impl auxImplE verify extractor P ] ≤ error
 
 /-! ### Coin-bearing NARG experiments (compiled / randomized provers)
 
@@ -552,41 +562,60 @@ def adaptiveNARGSoundnessWithCoins
       | adaptiveNARGSoundnessExpWithCoins init impl auxImpl verify P ] ≤ error
 
 /-- Coin-bearing CO25 Def 3.6 experiment: like `adaptiveNARGSoundnessExpWithCoins`, but it captures
-the prover's query log `tr` (over the coin-extended spec) and, on an accepting run, runs the
-straightline extractor `extractor x π tr`. -/
+the prover's query log and, on an accepting run, runs the straightline extractor on it.
+
+The prover `P` has full access to its private coins `auxSpec` (it runs over `oSpec + auxSpec`), and
+its complete query log `tr` is captured.  But the **extractor is fed only the `oSpec` projection
+`tr.fst`** — the prover's private-coin (`auxSpec`) queries are *excluded* from the log handed to the
+extractor.  This matches CO25 Def 3.14: the straightline extractor reads the prover's transcript to
+the *oracle* (the shared/challenge queries), never its private sampling coins.  It also keeps this
+experiment consistent with the coin-free `adaptiveNARGKnowledgeSoundnessExp`, whose extractor
+likewise receives only `QueryLog oSpec`. -/
 def adaptiveNARGKnowledgeSoundnessExpWithCoins
-    {ι κ : Type} {oSpec : OracleSpec ι} {auxSpec : OracleSpec κ}
+    {ι κ κE : Type} {oSpec : OracleSpec ι} {auxSpec : OracleSpec κ} {auxSpecE : OracleSpec κE}
     {σ StmtIn Proof StmtOut WitIn WitOut : Type}
     (init : ProbComp σ) (impl : QueryImpl oSpec (StateT σ ProbComp))
     (auxImpl : QueryImpl auxSpec ProbComp)
+    (auxImplE : QueryImpl auxSpecE ProbComp)
     (verify : StmtIn → Proof → OptionT (OracleComp oSpec) StmtOut)
-    (extractor : StmtIn → Proof → QueryLog (oSpec + auxSpec) → QueryLog (oSpec + auxSpec) →
-      OptionT (OracleComp oSpec) WitIn)
+    (extractor : StmtIn → WitOut → Proof → QueryLog oSpec → QueryLog oSpec →
+      OptionT (OracleComp auxSpecE) WitIn)
     (P : OracleComp (oSpec + auxSpec) (StmtIn × Proof × WitOut)) :
     ProbComp (StmtIn × Option WitIn × Option StmtOut × WitOut) := do
-  (simulateQ ((impl.addLift auxImpl) : QueryImpl (oSpec + auxSpec) (StateT σ ProbComp)) (do
-    let ⟨⟨x, π, witOut⟩, tr⟩ ← (simulateQ loggingOracle P).run
-    let ⟨stmtOut?, tr_V⟩ ←
-      (simulateQ loggingOracle (liftComp (verify x π).run (oSpec + auxSpec))).run
-    let witIn? ← liftComp (extractor x π tr tr_V).run (oSpec + auxSpec)
-    pure (x, witIn?, stmtOut?, witOut))).run' (← init)
+  -- Prover (coins `auxSpec`) + verifier share `σ` (`impl.addLift auxImpl`); their logs `tr, tr_V`
+  -- are read out as DATA.  Then the extractor runs **separately** over only its own sampler
+  -- `auxSpecE` (the `P`-independent `auxImplE`) — it sees neither `σ`, `auxSpec` (coin-blind), the
+  -- challenge oracle, nor `P`; it reads challenges from `tr.fst, tr_V`.  CO25 Def 3.14.
+  -- `tr_V` is logged at the **narrow** `oSpec` (the verifier is coin-blind — never queries
+  -- `auxSpec`).  The prover's `auxSpec`-coin queries in `tr` are dropped via `tr.fst` (the `oSpec`
+  -- projection) before the extractor sees the log.
+  let ⟨x, π, witOut, tr, stmtOut?, tr_V⟩ ←
+    (simulateQ ((impl.addLift auxImpl) : QueryImpl (oSpec + auxSpec) (StateT σ ProbComp)) (do
+      let ⟨⟨x, π, witOut⟩, tr⟩ ← (simulateQ loggingOracle P).run
+      let ⟨stmtOut?, tr_V⟩ ←
+        liftComp (simulateQ loggingOracle (verify x π).run).run (oSpec + auxSpec)
+      pure (x, π, witOut, tr, stmtOut?, tr_V))).run' (← init)
+  let witIn? ← simulateQ auxImplE (extractor x witOut π tr.fst tr_V).run
+  pure (x, witIn?, stmtOut?, witOut)
 
 /-- Coin-bearing CO25 Def 3.6 — adaptive, query-bounded straightline knowledge soundness against
 provers with private coins. -/
 def adaptiveNARGKnowledgeSoundnessWithCoins
-    {ι κ : Type} {oSpec : OracleSpec ι} {auxSpec : OracleSpec κ}
+    {ι κ κE : Type} {oSpec : OracleSpec ι} {auxSpec : OracleSpec κ} {auxSpecE : OracleSpec κE}
     {σ StmtIn Proof StmtOut WitIn WitOut : Type}
     (init : ProbComp σ) (impl : QueryImpl oSpec (StateT σ ProbComp))
     (auxImpl : QueryImpl auxSpec ProbComp)
+    (auxImplE : QueryImpl auxSpecE ProbComp)
     (verify : StmtIn → Proof → OptionT (OracleComp oSpec) StmtOut)
     (relIn : Set (StmtIn × WitIn)) (relOut : Set (StmtOut × WitOut))
     (bound : OracleComp (oSpec + auxSpec) (StmtIn × Proof × WitOut) → Prop) (error : ENNReal) :
     Prop :=
-  ∃ extractor : StmtIn → Proof → QueryLog (oSpec + auxSpec) → QueryLog (oSpec + auxSpec) →
-      OptionT (OracleComp oSpec) WitIn,
+  ∃ extractor : (stmtIn: StmtIn) → (witOut : WitOut) → (π: Proof) → (tr_P : QueryLog oSpec)
+    → (tr_V : QueryLog oSpec) → OptionT (OracleComp auxSpecE) WitIn,
   ∀ P : OracleComp (oSpec + auxSpec) (StmtIn × Proof × WitOut), bound P →
     Pr[ nargKSFailEvent relIn relOut
-      | adaptiveNARGKnowledgeSoundnessExpWithCoins init impl auxImpl verify extractor P ] ≤ error
+      | adaptiveNARGKnowledgeSoundnessExpWithCoins init impl auxImpl auxImplE verify
+          extractor P ] ≤ error
 
 end AdaptiveNARG
 
@@ -621,12 +650,14 @@ def adaptiveNARGSoundness
 /-- **CO25 Def 3.6 for a non-interactive verifier** — adaptive, query-bounded straightline knowledge
 soundness.  Delegates to the bare-function `adaptiveNARGKnowledgeSoundness`. -/
 def adaptiveNARGKnowledgeSoundness
-    {ι : Type} {oSpec : OracleSpec ι} {σ StmtIn Proof StmtOut WitIn WitOut : Type}
+    {ι κE : Type} {oSpec : OracleSpec ι} {auxSpecE : OracleSpec κE}
+    {σ StmtIn Proof StmtOut WitIn WitOut : Type}
     (init : ProbComp σ) (impl : QueryImpl oSpec (StateT σ ProbComp))
+    (auxImplE : QueryImpl auxSpecE ProbComp)
     (verifier : NonInteractiveVerifier Proof oSpec StmtIn StmtOut)
     (relIn : Set (StmtIn × WitIn)) (relOut : Set (StmtOut × WitOut))
     (bound : OracleComp oSpec (StmtIn × Proof × WitOut) → Prop) (error : ENNReal) : Prop :=
-  _root_.adaptiveNARGKnowledgeSoundness (WitIn := WitIn) (WitOut := WitOut) init impl
+  _root_.adaptiveNARGKnowledgeSoundness (WitIn := WitIn) (WitOut := WitOut) init impl auxImplE
     (fun x π => verifier.verify x (Fin.cons π (fun i => i.elim0)))
     relIn relOut bound error
 
@@ -645,16 +676,17 @@ def adaptiveNARGSoundnessWithCoins
 
 /-- Coin-bearing CO25 Def 3.6 for a non-interactive verifier (compiled / randomized prover). -/
 def adaptiveNARGKnowledgeSoundnessWithCoins
-    {ι κ : Type} {oSpec : OracleSpec ι} {auxSpec : OracleSpec κ}
+    {ι κ κE : Type} {oSpec : OracleSpec ι} {auxSpec : OracleSpec κ} {auxSpecE : OracleSpec κE}
     {σ StmtIn Proof StmtOut WitIn WitOut : Type}
     (init : ProbComp σ) (impl : QueryImpl oSpec (StateT σ ProbComp))
     (auxImpl : QueryImpl auxSpec ProbComp)
+    (auxImplE : QueryImpl auxSpecE ProbComp)
     (verifier : NonInteractiveVerifier Proof oSpec StmtIn StmtOut)
     (relIn : Set (StmtIn × WitIn)) (relOut : Set (StmtOut × WitOut))
     (bound : OracleComp (oSpec + auxSpec) (StmtIn × Proof × WitOut) → Prop) (error : ENNReal) :
     Prop :=
   _root_.adaptiveNARGKnowledgeSoundnessWithCoins (WitIn := WitIn) (WitOut := WitOut)
-    init impl auxImpl
+    init impl auxImpl auxImplE
     (fun x π => verifier.verify x (Fin.cons π (fun i => i.elim0)))
     relIn relOut bound error
 
