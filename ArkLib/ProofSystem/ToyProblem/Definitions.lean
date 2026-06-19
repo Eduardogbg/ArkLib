@@ -70,17 +70,19 @@ namespace ToyProblem
 open Code InterleavedCode
 open scoped NNReal
 
-variable {ι F : Type*} [Fintype ι] [Field F]
+variable {ι F A : Type*} [Fintype ι] [Field F] [AddCommGroup A] [Module F A]
 
 /-- **Definition 6.1 of [ABF26]** (toy problem relation `R_C^ℓ`).
 
 Given a code presented as its `F`-linear encoding
-`encode : (Fin k → F) →ₗ[F] (ι → F)` (the paper writes `C : F^k → (F^s)^n`
-and treats the code as the injective map, `.tex` ~1133), a constraint shape
-`(ℓ, k)`, a linear-constraint vector `v : Fin k → F`, and constraint values
-`μ : Fin ℓ → F`, the toy problem relation pairs an input `((v, μ), W)`, where
-`W : Fin ℓ → ι → F` is a stack of `ℓ` words, with the witness "underlying
-message matrix" `M : Fin ℓ → Fin k → F` such that:
+`encode : (Fin k → F) →ₗ[F] (ι → A)` over an alphabet `A` that is an
+`F`-module (the paper writes `C : F^k → (F^s)^n` and treats the code as the
+injective map, `.tex` ~1133 — `A = F^s` is the folded alphabet, `A = F` the
+scalar `s = 1` case), a constraint shape `(ℓ, k)`, a linear-constraint vector
+`v : Fin k → F`, and constraint values `μ : Fin ℓ → F`, the toy problem
+relation pairs an input `((v, μ), W)`, where `W : Fin ℓ → ι → A` is a stack of
+`ℓ` words, with the witness "underlying message matrix" `M : Fin ℓ → Fin k → F`
+such that:
 
   * each row `W i` is the codeword `encode (M i)` — the pre-image is taken
     under **the code's fixed encoding** (see the module docstring for why an
@@ -88,8 +90,8 @@ message matrix" `M : Fin ℓ → Fin k → F` such that:
   * the linear constraint `(M · v) i = μ i` holds for every `i`.
 
 This is what the paper calls "constrained codes". -/
-def relationFor {k ℓ : ℕ} (encode : (Fin k → F) →ₗ[F] (ι → F))
-    (v : Fin k → F) (μ : Fin ℓ → F) (W : Fin ℓ → ι → F) : Prop :=
+def relationFor {k ℓ : ℕ} (encode : (Fin k → F) →ₗ[F] (ι → A))
+    (v : Fin k → F) (μ : Fin ℓ → F) (W : Fin ℓ → ι → A) : Prop :=
   ∃ M : Fin ℓ → Fin k → F, (∀ i, W i = encode (M i)) ∧ ∀ i, ∑ j, M i j * v j = μ i
 
 /-- **Definition 6.3 of [ABF26]** (relaxed toy problem relation
@@ -100,9 +102,9 @@ The relaxed relation only requires that the input word stack `W` is
 of `relationFor encode v μ`. This is both necessary (the verifier in the IOR
 only reads a few entries of `W`) and sufficient (for downstream uses)
 for soundness with respect to `δ`. -/
-def relaxedRelationFor {k ℓ : ℕ} (encode : (Fin k → F) →ₗ[F] (ι → F)) (δ : ℝ≥0)
-    (v : Fin k → F) (μ : Fin ℓ → F) (W : Fin ℓ → ι → F) : Prop :=
-  ∃ Wstar : Fin ℓ → ι → F, relationFor encode v μ Wstar ∧
+def relaxedRelationFor {k ℓ : ℕ} (encode : (Fin k → F) →ₗ[F] (ι → A)) (δ : ℝ≥0)
+    (v : Fin k → F) (μ : Fin ℓ → F) (W : Fin ℓ → ι → A) : Prop :=
+  ∃ Wstar : Fin ℓ → ι → A, relationFor encode v μ Wstar ∧
     -- Interleaved Hamming distance between the two word stacks is at
     -- most `δ`: at least `(1 - δ) · |ι|` coordinates agree on every row.
     ∃ S : Finset ι, (1 - (δ : ℝ)) * Fintype.card ι ≤ S.card ∧
@@ -122,9 +124,9 @@ relation `R̃_{C,δ}^1`. The soundness error of `T'` is then exactly
 `max_{x,y} |Ω^y_x| / |F|` over inputs `(x, y)` whose original instance
 `(v, μ_1, μ_2)` violates `R̃_{C,δ}^2` (realised as
 `ToyProblem.winningSetSoundness` in `Leaderboard.lean`). -/
-def winningSetFor {k : ℕ} (encode : (Fin k → F) →ₗ[F] (ι → F)) (δ : ℝ≥0)
-    (v : Fin k → F) (μ₁ μ₂ : F) (f₁ f₂ : ι → F) : Set F :=
+def winningSetFor {k : ℕ} (encode : (Fin k → F) →ₗ[F] (ι → A)) (δ : ℝ≥0)
+    (v : Fin k → F) (μ₁ μ₂ : F) (f₁ f₂ : ι → A) : Set F :=
   { γ | relaxedRelationFor (ℓ := 1) encode δ v
-         (fun _ ↦ μ₁ + γ * μ₂) (fun _ j ↦ f₁ j + γ * f₂ j) }
+         (fun _ ↦ μ₁ + γ * μ₂) (fun _ j ↦ f₁ j + γ • f₂ j) }
 
 end ToyProblem

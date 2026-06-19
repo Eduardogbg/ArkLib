@@ -1285,12 +1285,20 @@ private noncomputable def rbrKSF (encode : (Fin k → F) → (ι → F)) (δ : �
     accepts_of_probEvent_pos_verifier_run (k := k) (t := t) init impl encode
       stmtIn tr witOut _ h
 
+-- `[Fintype A]`/`[DecidableEq A]` are used in `epsMCA`'s body but not its type, so they
+-- are absent from this lemma's type; suppress the `unused…InType` linter (the toy idiom).
+set_option linter.unusedFintypeInType false in
+set_option linter.unusedDecidableInType false in
 omit [DecidableEq ι] [DecidableEq F] in
-/-- `epsMCA` is a supremum of probabilities, hence `≤ 1 < ⊤`. (Candidate for
-relocation to `ProximityGap/Errors.lean`. Public because the L6.10 coercion
-endgame in `Spec/SimplifiedIOR.lean` reuses it.) -/
-lemma epsMCA_ne_top [Nonempty ι] (C : Set (ι → F)) (δ : ℝ≥0) :
-    epsMCA (F := F) (A := F) C δ ≠ ⊤ :=
+/-- `epsMCA` is a supremum of probabilities, hence `≤ 1 < ⊤`. Generic over the
+codeword alphabet `A` (an `F`-module): the bound is alphabet-agnostic, so it
+serves both the scalar (`A = F`) and folded (`A = Fin s → F`) instantiations.
+(Candidate for relocation to `ProximityGap/Errors.lean`. Public because the
+L6.10 coercion endgame in `Spec/SimplifiedIOR.lean` and the leaderboard bridge
+in `Leaderboard.lean` reuse it.) -/
+lemma epsMCA_ne_top [Nonempty ι] {A : Type} [Fintype A] [DecidableEq A]
+    [AddCommGroup A] [Module F A] (C : Set (ι → A)) (δ : ℝ≥0) :
+    epsMCA (F := F) (A := A) C δ ≠ ⊤ :=
   ne_top_of_le_ne_top ENNReal.one_ne_top (iSup_le fun _ ↦ PMF.coe_le_one _ _)
 
 omit [DecidableEq ι] in

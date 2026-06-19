@@ -101,6 +101,7 @@ open Code InterleavedCode ListDecodable ProximityGap
 open scoped NNReal ENNReal
 
 variable {ι F : Type} [Fintype ι] [Field F] [Fintype F] [DecidableEq F]
+variable {A : Type} [Fintype A] [DecidableEq A] [AddCommGroup A] [Module F A]
 
 /-! ## The per-δ soundness scalar (Definition 6.11 reading)
 
@@ -115,7 +116,7 @@ the unrestricted sup is the trivial `1`. -/
 violates the relaxed relation `R̃_{C,δ}^2` under the code's fixed encoding
 `enc` ([ABF26] Definition 6.3 via `relaxedRelationFor`). This is the index of
 the worst-case soundness supremum of Definition 6.11. -/
-structure ViolatingInstance {k : ℕ} (enc : (Fin k → F) →ₗ[F] (ι → F)) (δ : ℝ≥0) where
+structure ViolatingInstance {k : ℕ} (enc : (Fin k → F) →ₗ[F] (ι → A)) (δ : ℝ≥0) where
   /-- The linear-constraint vector. -/
   v : Fin k → F
   /-- First constraint value. -/
@@ -123,9 +124,9 @@ structure ViolatingInstance {k : ℕ} (enc : (Fin k → F) →ₗ[F] (ι → F))
   /-- Second constraint value. -/
   μ₂ : F
   /-- First input word. -/
-  f₁ : ι → F
+  f₁ : ι → A
   /-- Second input word. -/
-  f₂ : ι → F
+  f₂ : ι → A
   /-- The instance violates the relaxed two-row relation `R̃_{C,δ}^2`
   (fixed-encoding form). -/
   violates : ¬ relaxedRelationFor (ℓ := 2) enc δ v ![μ₁, μ₂] ![f₁, f₂]
@@ -133,7 +134,7 @@ structure ViolatingInstance {k : ℕ} (enc : (Fin k → F) →ₗ[F] (ι → F))
 /-- The winning-challenge fraction `|Ω^{f₁,f₂}_{v,μ₁,μ₂}| / |F|` of a
 violating instance ([ABF26] Definition 6.11, fixed-encoding `winningSetFor`).
 Always in `[0, 1]` (`winningSetFor enc … ⊆ F`). -/
-noncomputable def winningSetRatio {k : ℕ} {enc : (Fin k → F) →ₗ[F] (ι → F)} {δ : ℝ≥0}
+noncomputable def winningSetRatio {k : ℕ} {enc : (Fin k → F) →ₗ[F] (ι → A)} {δ : ℝ≥0}
     (x : ViolatingInstance enc δ) : ℝ≥0 :=
   ((winningSetFor enc δ x.v x.μ₁ x.μ₂ x.f₁ x.f₂).ncard : ℝ≥0) / (Fintype.card F : ℝ≥0)
 
@@ -145,13 +146,13 @@ The worst-case winning-challenge fraction over violating instances:
 *actual* soundness error after the combination-randomness round — the paper
 says the soundness error of Construction 6.9 "is exactly" this quantity. The
 leaderboard's common quantity `bestProvableError` sweeps it over δ. -/
-noncomputable def winningSetSoundness {k : ℕ} (enc : (Fin k → F) →ₗ[F] (ι → F))
+noncomputable def winningSetSoundness {k : ℕ} (enc : (Fin k → F) →ₗ[F] (ι → A))
     (δ : ℝ≥0) : ℝ≥0 :=
   ⨆ x : ViolatingInstance enc δ, winningSetRatio x
 
 /-- The winning-challenge fraction never exceeds `1` (`winningSetFor enc … ⊆ F`;
 cf. [ABF26] Definition 6.11). -/
-theorem winningSetRatio_le_one {k : ℕ} {enc : (Fin k → F) →ₗ[F] (ι → F)} {δ : ℝ≥0}
+theorem winningSetRatio_le_one {k : ℕ} {enc : (Fin k → F) →ₗ[F] (ι → A)} {δ : ℝ≥0}
     (x : ViolatingInstance enc δ) : winningSetRatio x ≤ 1 := by
   haveI : Nonempty F := ⟨0⟩
   have hpos : (0 : ℝ≥0) < (Fintype.card F : ℝ≥0) := by
@@ -166,7 +167,7 @@ theorem winningSetRatio_le_one {k : ℕ} {enc : (Fin k → F) →ₗ[F] (ι → 
 /-- The family of winning-challenge fractions is bounded above (by `1`), so
 its supremum is well-behaved in the conditionally complete order `ℝ≥0`
 (cf. [ABF26] Definition 6.11). -/
-theorem bddAbove_winningSetRatio {k : ℕ} (enc : (Fin k → F) →ₗ[F] (ι → F)) (δ : ℝ≥0) :
+theorem bddAbove_winningSetRatio {k : ℕ} (enc : (Fin k → F) →ₗ[F] (ι → A)) (δ : ℝ≥0) :
     BddAbove (Set.range (fun x : ViolatingInstance enc δ ↦ winningSetRatio x)) := by
   refine ⟨1, ?_⟩
   rintro r ⟨x, rfl⟩
@@ -176,7 +177,7 @@ theorem bddAbove_winningSetRatio {k : ℕ} (enc : (Fin k → F) →ₗ[F] (ι �
 soundness error of [ABF26] Definition 6.11 — the backbone of the attack (Y)
 side: an explicit attack witness lower-bounds `winningSetSoundness`. -/
 theorem winningSetRatio_le_winningSetSoundness {k : ℕ}
-    {enc : (Fin k → F) →ₗ[F] (ι → F)} {δ : ℝ≥0} (x : ViolatingInstance enc δ) :
+    {enc : (Fin k → F) →ₗ[F] (ι → A)} {δ : ℝ≥0} (x : ViolatingInstance enc δ) :
     winningSetRatio x ≤ winningSetSoundness enc δ :=
   le_ciSup (bddAbove_winningSetRatio enc δ) x
 
@@ -195,12 +196,12 @@ on the worst-case soundness.
 This is a proven hook for Y-side submissions: a numeric `ε_ca(C, δ) ≥ 2^(-b)`
 at an admissible δ floors `winningSetSoundness enc δ`. Axiom-clean (no
 `sorryAx`). -/
-theorem epsCA_le_winningSetSoundness {k : ℕ} [Nonempty ι] {C : Set (ι → F)} (δ : ℝ≥0)
+theorem epsCA_le_winningSetSoundness {k : ℕ} [Nonempty ι] {C : Set (ι → A)} (δ : ℝ≥0)
     (hδpos : (0 : ℝ≥0) < δ) (hδlt : δ < 1)
-    (enc : (Fin k → F) →ₗ[F] (ι → F)) (henc_inj : Function.Injective enc)
+    (enc : (Fin k → F) →ₗ[F] (ι → A)) (henc_inj : Function.Injective enc)
     (henc_range : Set.range enc = C) :
-    epsCA (F := F) (A := F) C δ δ ≤ (winningSetSoundness enc δ : ENNReal) := by
-  rcases eq_or_lt_of_le (zero_le (a := epsCA (F := F) (A := F) C δ δ)) with h | hca
+    epsCA (F := F) (A := A) C δ δ ≤ (winningSetSoundness enc δ : ENNReal) := by
+  rcases eq_or_lt_of_le (zero_le (a := epsCA (F := F) (A := A) C δ δ)) with h | hca
   · rw [← h]; exact zero_le
   obtain ⟨v, μ₁, μ₂, f₁, f₂, hviol, hbound⟩ :=
     simplified_iop_soundness_ca_lb C δ hδpos hδlt enc henc_inj henc_range hca
@@ -233,9 +234,9 @@ through `winningSetRatio_le_winningSetSoundness`.
 This is the second proven Y-side hook: a numeric list-size lower bound (e.g.
 Elias/[KKH26] at the §6.3 parameters) floors `winningSetSoundness enc δ`.
 Axiom-clean (no `sorryAx`). -/
-theorem listDecoding_le_winningSetSoundness {k : ℕ} [Nonempty ι] {C : Set (ι → F)}
+theorem listDecoding_le_winningSetSoundness {k : ℕ} [Nonempty ι] {C : Set (ι → A)}
     (δ : ℝ≥0) (hδpos : (0 : ℝ≥0) < δ) (hδlt : δ < 1)
-    (enc : (Fin k → F) →ₗ[F] (ι → F)) (henc_inj : Function.Injective enc)
+    (enc : (Fin k → F) →ₗ[F] (ι → A)) (henc_inj : Function.Injective enc)
     (henc_range : Set.range enc = C)
     (hF : ((Lambda (interleavedCodeSet (κ := Fin 2) C) (δ : ℝ)).toNat : ℝ)
       < Fintype.card F) :
@@ -285,9 +286,9 @@ in regime.) The `(Lambda …).toNat` is faithful: `ListDecodable.Lambda_ne_top`.
 is the X-side proof vehicle: an analysis picks an admissible δ and bounds
 `bestProvableError` through it (via `winningSetSoundness_le_toySoundnessError`
 and `bestProvableError_le`). -/
-noncomputable def toySoundnessError (C : Set (ι → F)) (δ : ℝ≥0) (t : ℕ) : ℝ≥0 :=
+noncomputable def toySoundnessError (C : Set (ι → A)) (δ : ℝ≥0) (t : ℕ) : ℝ≥0 :=
   (1 - δ) ^ t
-    + ((epsMCA (F := F) (A := F) C δ).toNNReal +
+    + ((epsMCA (F := F) (A := A) C δ).toNNReal +
         ((Lambda (interleavedCodeSet (κ := Fin 2) C) (δ : ℝ)).toNat : ℝ≥0)
           / (Fintype.card F : ℝ≥0)) * (1 - (1 - δ) ^ t)
 
@@ -303,12 +304,12 @@ This is *only* the error bound; the full knowledge-soundness *game* of L6.10
 `Spec/SimplifiedIOR.lean` — cross-reference it (an earlier revision mislabeled
 this inequality itself as "L6.10"). Paper-proof-owed (ABF26's own §6.4
 result). -/
-theorem winningSetSoundness_le_epsMCA_add {k : ℕ} [Nonempty ι] {C : Set (ι → F)} (δ : ℝ≥0)
+theorem winningSetSoundness_le_epsMCA_add {k : ℕ} [Nonempty ι] {C : Set (ι → A)} (δ : ℝ≥0)
     (hδ : δ ∈ Set.Ioo (0 : ℝ≥0) ((minRelHammingDistCode C : ℝ≥0)))
-    (enc : (Fin k → F) →ₗ[F] (ι → F)) (henc_inj : Function.Injective enc)
+    (enc : (Fin k → F) →ₗ[F] (ι → A)) (henc_inj : Function.Injective enc)
     (henc_range : Set.range enc = C) :
     winningSetSoundness enc δ
-      ≤ (epsMCA (F := F) (A := F) C δ).toNNReal
+      ≤ (epsMCA (F := F) (A := A) C δ).toNNReal
         + ((Lambda (interleavedCodeSet (κ := Fin 2) C) (δ : ℝ)).toNat : ℝ≥0)
           / (Fintype.card F : ℝ≥0) := by
   -- ABF26-L6.10 error bound: the 1-round (γ) form of the L6.8 γ-round analysis. Each
@@ -317,12 +318,12 @@ theorem winningSetSoundness_le_epsMCA_add {k : ℕ} [Nonempty ι] {C : Set (ι �
   classical
   obtain ⟨hδpos, hδlt⟩ := hδ
   -- `epsMCA` is a supremum of probabilities, hence `≤ 1 < ⊤`.
-  have hMCAtop : epsMCA (F := F) (A := F) C δ ≠ ⊤ := Spec.epsMCA_ne_top C δ
+  have hMCAtop : epsMCA (F := F) (A := A) C δ ≠ ⊤ := Spec.epsMCA_ne_top C δ
   -- Coerced bound equals the `ℝ≥0∞` bound produced by `gamma_transition_prob_le`.
-  have hε₀coe : (((epsMCA (F := F) (A := F) C δ).toNNReal +
+  have hε₀coe : (((epsMCA (F := F) (A := A) C δ).toNNReal +
         ((Lambda (interleavedCodeSet (κ := Fin 2) C) (δ : ℝ)).toNat : ℝ≥0)
           / (Fintype.card F : ℝ≥0) : ℝ≥0) : ℝ≥0∞)
-      = epsMCA (F := F) (A := F) C δ +
+      = epsMCA (F := F) (A := A) C δ +
         ((Lambda (interleavedCodeSet (κ := Fin 2) C) (δ : ℝ)).toNat : ℝ≥0∞)
           / (Fintype.card F : ℝ≥0∞) := by
     rw [ENNReal.coe_add, ENNReal.coe_toNNReal hMCAtop,
@@ -343,7 +344,7 @@ theorem winningSetSoundness_le_epsMCA_add {k : ℕ} [Nonempty ι] {C : Set (ι �
   have hWSeq : winningSetFor enc δ v μ₁ μ₂ f₁ f₂ =
       {γ : F | ∃ m : Fin k → F, (∑ j, m j * v j = μ₁ + γ * μ₂) ∧
         ∃ S : Finset ι, (1 - (δ : ℝ)) * Fintype.card ι ≤ S.card ∧
-          ∀ j ∈ S, f₁ j + γ * f₂ j = enc m j} := by
+          ∀ j ∈ S, f₁ j + γ • f₂ j = enc m j} := by
     ext γ
     constructor
     · rintro ⟨Wstar, ⟨M, hWeq, hlin⟩, S, hScard, hagree⟩
@@ -364,7 +365,7 @@ theorem winningSetSoundness_le_epsMCA_add {k : ℕ} [Nonempty ι] {C : Set (ι �
 
 /-- The Definition-6.11 soundness scalar never exceeds `1` (a supremum of
 fractions `|Ω|/|F| ≤ 1`). -/
-theorem winningSetSoundness_le_one {k : ℕ} (enc : (Fin k → F) →ₗ[F] (ι → F)) (δ : ℝ≥0) :
+theorem winningSetSoundness_le_one {k : ℕ} (enc : (Fin k → F) →ₗ[F] (ι → A)) (δ : ℝ≥0) :
     winningSetSoundness enc δ ≤ 1 :=
   ciSup_le' (fun x ↦ winningSetRatio_le_one x)
 
@@ -372,12 +373,12 @@ theorem winningSetSoundness_le_one {k : ℕ} (enc : (Fin k → F) →ₗ[F] (ι 
 (corollary of the L6.10 bridge `winningSetSoundness_le_epsMCA_add` of [ABF26];
 the bridge's `ε_mca + |Λ|/|F|` term is the combination-randomness slot of the
 convex `toySoundnessError`). -/
-theorem winningSetSoundness_le_toySoundnessError {k : ℕ} [Nonempty ι] {C : Set (ι → F)}
+theorem winningSetSoundness_le_toySoundnessError {k : ℕ} [Nonempty ι] {C : Set (ι → A)}
     (δ : ℝ≥0) (t : ℕ)
     (hδ : δ ∈ Set.Ioo (0 : ℝ≥0) ((minRelHammingDistCode C : ℝ≥0)))
-    (enc : (Fin k → F) →ₗ[F] (ι → F)) (henc_inj : Function.Injective enc)
+    (enc : (Fin k → F) →ₗ[F] (ι → A)) (henc_inj : Function.Injective enc)
     (henc_range : Set.range enc = C) :
-    winningSetSoundness enc δ ≤ toySoundnessError C δ t := by
+    winningSetSoundness enc δ ≤ toySoundnessError (F := F) C δ t := by
   -- `w ≤ ε₀` (bridge) and `w ≤ 1`, so `w = w·(1-a) + w·a ≤ ε₀·(1-a) + 1·a = a + ε₀·(1-a)`
   -- where `a = (1-δ)^t ≤ 1`.
   set w := winningSetSoundness enc δ
@@ -387,10 +388,10 @@ theorem winningSetSoundness_le_toySoundnessError {k : ℕ} [Nonempty ι] {C : Se
   have hw1 := winningSetSoundness_le_one enc δ
   calc w = w * (1 - a) + w * a := by
             rw [← mul_add, tsub_add_cancel_of_le ha1, mul_one]
-    _ ≤ ((epsMCA (F := F) (A := F) C δ).toNNReal +
+    _ ≤ ((epsMCA (F := F) (A := A) C δ).toNNReal +
           ((Lambda (interleavedCodeSet (κ := Fin 2) C) (δ : ℝ)).toNat : ℝ≥0)
             / (Fintype.card F : ℝ≥0)) * (1 - a) + 1 * a := by gcongr
-    _ = toySoundnessError C δ t := by rw [toySoundnessError, one_mul, add_comm]
+    _ = toySoundnessError (F := F) C δ t := by rw [toySoundnessError, one_mul, add_comm]
 
 /-! ## Bits of security -/
 
@@ -420,16 +421,23 @@ structure ToyParams where
   F : Type
   /-- Codeword index type (`Type 0`; `Fin n`). -/
   ι : Type
+  /-- Codeword alphabet (`Type 0`; an `F`-module): `A = F` is the scalar `s = 1`
+  case (interleaved RS), `A = Fin s → F` the folded case (`s`-folded RS). -/
+  A : Type
   [field : Field F]
   [fintypeF : Fintype F]
   [decEqF : DecidableEq F]
   [fintypeι : Fintype ι]
   [nonemptyι : Nonempty ι]
+  [addCommGroupA : AddCommGroup A]
+  [moduleA : Module F A]
+  [fintypeA : Fintype A]
+  [decEqA : DecidableEq A]
   /-- Message dimension `k` (gives `winningSetFor`'s `v : Fin k → F`). -/
   k : ℕ
-  /-- The code's fixed `F`-linear encoding (the paper's "code as the
-  injective map"; the code itself is `ToyParams.code = Set.range enc`). -/
-  enc : (Fin k → F) →ₗ[F] (ι → F)
+  /-- The code's fixed `F`-linear encoding into the alphabet `A` (the paper's
+  "code as the injective map"; the code itself is `ToyParams.code = Set.range enc`). -/
+  enc : (Fin k → F) →ₗ[F] (ι → A)
   /-- The encoding is injective (Definition 6.1's "code as injective map"). -/
   enc_injective : Function.Injective enc
   /-- Number of spot-check repetitions `t`. -/
@@ -447,11 +455,12 @@ structure ToyParams where
   n : ℕ := 0
 
 attribute [instance] ToyParams.field ToyParams.fintypeF ToyParams.decEqF ToyParams.fintypeι
-  ToyParams.nonemptyι
+  ToyParams.nonemptyι ToyParams.addCommGroupA ToyParams.moduleA ToyParams.fintypeA
+  ToyParams.decEqA
 
 /-- The interpreted base code at a parameter point: the image of the pinned
 encoding ([ABF26] Definition 6.1's code-as-injective-map reading). -/
-def ToyParams.code (p : ToyParams) : Set (p.ι → p.F) := Set.range p.enc
+def ToyParams.code (p : ToyParams) : Set (p.ι → p.A) := Set.range p.enc
 
 /-! ## The leaderboard's common quantity: the δ-swept frontier -/
 
@@ -778,6 +787,7 @@ noncomputable def koalaIRS : ToyParams := by
   exact
     { F := KoalaSextic
       ι := Fin 4
+      A := KoalaSextic
       k := 2
       enc := koalaEnc
       enc_injective := koalaEnc_injective

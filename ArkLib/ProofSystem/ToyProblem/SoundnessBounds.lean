@@ -77,7 +77,16 @@ namespace ToyProblem
 open Code InterleavedCode ListDecodable ProximityGap
 open scoped NNReal ENNReal ProbabilityTheory
 
+-- Generalising the codeword alphabet to an `F`-module `A` (folded RS: `A = Fin s → F`)
+-- leaves many lemmas using only a subset of `A`'s `Fintype`/`DecidableEq`/`Module`
+-- instances in their types; suppress the noisy `unused...InType` / `unusedSectionVars`
+-- warnings file-wide, matching the `Leaderboard.lean` / `ProximityGap/GrandChallenges.lean` idiom.
+set_option linter.unusedFintypeInType false
+set_option linter.unusedDecidableInType false
+set_option linter.unusedSectionVars false
+
 variable {ι F : Type} [Fintype ι] [Field F] [Fintype F] [DecidableEq F]
+variable {A : Type} [Fintype A] [DecidableEq A] [AddCommGroup A] [Module F A]
 
 omit [Fintype ι] [Fintype F] [DecidableEq F] in
 /-- **ENNReal → ℝ bridge for the Claim-B.1 output.** Rewrites Claim B.1's image
@@ -128,25 +137,25 @@ private lemma claimB1_bound_to_real {M s c : ℕ} (hc : 1 ≤ c) (hM : 1 ≤ M)
 /-- **Stacked-codeword matrix.** The interleaved word whose two columns are the
 codewords `enc m.1` and `enc m.2`; used to enumerate `Λ(C^{≡2}, δ, (f₁,f₂))` by
 message pairs in the proof of ABF26 Lemma 6.12. -/
-private def encStack {k : ℕ} (enc : (Fin k → F) →ₗ[F] (ι → F))
-    (m : (Fin k → F) × (Fin k → F)) : Matrix ι (Fin 2) F :=
+private def encStack {k : ℕ} (enc : (Fin k → F) →ₗ[F] (ι → A))
+    (m : (Fin k → F) × (Fin k → F)) : Matrix ι (Fin 2) A :=
   Matrix.of (fun i j ↦ if j = 0 then enc m.1 i else enc m.2 i)
 
 omit [Fintype ι] [Fintype F] [DecidableEq F] in
-private lemma encStack_apply_zero {k : ℕ} (enc : (Fin k → F) →ₗ[F] (ι → F))
+private lemma encStack_apply_zero {k : ℕ} (enc : (Fin k → F) →ₗ[F] (ι → A))
     (m : (Fin k → F) × (Fin k → F)) (i : ι) : encStack enc m i 0 = enc m.1 i := rfl
 
 omit [Fintype ι] [Fintype F] [DecidableEq F] in
-private lemma encStack_apply_one {k : ℕ} (enc : (Fin k → F) →ₗ[F] (ι → F))
+private lemma encStack_apply_one {k : ℕ} (enc : (Fin k → F) →ₗ[F] (ι → A))
     (m : (Fin k → F) × (Fin k → F)) (i : ι) : encStack enc m i 1 = enc m.2 i := rfl
 
 omit [Fintype ι] [Fintype F] [DecidableEq F] in
-private lemma encStack_transpose_zero {k : ℕ} (enc : (Fin k → F) →ₗ[F] (ι → F))
+private lemma encStack_transpose_zero {k : ℕ} (enc : (Fin k → F) →ₗ[F] (ι → A))
     (m : (Fin k → F) × (Fin k → F)) : (encStack enc m).transpose 0 = enc m.1 := by
   funext i; rfl
 
 omit [Fintype ι] [Fintype F] [DecidableEq F] in
-private lemma encStack_transpose_one {k : ℕ} (enc : (Fin k → F) →ₗ[F] (ι → F))
+private lemma encStack_transpose_one {k : ℕ} (enc : (Fin k → F) →ₗ[F] (ι → A))
     (m : (Fin k → F) × (Fin k → F)) : (encStack enc m).transpose 1 = enc m.2 := by
   funext i; rfl
 
@@ -155,15 +164,15 @@ omit [Fintype F] [Field F] in
 `δᵣ` form used by `relCloseToWord_iff_exists_agreementCols`. The two differ only by
 the `DecidableEq` instance baked into `relHammingBall` (a `Subsingleton`, closed by
 `congr!`) and the `ℚ≥0`/`ℝ≥0`/`ℝ` coercion path. -/
-private lemma mem_relHammingBall_iff [Nonempty ι] (y : ι → Fin 2 → F)
-    (x : Matrix ι (Fin 2) F) (δ : ℝ≥0) :
+private lemma mem_relHammingBall_iff [Nonempty ι] (y : ι → Fin 2 → A)
+    (x : Matrix ι (Fin 2) A) (δ : ℝ≥0) :
     x ∈ relHammingBall y (δ : ℝ) ↔ (↑δᵣ(y, x) : ℝ≥0) ≤ δ := by
   have key : x ∈ relHammingBall y (δ : ℝ) ↔ (↑δᵣ(y, x) : ℝ) ≤ (δ : ℝ) := by
     rw [relHammingBall]
-    change (↑(@relHammingDist ι _ (Fin 2 → F)
+    change (↑(@relHammingDist ι _ (Fin 2 → A)
           (fun a b ↦ Classical.propDecidable (a = b)) y x) : ℝ) ≤ (δ : ℝ)
         ↔ (↑δᵣ(y, x) : ℝ) ≤ (δ : ℝ)
-    rw [show (@relHammingDist ι _ (Fin 2 → F)
+    rw [show (@relHammingDist ι _ (Fin 2 → A)
           (fun a b ↦ Classical.propDecidable (a = b)) y x) = δᵣ(y, x) from by congr! 1]
   rw [key, ← NNReal.coe_le_coe]; norm_cast
 
@@ -180,8 +189,8 @@ lies in `Λ(C^{≡2}, δ, fStar)` exactly when `fStar` agrees with the two colum
 `relCloseToWord_iff_exists_agreementCols` + `relDist_floor_bound_iff_complement_bound`,
 following the coercion handling of `mem_winningSetFor_zero_of_relClose`. -/
 private lemma encStack_mem_closeCodewordsRel_iff [Nonempty ι] {k : ℕ}
-    (enc : (Fin k → F) →ₗ[F] (ι → F)) {C : Set (ι → F)} (hC : Set.range enc = C)
-    {δ : ℝ≥0} (hδ_lt : δ < 1) {fStar : ι → Fin 2 → F}
+    (enc : (Fin k → F) →ₗ[F] (ι → A)) {C : Set (ι → A)} (hC : Set.range enc = C)
+    {δ : ℝ≥0} (hδ_lt : δ < 1) {fStar : ι → Fin 2 → A}
     (m : (Fin k → F) × (Fin k → F)) :
     encStack enc m ∈ closeCodewordsRel (interleavedCodeSet (κ := Fin 2) C) fStar (δ : ℝ) ↔
       ∃ S : Finset ι, (1 - (δ : ℝ)) * Fintype.card ι ≤ S.card ∧
@@ -376,11 +385,11 @@ least a `(1 - δ)`-fraction of `ι`, and the message `m` satisfies the linear
 constraint `⟨m, v⟩ = μ₁ + γ·μ₂`, then `γ` is a winning challenge (paper: "every
 `γ = (μ₁−a₁)/(a₂−μ₂)` belongs to `Ω`"). -/
 theorem mem_winningSetFor_of_agree {k : ℕ} {δ : ℝ≥0}
-    (enc : (Fin k → F) →ₗ[F] (ι → F))
-    {v : Fin k → F} {μ₁ μ₂ : F} {f₁ f₂ : ι → F} {γ : F} {m : Fin k → F}
+    (enc : (Fin k → F) →ₗ[F] (ι → A))
+    {v : Fin k → F} {μ₁ μ₂ : F} {f₁ f₂ : ι → A} {γ : F} {m : Fin k → F}
     (hconstr : ∑ j, m j * v j = μ₁ + γ * μ₂)
     (S : Finset ι) (hScard : (1 - (δ : ℝ)) * Fintype.card ι ≤ S.card)
-    (hagree : ∀ j ∈ S, f₁ j + γ * f₂ j = enc m j) :
+    (hagree : ∀ j ∈ S, f₁ j + γ • f₂ j = enc m j) :
     γ ∈ winningSetFor enc δ v μ₁ μ₂ f₁ f₂ := by
   rw [winningSetFor, Set.mem_setOf_eq]
   exact ⟨fun _ ↦ enc m,
@@ -482,12 +491,12 @@ ENNReal→ℝ bridge), `listDecoding_winning_lb` (the `z ↦ z/(F+z−1)` denomi
 chain), and `mem_winningSetFor_of_agree` (the membership step). -/
 theorem simplified_iop_soundness_listDecoding_lb {k : ℕ}
     [Nonempty ι]
-    (C : Set (ι → F)) (δ : ℝ≥0) (_hδ_pos : (0 : ℝ≥0) < δ) (_hδ_lt : δ < 1)
-    (enc : (Fin k → F) →ₗ[F] (ι → F)) (hinj : Function.Injective enc)
+    (C : Set (ι → A)) (δ : ℝ≥0) (_hδ_pos : (0 : ℝ≥0) < δ) (_hδ_lt : δ < 1)
+    (enc : (Fin k → F) →ₗ[F] (ι → A)) (hinj : Function.Injective enc)
     (hC : Set.range enc = C)
     (hF : ((Lambda (interleavedCodeSet (κ := Fin 2) C) (δ : ℝ)).toNat : ℝ)
       < Fintype.card F) :
-    ∃ (v : Fin k → F) (μ₁ μ₂ : F) (f₁ f₂ : ι → F),
+    ∃ (v : Fin k → F) (μ₁ μ₂ : F) (f₁ f₂ : ι → A),
       ¬ relaxedRelationFor (ℓ := 2) enc δ v ![μ₁, μ₂] ![f₁, f₂] ∧
       ((winningSetFor enc δ v μ₁ μ₂ f₁ f₂).ncard : ℝ) ≥
         (((Lambda (interleavedCodeSet (κ := Fin 2) C) (δ : ℝ)).toNat : ℝ)
@@ -495,20 +504,20 @@ theorem simplified_iop_soundness_listDecoding_lb {k : ℕ}
           / (Fintype.card F
               + 2 * ((Lambda (interleavedCodeSet (κ := Fin 2) C) (δ : ℝ)).toNat : ℝ)) := by
   classical
-  set Cint : Set (Matrix ι (Fin 2) F) := interleavedCodeSet (κ := Fin 2) C with hCint
+  set Cint : Set (Matrix ι (Fin 2) A) := interleavedCodeSet (κ := Fin 2) C with hCint
   -- Maximising matrix `fStar` for the list size (finite supremum, as in L6.13).
   obtain ⟨fStar, hfStar⟩ := Finite.exists_max
-    (fun f : ι → Fin 2 → F ↦ (closeCodewordsRel Cint f (δ : ℝ)).ncard)
+    (fun f : ι → Fin 2 → A ↦ (closeCodewordsRel Cint f (δ : ℝ)).ncard)
   set N : ℕ := (Lambda Cint (δ : ℝ)).toNat with hNdef
   have hNeq : N = (closeCodewordsRel Cint fStar (δ : ℝ)).ncard := by
     rw [hNdef, Lambda,
-      show (⨆ f : ι → Fin 2 → F, ((closeCodewordsRel Cint f (δ : ℝ)).ncard : ℕ∞))
+      show (⨆ f : ι → Fin 2 → A, ((closeCodewordsRel Cint f (δ : ℝ)).ncard : ℕ∞))
           = ((closeCodewordsRel Cint fStar (δ : ℝ)).ncard : ℕ∞) from
         le_antisymm (iSup_le fun f ↦ by exact_mod_cast hfStar f)
           (le_iSup (fun f ↦ ((closeCodewordsRel Cint f (δ : ℝ)).ncard : ℕ∞)) fStar),
       ENat.toNat_coe]
-  set f₁ : ι → F := fun i ↦ fStar i 0 with hf1
-  set f₂ : ι → F := fun i ↦ fStar i 1 with hf2
+  set f₁ : ι → A := fun i ↦ fStar i 0 with hf1
+  set f₂ : ι → A := fun i ↦ fStar i 1 with hf2
   have hcardF1 : 1 ≤ Fintype.card F := Fintype.card_pos
   have hNltF : N < Fintype.card F := by exact_mod_cast hF
   -- Message-pair enumeration of `Λ(C^{≡2}, δ, (f₁,f₂))`.
@@ -531,7 +540,7 @@ theorem simplified_iop_soundness_listDecoding_lb {k : ℕ}
     rw [hNeq]
     -- The image of `Smsg` under `encStack enc` is exactly the close-codewords set.
     have himg : (encStack enc) '' (Smsg : Set ((Fin k → F) × (Fin k → F)))
-        = (closeCodewordsRel Cint fStar (δ : ℝ) : Set (Matrix ι (Fin 2) F)) := by
+        = (closeCodewordsRel Cint fStar (δ : ℝ) : Set (Matrix ι (Fin 2) A)) := by
       ext V
       simp only [Set.mem_image, Finset.mem_coe, hSmsg, Finset.mem_filter,
         Finset.mem_univ, true_and]
@@ -660,8 +669,8 @@ theorem simplified_iop_soundness_listDecoding_lb {k : ℕ}
       · -- agreement: on `S'`, `f₁ i + γ•f₂ i = enc m.1 i + γ•enc m.2 i = enc (m.1+γ•m.2) i`.
         intro i hi
         obtain ⟨h0, h1⟩ := hS'ag i hi
-        have henc : enc (m.1 + γ • m.2) i = enc m.1 i + γ * enc m.2 i := by
-          rw [map_add, map_smul]; simp [Pi.add_apply, Pi.smul_apply, smul_eq_mul]
+        have henc : enc (m.1 + γ • m.2) i = enc m.1 i + γ • enc m.2 i := by
+          rw [map_add, map_smul]; simp [Pi.add_apply, Pi.smul_apply]
         rw [henc]
         -- `f₁ i = fStar i 0 = enc m.1 i`, `f₂ i = fStar i 1 = enc m.2 i`.
         rw [show f₁ i = fStar i 0 from rfl, show f₂ i = fStar i 1 from rfl, h0, h1]
@@ -706,10 +715,10 @@ all-zero instance `(v, μ₁, μ₂) = (0, 0, 0)` (Definition 6.11, fixed-encodi
 `winningSetFor enc` — the linear constraint `⟨m, 0⟩ = 0 + γ·0` is trivially
 satisfied). This is the inclusion `S ⊆ Ω^{f₁,f₂}_{0,0,0}` from the proof of
 **Lemma 6.13 of [ABF26]** (§6.4.2), generalised to any line. -/
-theorem mem_winningSetFor_zero_of_relClose {k : ℕ} [Nonempty ι] {C : Set (ι → F)}
+theorem mem_winningSetFor_zero_of_relClose {k : ℕ} [Nonempty ι] {C : Set (ι → A)}
     {δ : ℝ≥0} (_hδ_lt : δ < 1)
-    (enc : (Fin k → F) →ₗ[F] (ι → F)) (hC : Set.range enc = C)
-    (f₁ f₂ : ι → F) {γ : F} (hγ : δᵣ(f₁ + γ • f₂, C) ≤ δ) :
+    (enc : (Fin k → F) →ₗ[F] (ι → A)) (hC : Set.range enc = C)
+    (f₁ f₂ : ι → A) {γ : F} (hγ : δᵣ(f₁ + γ • f₂, C) ≤ δ) :
     γ ∈ winningSetFor enc δ (0 : Fin k → F) 0 0 f₁ f₂ := by
   classical
   rw [winningSetFor, Set.mem_setOf_eq]
@@ -729,7 +738,7 @@ theorem mem_winningSetFor_zero_of_relClose {k : ℕ} [Nonempty ι] {C : Set (ι 
     linarith [this]
   · intro i j hj
     have hag := (hSagree j).1 hj
-    simpa only [Pi.add_apply, Pi.smul_apply, smul_eq_mul] using hag
+    simpa only [Pi.add_apply, Pi.smul_apply] using hag
 
 /-- **Lemma 6.13 of [ABF26]** (correlated-agreement lower bound on the simplified IOR).
 
@@ -760,27 +769,27 @@ consume it. The bound is in terms of `ε_ca` (correlated agreement) rather than
 `ε_mca`; the latter would be qualitatively stronger but no attack reaching
 `ε_mca > ε_ca` is currently known (Remark 6.14). -/
 theorem simplified_iop_soundness_ca_lb {k : ℕ} [Nonempty ι]
-    (C : Set (ι → F)) (δ : ℝ≥0) (_hδ_pos : (0 : ℝ≥0) < δ) (_hδ_lt : δ < 1)
-    (enc : (Fin k → F) →ₗ[F] (ι → F)) (_henc_inj : Function.Injective enc)
+    (C : Set (ι → A)) (δ : ℝ≥0) (_hδ_pos : (0 : ℝ≥0) < δ) (_hδ_lt : δ < 1)
+    (enc : (Fin k → F) →ₗ[F] (ι → A)) (_henc_inj : Function.Injective enc)
     (hC : Set.range enc = C)
-    (hca : 0 < epsCA (F := F) (A := F) C δ δ) :
-    ∃ (v : Fin k → F) (μ₁ μ₂ : F) (f₁ f₂ : ι → F),
+    (hca : 0 < epsCA (F := F) (A := A) C δ δ) :
+    ∃ (v : Fin k → F) (μ₁ μ₂ : F) (f₁ f₂ : ι → A),
       ¬ relaxedRelationFor (ℓ := 2) enc δ v ![μ₁, μ₂] ![f₁, f₂] ∧
       ((winningSetFor enc δ v μ₁ μ₂ f₁ f₂).ncard : ENNReal)
-        ≥ epsCA (F := F) (A := F) C δ δ * (Fintype.card F : ENNReal) := by
+        ≥ epsCA (F := F) (A := A) C δ δ * (Fintype.card F : ENNReal) := by
   classical
   -- The CA error is attained at some word-stack `u` (finite supremum).
   obtain ⟨u, hu_max⟩ := Finite.exists_max
-    (fun u : WordStack F (Fin 2) ι ↦
+    (fun u : WordStack A (Fin 2) ι ↦
       if jointProximity C u δ then (0 : ENNReal)
       else Pr_{ let γ ← $ᵖ F }[δᵣ(u 0 + γ • u 1, C) ≤ δ])
-  have h_eps : epsCA (F := F) (A := F) C δ δ =
+  have h_eps : epsCA (F := F) (A := A) C δ δ =
       (if jointProximity C u δ then (0 : ENNReal)
        else Pr_{ let γ ← $ᵖ F }[δᵣ(u 0 + γ • u 1, C) ≤ δ]) := by
     refine le_antisymm ?_ ?_
     · rw [epsCA]; exact iSup_le hu_max
     · rw [epsCA]
-      exact le_iSup (fun w : WordStack F (Fin 2) ι ↦
+      exact le_iSup (fun w : WordStack A (Fin 2) ι ↦
         if jointProximity C w δ then (0 : ENNReal)
         else Pr_{ let γ ← $ᵖ F }[δᵣ(w 0 + γ • w 1, C) ≤ δ]) u
   -- Positivity forces the maximiser to be *not* jointly close.
@@ -832,16 +841,16 @@ omit [Fintype ι] [Fintype F] [DecidableEq F] in
 /-- The post-`γ` knowledge state of the ABF26 §6.2 γ-round: some message `m`
 satisfies the folded linear constraint `⟨m, v⟩ = μ₁ + γ·μ₂` and the folded word
 `f₁ + γ·f₂` agrees with the codeword `enc m` on a `(1-δ)`-fraction column set. -/
-private def gammaEvent {k : ℕ} (enc : (Fin k → F) →ₗ[F] (ι → F)) (δ : ℝ≥0)
-    (v : Fin k → F) (μ₁ μ₂ : F) (f₁ f₂ : ι → F) (γ : F) : Prop :=
+private def gammaEvent {k : ℕ} (enc : (Fin k → F) →ₗ[F] (ι → A)) (δ : ℝ≥0)
+    (v : Fin k → F) (μ₁ μ₂ : F) (f₁ f₂ : ι → A) (γ : F) : Prop :=
   ∃ m : Fin k → F, (∑ j, m j * v j = μ₁ + γ * μ₂) ∧
     ∃ S : Finset ι, (1 - (δ : ℝ)) * Fintype.card ι ≤ S.card ∧
-      ∀ j ∈ S, f₁ j + γ * f₂ j = enc m j
+      ∀ j ∈ S, f₁ j + γ • f₂ j = enc m j
 
 omit [Field F] [Fintype F] in
 /-- The minimum relative Hamming distance of any code is at most `1` (it is
 either a relative Hamming distance between two words, or `0` by convention). -/
-private lemma minRelHammingDistCode_le_one [Nonempty ι] (C : Set (ι → F)) :
+private lemma minRelHammingDistCode_le_one [Nonempty ι] (C : Set (ι → A)) :
     minRelHammingDistCode C ≤ 1 := by
   by_cases h : (possibleRelHammingDists C).Nonempty
   · obtain ⟨p, _, heq⟩ := minRelHammingDistCode_mem h
@@ -855,8 +864,8 @@ omit [Field F] [Fintype F] in
 agree on a column set covering a `(1-δ)`-fraction of `ι` with `δ < δ_min(C)`
 are equal: their relative Hamming distance is at most `δ`, but distinct
 codewords are at relative distance at least `δ_min(C) > δ`. -/
-private lemma codeword_eq_of_agree_on_large_set [Nonempty ι] {C : Set (ι → F)}
-    {δ : ℝ≥0} (hδ_lt : δ < (minRelHammingDistCode C : ℝ≥0)) {w₁ w₂ : ι → F}
+private lemma codeword_eq_of_agree_on_large_set [Nonempty ι] {C : Set (ι → A)}
+    {δ : ℝ≥0} (hδ_lt : δ < (minRelHammingDistCode C : ℝ≥0)) {w₁ w₂ : ι → A}
     (hw₁ : w₁ ∈ C) (hw₂ : w₂ ∈ C) {S : Finset ι}
     (hScard : (1 - (δ : ℝ)) * Fintype.card ι ≤ S.card)
     (hagree : ∀ j ∈ S, w₁ j = w₂ j) : w₁ = w₂ := by
@@ -881,7 +890,7 @@ private lemma codeword_eq_of_agree_on_large_set [Nonempty ι] {C : Set (ι → F
 omit [Fintype ι] [Fintype F] [DecidableEq F] in
 /-- `encStack enc` is injective when `enc` is: the two columns of the stack
 recover `enc m.1` and `enc m.2`, hence (by injectivity of `enc`) the pair. -/
-private lemma encStack_injective {k : ℕ} {enc : (Fin k → F) →ₗ[F] (ι → F)}
+private lemma encStack_injective {k : ℕ} {enc : (Fin k → F) →ₗ[F] (ι → A)}
     (hinj : Function.Injective enc) : Function.Injective (encStack enc) := by
   intro p q hpq
   have h1 : enc p.1 = enc q.1 := by
@@ -940,10 +949,10 @@ set_option linter.unusedDecidableInType false in
 pair `p` whose codeword stack lies in `Λ(C^{≡2}, δ, (f₁, f₂))` cannot satisfy
 both `⟨p.1, v⟩ = μ₁` and `⟨p.2, v⟩ = μ₂` — its own agreement set would
 otherwise complete a witness. -/
-private lemma pair_violates {k : ℕ} [Nonempty ι] {C : Set (ι → F)} {δ : ℝ≥0}
+private lemma pair_violates {k : ℕ} [Nonempty ι] {C : Set (ι → A)} {δ : ℝ≥0}
     (hδ1 : δ < 1)
-    (enc : (Fin k → F) →ₗ[F] (ι → F)) (hC : Set.range enc = C)
-    {v : Fin k → F} {μ₁ μ₂ : F} {f₁ f₂ : ι → F}
+    (enc : (Fin k → F) →ₗ[F] (ι → A)) (hC : Set.range enc = C)
+    {v : Fin k → F} {μ₁ μ₂ : F} {f₁ f₂ : ι → A}
     (hNoWit : ¬ ∃ M : Fin 2 → (Fin k → F),
       (∀ i : Fin 2, ∑ j, M i j * v j = ![μ₁, μ₂] i) ∧
       ∃ S : Finset ι, (1 - (δ : ℝ)) * Fintype.card ι ≤ S.card ∧
@@ -970,11 +979,11 @@ with `(f₁, f₂)` on `S`; pulling it back along the injective `enc` and applyi
 unique decoding (`δ < δ_min`) to the two codewords `enc m` and `enc (m₁ + γ·m₂)`
 — both agreeing with `f₁ + γ·f₂` on `S` — yields a message pair `(m₁, m₂)` in
 `Λ(C^{≡2}, δ, (f₁, f₂))` whose folded constraint pins down `γ`. -/
-private lemma gamma_bad_pair {k : ℕ} [Nonempty ι] {C : Set (ι → F)} {δ : ℝ≥0}
-    (enc : (Fin k → F) →ₗ[F] (ι → F)) (hinj : Function.Injective enc)
+private lemma gamma_bad_pair {k : ℕ} [Nonempty ι] {C : Set (ι → A)} {δ : ℝ≥0}
+    (enc : (Fin k → F) →ₗ[F] (ι → A)) (hinj : Function.Injective enc)
     (hC : Set.range enc = C)
     (hδ_lt : δ < (minRelHammingDistCode C : ℝ≥0))
-    {v : Fin k → F} {μ₁ μ₂ : F} {f₁ f₂ : ι → F} {γ : F}
+    {v : Fin k → F} {μ₁ μ₂ : F} {f₁ f₂ : ι → A} {γ : F}
     (hEvent : gammaEvent enc δ v μ₁ μ₂ f₁ f₂ γ)
     (hmca : ¬ mcaEvent C δ f₁ f₂ γ) :
     ∃ p : (Fin k → F) × (Fin k → F),
@@ -997,7 +1006,7 @@ private lemma gamma_bad_pair {k : ℕ} [Nonempty ι] {C : Set (ι → F)} {δ : 
   have hpair : pairJointAgreesOn C S f₁ f₂ := by
     by_contra hno
     exact hmca ⟨S, hSnn, ⟨enc m, hencm, fun i hi ↦ by
-      rw [smul_eq_mul]; exact (hagree i hi).symm⟩, hno⟩
+      exact (hagree i hi).symm⟩, hno⟩
   obtain ⟨u₁, hu₁, u₂, hu₂, hagS⟩ := hpair
   obtain ⟨m₁, hm₁⟩ : ∃ m₁, enc m₁ = u₁ := by rw [← hC] at hu₁; exact hu₁
   obtain ⟨m₂, hm₂⟩ : ∃ m₂, enc m₂ = u₂ := by rw [← hC] at hu₂; exact hu₂
@@ -1012,9 +1021,9 @@ private lemma gamma_bad_pair {k : ℕ} [Nonempty ι] {C : Set (ι → F)} {δ : 
   · -- Unique decoding: `enc m = enc (m₁ + γ • m₂)`, then push the constraint through.
     have hagree2 : ∀ j ∈ S, enc m j = enc (m₁ + γ • m₂) j := by
       intro j hj
-      have hcalc : enc (m₁ + γ • m₂) j = f₁ j + γ * f₂ j := by
+      have hcalc : enc (m₁ + γ • m₂) j = f₁ j + γ • f₂ j := by
         rw [map_add, map_smul]
-        simp only [Pi.add_apply, Pi.smul_apply, smul_eq_mul]
+        simp only [Pi.add_apply, Pi.smul_apply]
         rw [hm₁, hm₂, (hagS j hj).1, (hagS j hj).2]
       rw [hcalc, hagree j hj]
     have heq : enc m = enc (m₁ + γ • m₂) :=
@@ -1046,11 +1055,11 @@ violates `(⟨m₁, v⟩, ⟨m₂, v⟩) = (μ₁, μ₂)` (`pair_violates`), so
 at most one `γ` (`affine_solution_card_le_one`). The bad challenges therefore
 number at most `|Λ(C^{≡2}, δ)|`, giving the `|Λ|/|F|` term. -/
 theorem gamma_transition_prob_le {k : ℕ} [Nonempty ι]
-    (C : Set (ι → F)) (δ : ℝ≥0)
-    (enc : (Fin k → F) →ₗ[F] (ι → F)) (hinj : Function.Injective enc)
+    (C : Set (ι → A)) (δ : ℝ≥0)
+    (enc : (Fin k → F) →ₗ[F] (ι → A)) (hinj : Function.Injective enc)
     (hC : Set.range enc = C)
     (_hδ_pos : 0 < δ) (hδ_lt : δ < (minRelHammingDistCode C : ℝ≥0))
-    (v : Fin k → F) (μ₁ μ₂ : F) (f₁ f₂ : ι → F)
+    (v : Fin k → F) (μ₁ μ₂ : F) (f₁ f₂ : ι → A)
     (hNoWit : ¬ ∃ M : Fin 2 → (Fin k → F),
       (∀ i : Fin 2, ∑ j, M i j * v j = ![μ₁, μ₂] i) ∧
       ∃ S : Finset ι, (1 - (δ : ℝ)) * Fintype.card ι ≤ S.card ∧
@@ -1058,14 +1067,14 @@ theorem gamma_transition_prob_le {k : ℕ} [Nonempty ι]
     Pr_{let γ ← $ᵖ F}[∃ m : Fin k → F,
         (∑ j, m j * v j = μ₁ + γ * μ₂) ∧
         ∃ S : Finset ι, (1 - (δ : ℝ)) * Fintype.card ι ≤ S.card ∧
-          ∀ j ∈ S, f₁ j + γ * f₂ j = enc m j]
-      ≤ epsMCA (F := F) (A := F) C δ +
+          ∀ j ∈ S, f₁ j + γ • f₂ j = enc m j]
+      ≤ epsMCA (F := F) (A := A) C δ +
         ((Lambda (interleavedCodeSet (κ := Fin 2) C) (δ : ℝ)).toNat : ℝ≥0∞)
           / (Fintype.card F : ℝ≥0∞) := by
   classical
   have hδ1 : δ < 1 :=
     lt_of_lt_of_le hδ_lt (by exact_mod_cast minRelHammingDistCode_le_one C)
-  set Cint : Set (Matrix ι (Fin 2) F) := interleavedCodeSet (κ := Fin 2) C with hCint
+  set Cint : Set (Matrix ι (Fin 2) A) := interleavedCodeSet (κ := Fin 2) C with hCint
   -- Message-pair enumeration of `Λ(C^{≡2}, δ, (f₁, f₂))`.
   set Smsg : Finset ((Fin k → F) × (Fin k → F)) := Finset.univ.filter
     (fun p ↦ encStack enc p ∈ closeCodewordsRel Cint (fun i ↦ ![f₁ i, f₂ i]) (δ : ℝ))
@@ -1085,7 +1094,7 @@ theorem gamma_transition_prob_le {k : ℕ} [Nonempty ι]
     have h2 : ((closeCodewordsRel Cint (fun i ↦ ![f₁ i, f₂ i]) (δ : ℝ)).ncard : ℕ∞)
         ≤ Lambda Cint (δ : ℝ) := by
       rw [Lambda]
-      exact le_iSup (fun f : ι → Fin 2 → F ↦ ((closeCodewordsRel Cint f (δ : ℝ)).ncard : ℕ∞))
+      exact le_iSup (fun f : ι → Fin 2 → A ↦ ((closeCodewordsRel Cint f (δ : ℝ)).ncard : ℕ∞))
         (fun i ↦ ![f₁ i, f₂ i])
     have h3 : (Smsg.card : ℕ∞) ≤ Lambda Cint (δ : ℝ) := le_trans (by exact_mod_cast h1) h2
     rwa [← ENat.coe_toNat (Lambda_ne_top (C := Cint) (δ : ℝ)), Nat.cast_le] at h3
@@ -1123,7 +1132,7 @@ theorem gamma_transition_prob_le {k : ℕ} [Nonempty ι]
     · exact Or.inr ⟨h, hm⟩
   · -- `Pr[mcaEvent] ≤ ε_mca` via `le_iSup` at the word stack `(f₁, f₂)`.
     unfold epsMCA
-    exact le_iSup (fun u : WordStack F (Fin 2) ι ↦
+    exact le_iSup (fun u : WordStack A (Fin 2) ι ↦
       Pr_{let γ ← $ᵖ F}[mcaEvent C δ (u 0) (u 1) γ]) ![f₁, f₂]
   · -- `Pr[bad] = |bad| / |F| ≤ Λ.toNat / |F|` by the card-filter route.
     rw [prob_uniform_eq_card_filter_div_card]
