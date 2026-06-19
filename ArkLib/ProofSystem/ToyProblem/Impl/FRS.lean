@@ -81,17 +81,30 @@ injectivity — is therefore an owed structural fact (`koalaFRSEnc_injective`). 
 concrete witness here is documentary. -/
 noncomputable def koalaFoldω : KoalaSextic := 7
 
-/-- The `2^16`-point folded-RS evaluation domain `{0, 1, …, 2^16 − 1} ⊆
-KoalaSextic`. Distinctness is injectivity of `Nat.cast` below the characteristic
-(`2^16 ≤ KoalaBear.fieldSize ≈ 2^31`), exactly as for `koalaDomain`. -/
+/-- The `2^16`-point folded-RS evaluation domain `{1, 2, …, 2^16} ⊆ KoalaSextic`
+— deliberately **zero-free** (each point is `i + 1`). Distinctness is injectivity
+of `Nat.cast` below the characteristic (`2^16 + 1 ≤ KoalaBear.fieldSize ≈ 2^31`),
+exactly as for `koalaDomain`.
+
+The paper's folded-RS evaluation domain is a *smooth multiplicative coset*
+(`{g · h^j}`, [ABF26] §6.3 "common case"), which is zero-free; we exclude `0`
+here for the same reason it matters downstream: the GR08 admissibility condition
+(`ReedSolomon.Folded.Admissible`) requires the folded orbits `{α · ω^i}` to be
+pairwise distinct, and its intra-orbit clause `α · ω^i ≠ α` (for `0 < i < s`) is
+*false* at `α = 0` (`0 · ω^i = 0`). A domain containing `0` could therefore never
+be admissible; a zero-free domain keeps admissibility a genuinely-owed (not
+provably-false) side condition (see `koalaFRSEnc_injective`). -/
 noncomputable def koalaFRSDomain : Fin (2 ^ 16) ↪ KoalaSextic where
-  toFun i := (i.val : KoalaSextic)
+  toFun i := ((i.val + 1 : ℕ) : KoalaSextic)
   inj' i j hij := by
-    have hfs : (2 ^ 16 : ℕ) ≤ KoalaBear.fieldSize := by norm_num [KoalaBear.fieldSize]
-    have hi : (i : ℕ) ∈ Set.Iio KoalaBear.fieldSize := Set.mem_Iio.mpr (i.isLt.trans_le hfs)
-    have hj : (j : ℕ) ∈ Set.Iio KoalaBear.fieldSize := Set.mem_Iio.mpr (j.isLt.trans_le hfs)
-    exact Fin.val_injective
-      (CharP.natCast_injOn_Iio KoalaSextic KoalaBear.fieldSize hi hj hij)
+    have hil : (i : ℕ) < 2 ^ 16 := i.isLt
+    have hjl : (j : ℕ) < 2 ^ 16 := j.isLt
+    have hchar : (2 ^ 16 : ℕ) < KoalaBear.fieldSize := by norm_num [KoalaBear.fieldSize]
+    have hi : (i.val + 1) ∈ Set.Iio KoalaBear.fieldSize := Set.mem_Iio.mpr (by omega)
+    have hj : (j.val + 1) ∈ Set.Iio KoalaBear.fieldSize := Set.mem_Iio.mpr (by omega)
+    have hnat : i.val + 1 = j.val + 1 :=
+      CharP.natCast_injOn_Iio KoalaSextic KoalaBear.fieldSize hi hj hij
+    exact Fin.val_injective (by omega)
 
 /-- The genuine §6.3.2 folded encoder: the degree-`< 2^20` folded Reed–Solomon
 evaluation map on the `2^16` points of `koalaFRSDomain` with folding `s = 32`
@@ -107,21 +120,26 @@ noncomputable def koalaFRSEnc :
     ∘ₗ (Polynomial.degreeLTEquiv KoalaSextic (2 ^ 20)).symm.toLinearMap
 
 /-- **Injectivity of the folded encoder** ([ABF26] Definition 6.1's "code as the
-injective map"). Mathematically this follows from `(L, s)`-admissibility of
+injective map"). Mathematically this would follow from `(L, s)`-admissibility of
 `koalaFoldω` (`ReedSolomon.Folded.Admissible`, the GR08 condition that the `s·|L|`
 folded evaluation points `{α · ω^i}` are pairwise distinct) together with
 `k ≤ s·|L|` (here `2^20 ≤ 32·2^16 = 2^21`): a degree-`< k` polynomial vanishing
 on `s·|L| ≥ k` distinct points is zero, so the unfolded evaluation — hence
-`frsEvalOnPoints` on `degreeLT k` — is injective (`dim_frsCode`'s
-`h_encoder_inj` hypothesis).
+`frsEvalOnPoints` on `degreeLT k` — would be injective. `koalaFRSDomain` is
+zero-free precisely so `Admissible koalaFoldω` is not *provably false* (its
+intra-orbit clause fails at `0`; see `koalaFRSDomain`).
 
-**Owed (structural).** Establishing `Admissible koalaFoldω` requires
-multiplicative-order facts about `ω` in the **noncomputable**
-`GaloisField KoalaBear.fieldSize 6`, which are not available `sorry`-free here —
-the multiplicative analogue of the additive characteristic argument used for
-`koalaDomain` (cf. the Session 1a finding). This is the FRS counterpart of the
-owed external numerics carried by the `koalaIRS` anchors; it is a named,
-legitimately-owed gap, not a hand-wave. -/
+**Owed (structural), in two parts.** (1) `ReedSolomon.Folded` provides **no**
+`Admissible ω → Function.Injective (frsEvalOnPoints …)` bridge — `dim_frsCode`
+takes encoder injectivity as a *hypothesis* (`h_encoder_inj`); that general lemma
+would have to be added (unlike the interleaved case, whose `koalaEnc_injective`
+*did* have the in-tree bridge `ReedSolomon.evalOnPoints_domRestrict_injective`).
+(2) Even with the bridge, `Admissible koalaFoldω` requires multiplicative-order
+facts about `ω` in the **noncomputable** `GaloisField KoalaBear.fieldSize 6`,
+not available `sorry`-free here (the multiplicative analogue of the additive
+characteristic argument behind `koalaDomain`; cf. the Session 1a finding). This
+is the FRS counterpart of the owed external dependencies carried by the
+`koalaIRS` anchors — a named, legitimately-owed gap, not a hand-wave. -/
 theorem koalaFRSEnc_injective : Function.Injective koalaFRSEnc := by
   sorry
 
