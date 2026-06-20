@@ -1,7 +1,7 @@
 /-
 Copyright (c) 2024-2025 ArkLib Contributors. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Quang Dao, Chung Thai Nguyen
+Authors: Quang Dao, Chung Thai Nguyen, Katerina Hristova
 -/
 
 import Mathlib.Probability.ProbabilityMassFunction.Monad
@@ -9,13 +9,13 @@ import ArkLib.Data.Probability.Notation
 import CompPoly.Data.Fin.BigOperators
 import CompPoly.Data.Nat.Bitwise
 import Mathlib.Algebra.MvPolynomial.SchwartzZippel
+
 /-! # Probability Instances -/
 
 
-open ProbabilityTheory Filter
-open NNReal Finset Function
+open ProbabilityTheory Filter NNReal Finset Function Real
 open scoped BigOperators ProbabilityTheory
-open Real
+
 
 -- TODO(dtumad): Move most of the stuff in this file to VCV and generalize as possible
 
@@ -41,6 +41,7 @@ instance [IsEmpty α] : IsEmpty (PMF α) := by
 end
 
 section ProbabilityTools
+
 /-- Unrolls `Pr_{ let x ← D }[P x]` into a sum of the form
 `∑' x, Pr[x] * (if P x then 1 else 0)`. -/
 theorem prob_tsum_form_singleton {α : Type} (D : PMF α) (P : α → Prop) [DecidablePred P] :
@@ -116,6 +117,15 @@ theorem prob_uniform_eq_card_filter_div_card {F : Type} [Fintype F] [Nonempty F]
     -- ⊢ P x ∧ P x ↔ P x
     rw [and_self_iff]
   rw [h_card_eq]
+
+/-- The probability that a property `P` holds for a uniformly random `r : F` in a field `F` equals
+`ENNReal.ofReal` of the real-valued density `|{x : F // P x}| / |F|`. -/
+theorem prob_uniform_eq_ofReal {F : Type} [Fintype F] [Field F] (P : F → Prop) [DecidablePred P] :
+    Pr_{let r ←$ᵖ F}[P r] = ENNReal.ofReal
+                    (((Finset.filter (α := F) P Finset.univ).card : ℝ) / (Fintype.card F : ℝ)) := by
+  convert prob_uniform_eq_card_filter_div_card P using 1
+  rw [ENNReal.ofReal_div_of_pos] <;> norm_num
+  exact Fintype.card_pos
 
 lemma Fintype.card_fun_fin_one_eq {F : Type} [Fintype F] [Nonempty F] :
     Fintype.card (Fin 1 → F) = Fintype.card F := by
