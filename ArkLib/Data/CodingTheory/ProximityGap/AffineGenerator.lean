@@ -8,16 +8,14 @@ import ArkLib.Data.CodingTheory.ProximityGap.ProximityGenerators
 import ArkLib.Data.CodingTheory.ProximityGap.MCAGenerator
 import Mathlib
 import ArkLib.Data.CodingTheory.ProximityGap.AffineGenHelperLemmas
+import ArkLib.Data.Probability.Instances
 
 
 /-!
-# Proximity Generators fundamental definitions
+## Main Results
 
-Define the fundamental concepts for different types of generators functions used in coding theory.
-
-## Main Definitions
-
--
+- Lemma 7.1. [BCGM25]: Mutual correlated agreement (MCA) for the affine line generator implies
+MCA for the affine space generator.
 
 ## References
 
@@ -31,42 +29,12 @@ open scoped ProbabilityTheory NNReal ENNReal
 
 variable {ι : Type} [Fintype ι]
          {F : Type} [Field F] [Fintype F]
-        --  {ℓ ℓ' : Type} [Fintype ℓ] [Fintype ℓ']
-        --  {S : Type} [Fintype S]
 
 
-/-
-The uniform probability of `P` as an `ENNReal.ofReal` of the real density.
--/
-theorem prob_uniform_eq_ofReal {F : Type} [Fintype F] [Nonempty F]
-    (P : F → Prop) [DecidablePred P] :
-    Pr_{ let r ←$ᵖ F }[ P r ] =
-      ENNReal.ofReal (((Finset.filter (α := F) P Finset.univ).card : ℝ) / (Fintype.card F : ℝ)) := by
-  convert prob_uniform_eq_card_filter_div_card P using 1;
-  rw [ ENNReal.ofReal_div_of_pos ] <;> norm_num;
-
-
--- /-- Lemma 7.1. in [BCGM25]. -/
--- theorem AffineLine_MCA_AffineSpaceMCA {ℓ : ℕ} (hℓ : ℓ ≥ 2) (ε_mca : I → ℝ) (LC : LinearCode ι F)
--- (hGMCA : IsMCAGenerator (AffineLineGenerator F) ε_mca LC) :
---   let a := (1 - 1 / Fintype.card F : ℝ)
---   let ε_mca' := a • ε_mca
---   IsMCAGenerator (AffineSpaceGenerator F ℓ) ε_mca' LC := by sorry
-
-/-- Lemma 7.1. in [BCGM25].
+/-- Lemma 7.1. [BCGM25].
 The affine line generator `F → F²`, `x ↦ (1, x)`, having MCA error `ε_mca` for `LC` implies that
 the affine space generator `Fˡ → Fˡ⁺¹`, `x ↦ (1, x)`, has MCA for `LC` with error
-`(1 - 1/|F|)⁻¹ • ε_mca`.
-Note on the statement: the original Lean draft wrote the new error as `a • ε_mca` with
-`a := 1 - 1/|F|`.  The reference [BCGM25, Lemma 7.1] gives the error as
-`ε_mca · (1 - 1/|F|)⁻¹`, i.e. `a⁻¹ • ε_mca`.  Since `a ≤ 1`, the factor must enlarge (not shrink)
-the error bound for the larger affine-space generator, so `a • ε_mca` was an inversion typo.
-We therefore prove the corrected statement `a⁻¹ • ε_mca`.
-The original draft statement was (note the conclusion `let ε_mca' := a • ε_mca`):
-```
-  ```
-Since `a ≤ 1`, that draft claims the affine-space generator has a *smaller* error than the affine
-line generator, which is false (adding codewords only makes the MCA event easier). -/
+`(1 - 1/|F|)⁻¹ • ε_mca`. -/
 theorem AffineLine_MCA_AffineSpaceMCA {ℓ : ℕ} (hℓ : ℓ ≥ 2) (ε_mca : I → ℝ) (LC : LinearCode ι F)
     (hGMCA : IsMCAGenerator (AffineLineGenerator F) ε_mca LC) :
     let a := (1 - 1 / Fintype.card F : ℝ)
@@ -82,15 +50,12 @@ theorem AffineLine_MCA_AffineSpaceMCA {ℓ : ℕ} (hℓ : ℓ ≥ 2) (ε_mca : I
     rw [ha_def, sub_pos, div_lt_one (by linarith)]
     linarith
   have hs : 1 ≤ ℓ := by omega
-  -- Rewrite the affine-space probability as a real density.
   rw [prob_uniform_eq_ofReal]
   have hcard : (Fintype.card (Fin ℓ → F) : ℝ) = (Fintype.card F : ℝ) ^ ℓ := by
     norm_cast
     rw [Fintype.card_fun, Fintype.card_fin]
   rw [hcard]
-  -- Simplify the right-hand error.
   simp only [Pi.smul_apply, smul_eq_mul]
-  -- Obtain the line bound and the affine-line MCA hypothesis.
   obtain ⟨W, hW⟩ := AffineMCA.exists_line_bound hs LC U γ
   rw [← ha_def] at hW
   have hline := hGMCA W γ

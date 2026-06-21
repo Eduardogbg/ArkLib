@@ -118,15 +118,6 @@ theorem prob_uniform_eq_card_filter_div_card {F : Type} [Fintype F] [Nonempty F]
     rw [and_self_iff]
   rw [h_card_eq]
 
-/-- The probability that a property `P` holds for a uniformly random `r : F` in a field `F` equals
-`ENNReal.ofReal` of the real-valued density `|{x : F // P x}| / |F|`. -/
-theorem prob_uniform_eq_ofReal {F : Type} [Fintype F] [Field F] (P : F → Prop) [DecidablePred P] :
-    Pr_{let r ←$ᵖ F}[P r] = ENNReal.ofReal
-                    (((Finset.filter (α := F) P Finset.univ).card : ℝ) / (Fintype.card F : ℝ)) := by
-  convert prob_uniform_eq_card_filter_div_card P using 1
-  rw [ENNReal.ofReal_div_of_pos] <;> norm_num
-  exact Fintype.card_pos
-
 lemma Fintype.card_fun_fin_one_eq {F : Type} [Fintype F] [Nonempty F] :
     Fintype.card (Fin 1 → F) = Fintype.card F := by
   rw [Fintype.card_fun]
@@ -230,6 +221,22 @@ theorem do_two_uniform_sampling_eq_uniform_prod {α β : Type} [Fintype α] [Fin
     intro i h_ne
     simp only [ite_eq_right_iff, one_ne_zero, imp_false]
     exact id (Ne.symm h_ne)
+
+section
+
+/-- The probability that a property `P` holds for a uniformly random `r : F` equals
+`ENNReal.ofReal` of the real-valued density `|{x : F // P x}| / |F|`. This is the
+`ENNReal.ofReal`-of-a-real-number form of `prob_uniform_eq_card_filter_div_card`, useful when the
+surrounding goal is stated over `ℝ` rather than `ℝ≥0`. -/
+theorem prob_uniform_eq_ofReal {F : Type} [Fintype F] [Nonempty F]
+   (P : F → Prop) [DecidablePred P] :
+    Pr_{let r ←$ᵖ F}[P r] = ENNReal.ofReal
+                    (((Finset.filter (α := F) P Finset.univ).card : ℝ) / (Fintype.card F : ℝ)) := by
+  convert prob_uniform_eq_card_filter_div_card P using 1
+  rw [ENNReal.ofReal_div_of_pos] <;> norm_num
+  exact Fintype.card_pos
+
+end
 
 /--
 **Generic Probability Splitting Lemma (via Equivalence)**

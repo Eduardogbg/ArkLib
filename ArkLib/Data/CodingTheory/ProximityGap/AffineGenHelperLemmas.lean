@@ -26,7 +26,7 @@ open CoreDefinitions LinearCode
 namespace AffineMCA
 
 variable {ι : Type}
-          {F : Type} [Field F]
+         {F : Type} [Field F]
 
 
 /-- The affine-space combination of codewords `U` at seed `x`:
