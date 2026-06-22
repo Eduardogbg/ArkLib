@@ -186,10 +186,18 @@ paper's worked example).
 
 | Anchor | `bits` | Basis |
 |---|---|---|
-| `frsLowerBound : SecurityLowerBound koalaFRS` | **29.11** | §6.3.2 τ-subspace-design analysis, `tab:subspace-design-security-analysis`, `s = 2^5`, `r = 8` (`τ(r) = s·ρ/(s−r+1)`) |
-| `frsUpperBound_attack : SecurityUpperBound koalaFRS` | **128.01** | δ-sweep floor from the spot-check term alone: `⨅_δ (1−δ)^128 ≥ (1−δ_min)^128 ≈ 2^(−128.006)`, with the folded **MDS** relative distance `δ_min = 32769/65536 ≈ 0.50002`; rounds up to `128.01`. (Stronger and *less owed* than the paper's per-`δ*` Elias point reading `2^(−127.63) = (1−0.499)^128` — that is not the sweep floor; owed here is only the folded distance lemma, not a list-size bound.) |
+| `frsLowerBound : SecurityLowerBound koalaFRS` | **29.10** | §6.3.2 τ-subspace-design analysis, `tab:subspace-design-security-analysis`, `s = 2^5`, `r = 8` (`τ(r) = s·ρ/(s−r+1)`), at `δ = 7/48`. Now a **full reduction**: spot-check `(41/48)^128 ≤ 2^(−29)·(116/125)` (`koalaFRS_spotcheck`, integer fact `41^128·2^29·125 ≤ 116·48^128`) + the L6.10 bridge to `ε_mca + |Λ|/|F|` (one owed external admit), summed `≤ 2^(−29)·(933/1000) ≤ 2^(−29.10)` (`koalaFRS_combine`, integer fact `2·933^10 ≤ 10^30`). |
+| `frsUpperBound_attack : SecurityUpperBound koalaFRS` | **128.01** | δ-sweep floor from the spot-check term alone: `⨅_δ (1−δ)^128 ≥ (1−δ_min)^128 ≈ 2^(−128.006)`, with the folded **MDS** relative distance `δ_min = 32769/65536 ≈ 0.50002`; rounds up to `128.01`. Now a **full reduction** via `le_bestProvableError` (drop the nonnegative `winningSetSoundness` term, floor `(1−δ)^128 ≥ (32767/65536)^128 ≥ 2^(−128.01)` by `koalaFRS_spotcheck_lb`, integer fact `256^100 ≤ 2·255^100`); the **only** owed external is the folded distance `koalaFRS_minRelDist`. (Stronger and *less owed* than the paper's per-`δ*` Elias point reading `2^(−127.63) = (1−0.499)^128` — that is not the sweep floor; no list-size bound enters.) |
 
-so `securityGap_koalaFRS = 128.01 − 29.11 = 98.90`.
+so `securityGap_koalaFRS = 128.01 − 29.10 = 98.91`.
+
+> **Round-down correction (`29.11 → 29.10`).** The spot-check term at the `r = 8`
+> operating point is `(τ(9)+3/(2·8))^128 = (41/48)^128 = 2^(−29.1085)` *exactly*,
+> and the convex combination always dominates it, so the strict provable ceiling
+> is `2^(−29.1085)`. An honest **lower** bound must round the magnitude **down**:
+> `29.10`, not the table's display-rounded `29.11` (`2^(−29.1085) > 2^(−29.11)`,
+> so `29.11` is unprovable). This is the same discipline as the interleaved anchor
+> (`64 → 63.99`); the gap is correspondingly `98.91`, not `98.90`.
 
 - **Reading the gap honestly.** At a *fixed* `t = 128`, `s = 32` folding gives a
   *wider* gap than interleaving (`53.01`) — and for `s ≤ 2^4` *no* soundness is
@@ -199,9 +207,16 @@ so `securityGap_koalaFRS = 128.01 − 29.11 = 98.90`.
   enforced 128-bit security** (`s = 2^5` reaches `2^(-128.03)` at repetition
   `t = 563`, `r = 8`, `417.9 KiB`, `tab:subspace-design-128bit-security`), the
   metric on which folding genuinely beats interleaving.
-- **Owed (cited, not fabricated).** The two anchor numerics are external
-  coding-theory results (τ-subspace-design list-decodability / Elias lower bound)
-  read from the paper's tables. `koalaFRSEnc_injective` is owed structurally:
+- **Owed (cited, not fabricated).** Both anchors are now **full reductions** down
+  to named externals (matching the `koalaIRS` anchors), not opaque sorries. The
+  upper anchor owes a *single* external — the folded-Singleton distance
+  `koalaFRS_minRelDist` (`δ_min = 32769/65536`; path (b): admitted because
+  `ReedSolomon.Folded` has no minimum-distance lemma and the count rests on GR08
+  admissibility of `koalaFoldω`). The lower anchor owes the τ-subspace-design
+  `ε_mca` term (`≈ 2^(−166.8)` actual, capped `≤ 2^(−29)·(1/200)`), the FRS
+  counterpart of the `koalaIRS` owed `ε_mca`. The spot-check integer leaves
+  (`koalaFRS_spotcheck`, `koalaFRS_spotcheck_lb`, `koalaFRS_combine`) are
+  **sorry-free**. `koalaFRSEnc_injective` is owed structurally:
   there is no in-tree `Admissible → injective` bridge for `frsEvalOnPoints`
   (`dim_frsCode` takes injectivity as a hypothesis), and concrete GR08
   admissibility needs multiplicative-order facts over the noncomputable
