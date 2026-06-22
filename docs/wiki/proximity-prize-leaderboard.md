@@ -264,7 +264,7 @@ so `securityGap_koalaFRS12 = 128.75 − 118.13 = 10.62` — versus **`98.91` at
   soundness), which is exactly why the `s = 32` `98.91`-bit gap is irreducible —
   a folding-size limit, **not** a missing-citation. (The GG25 *capacity corollary*
   `frs_epsMCA_capacity_gg25`, regime `s > 16/η²`, does not apply here either: at
-  the `r = 108` point `η = 1/2 − δ ≈ 0.027` needs `s > 21277 > 4096` — the paper's
+  the `r = 108` point `η = 1/2 − δ = 1969/71784 ≈ 0.0274` needs `s > 16/η² ≈ 21266 > 4096` — the paper's
   bound is the τ-subspace-design MCA estimate, not the capacity corollary.)
 - **Owed (cited, not fabricated).** Identical full-reduction shape to `koalaFRS`:
   the three integer leaves are **sorry-free** (`#print axioms = [propext,
