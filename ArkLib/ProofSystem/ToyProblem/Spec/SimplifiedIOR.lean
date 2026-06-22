@@ -40,17 +40,15 @@ Outputs:
 The new instance lies in `R̃¹_{C,δ}` iff the original lay in
 `R̃²_{C,δ}` (up to the soundness error of L6.10).
 
-## Alphabet restriction (`s = 1`)
+## Codeword alphabet `A` (folding-generic)
 
-As in `Spec/General.lean`: the paper's inputs are `f : [n] → F^s` for a
-folding parameter `s` (the §6.3 tables sweep `s = 2^0, …, 2^12`), while
-this formalization fixes `s = 1` (words `ι → F`). This is a genuine
-scope restriction — reindexing `ι := [n] × [s]` does not recover the
-general case because the relative Hamming metric over the alphabet
-`F^s` differs from the metric over `F` on the flattened index set. The
-§6.3 `s`-sweep needs the `F^s` generalization (Phase-5 `Impl/FRS`); the
-`s = 2^0` table rows keep the current form non-vacuous for the prize
-regime.
+As in `Spec/General.lean`: generic over the codeword alphabet `A` (an
+`F`-module), with `A = F` the scalar `s = 1` interleaved case
+(`Impl/IRS.lean`) and `A = Fin s → F` the genuine `s > 1` folded case
+(`Impl/FRS.lean`). The relative Hamming metric is over `A` (one symbol =
+one `A`-coordinate), the right folded metric — `ι := [n] × [s]` over a
+scalar alphabet would not recover it. The challenge `γ` and constraints
+stay scalar; the combined output oracle is `f₁ + γ • f₂` over `A`.
 
 ## References
 

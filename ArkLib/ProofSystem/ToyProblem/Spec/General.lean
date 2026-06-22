@@ -88,19 +88,21 @@ How each step of Construction 6.2 lands on an ArkLib / VCV-io primitive:
   complexity (`2t + 1`) is documented, not enforced
   (`OracleVerifier.numQueries` is upstream-sorried).
 
-## Alphabet restriction (`s = 1`)
+## Codeword alphabet `A` (folding-generic)
 
 The paper's Construction 6.1/6.2 inputs are `f : [n] → F^s` for a folding
 parameter `s` (and the §6.3 tables sweep `s = 2^0, …, 2^12`). This
-formalization fixes `s = 1`: words are `ι → F`, not `ι → F^s`. This is a
-genuine scope restriction, not mere notational choice — reindexing
-`ι := [n] × [s]` does **not** recover the general case, because the
-relative Hamming metric over the alphabet `F^s` (one symbol = one
-`F^s`-coordinate) differs from the metric over `F` on the flattened
-index set. The §6.3 `s`-sweep therefore needs the `F^s` generalization,
-planned for Phase-5 `Impl/FRS`. The `s = 2^0` rows of the paper's tables
-fall squarely inside the current form, so the `s = 1` formalization is
-non-vacuous for the prize regime.
+formalization is generic over the codeword alphabet `A` (an `F`-module):
+words are `ι → A`, with `A = F` the scalar `s = 1` interleaved case
+(`Impl/IRS.lean`) and `A = Fin s → F` the genuine `s > 1` folded case
+(`Impl/FRS.lean`, e.g. `s = 2^5`). The relative Hamming metric is over `A`
+(one symbol = one `A`-coordinate), which is exactly the right folded metric —
+reindexing `ι := [n] × [s]` over a scalar alphabet would **not** recover it,
+hence the genuine `F`-module `A` rather than a flattened index set. The
+challenge `γ`, constraint vector `v`, and constraint values `μ` stay scalar
+(`F`); only the codeword values and the encoder `(Fin k → F) →ₗ[F] (ι → A)`
+range over `A`. Combination of codeword values is the module action
+`f₀ + γ • f₁` (it specializes to `f₀ + γ · f₁` when `A = F`).
 
 ## References
 
