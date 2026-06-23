@@ -226,15 +226,19 @@ so `securityGap_koalaFRS = 128.01 − 29.10 = 98.91`.
   `koalaFRSDomain j = γ^(s·j)` (the §6.3 "common case" smooth coset), replacing the
   earlier additive `{1,…,2^n}` placeholder — whose `Admissible` was in fact
   *provably false* (`1·7 = 7 ∈ L`). Domain injectivity, `(L,s)`-admissibility, encoder
-  injectivity, and the folded distance for **both** rows all reduce to a **single
-  shared owed witness** `koalaFRSγ_exists : ∃ γ, γ ≠ 0 ∧ 2^21 ≤ orderOf γ` — a
-  *verifiably true* fact (KoalaBear's `q − 1 = 2^24·127`, so 𝔽_q ⊆ KoalaSextic has
-  an element of order `2^24 ≥ 2^21`), owed only because multiplicative-order facts
-  over the noncomputable `GaloisField` are not yet `sorry`-free (Tier 2: the
-  `UInt32^6` field-model lift). The spot-check integer leaves remain sorry-free. The
-  lower anchor *additionally* owes the τ-subspace-design `ε_mca` term
-  (`≈ 2^(−166.8)` actual, capped `≤ 2^(−29)·(1/200)`), the FRS counterpart of the
-  `koalaIRS` owed `ε_mca` — the **only** by-design coding-theory admit left.
+  injectivity, and the folded distance for **both** rows all reduce to the single
+  witness `koalaFRSγ_exists : ∃ γ, γ ≠ 0 ∧ 2^21 ≤ orderOf γ` — which is now itself
+  **proven `sorry`-free, abstractly** (no `UInt32^6` field-model lift needed): `Kˣ`
+  is cyclic of order `q^6 − 1`, and `2^21 ∣ q − 1 = 2^24·127 ∣ q^6 − 1`, so a
+  generator power has order exactly `2^21`. **Consequently the entire structural
+  chain is axiom-clean** — `koalaFRSEnc_injective`, `koalaFRS_minRelDist`, the
+  admissibility lemmas, *and both* `frsUpperBound_attack` anchors are now
+  `#print axioms = [propext, Classical.choice, Quot.sound]` (zero `sorryAx`; the
+  whole **attack/Y side owes nothing**). The spot-check integer leaves stay
+  sorry-free. The **only** remaining owed external is the τ-subspace-design `ε_mca`
+  term in the *lower* anchor (`frsLowerBound`, `≈ 2^(−166.8)` actual, capped
+  `≤ 2^(−29)·(1/200)`) — the by-design coding-theory admit, the FRS counterpart of
+  the `koalaIRS` owed `ε_mca`.
 - **Protocol-reduction status (DONE).** The `koalaFRS` leaderboard entry only
   needs the alphabet-generic soundness layer, but the protocol *reduction* layer
   is now generalized to folded codewords too (Stage 1, 2026-06-22): `Spec/General.lean`,
@@ -281,11 +285,11 @@ so `securityGap_koalaFRS12 = 128.75 − 118.13 = 10.62` — versus **`98.91` at
   and `koalaFRS12_minRelDist` (`= 257/512`) are now full `sorry`-free derivations
   through the **same** two `Folded.lean` bridges, on the coset domain
   `koalaFRS12Domain j = γ^(2^12·j)` with the **same** `γ` (each row needs only
-  `orderOf γ ≥ s·|L| = 2^21`). So both rows' structural owes collapse to the *single*
-  shared witness `koalaFRSγ_exists`. The three integer leaves stay sorry-free; the
+  `orderOf γ ≥ s·|L| = 2^21`). Both rows share the now-**proven** `koalaFRSγ_exists`,
+  so `koalaFRS12Enc_injective`, `koalaFRS12_minRelDist`, and `frsUpperBound_attack12`
+  are fully axiom-clean (no `sorryAx`). The three integer leaves stay sorry-free; the
   lower anchor's only remaining by-design admit is the τ-subspace-design `ε_mca`
-  (here at `r = 108`, the same admit family as `frsLowerBound`). `#print axioms`
-  adds only `sorryAx`, all tracing to those two named externals.
+  (here at `r = 108`, the same admit family as `frsLowerBound`).
 
 ## Connection to the grand challenges (Phase 1)
 

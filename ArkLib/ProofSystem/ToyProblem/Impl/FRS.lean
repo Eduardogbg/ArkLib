@@ -75,13 +75,17 @@ axis** the toy `bestProvableError` (a fixed-`t` δ-sweep) does not capture:
   argument size `417.9 KiB` (`tab:subspace-design-128bit-security`), the metric
   on which folding genuinely beats interleaving.
 
-Both anchors are **full reductions** down to named externals (the sorry-free
-integer spot-check leaves `koalaFRS_spotcheck` / `koalaFRS_spotcheck_lb` /
-`koalaFRS_combine` plus the proven L6.10 bridge), matching the `koalaIRS` anchors.
-The attack ceiling owes a *single* external — the folded MDS relative distance
-`koalaFRS_minRelDist` (`δ_min = 32769/65536`); the provable bound owes the
-τ-subspace-design `ε_mca` term, the FRS counterpart of the `koalaIRS` owed `ε_mca`
-(see `frsLowerBound` / `frsUpperBound_attack`).
+Both anchors are **full reductions** (the sorry-free integer spot-check leaves
+`koalaFRS_spotcheck` / `koalaFRS_spotcheck_lb` / `koalaFRS_combine` plus the proven
+L6.10 bridge), matching the `koalaIRS` anchors. **Track B (2026-06-23) closed the
+structural side entirely:** the folded MDS distance `koalaFRS_minRelDist`
+(`δ_min = 32769/65536`) and encoder injectivity are now proven `sorry`-free via the
+new `ReedSolomon/Folded.lean` bridges (`frsEvalOnPoints_domRestrict_injective`,
+`minDist_frsCode`) on a genuine multiplicative-coset domain, resting on the
+proven order witness `koalaFRSγ_exists` — so the **attack ceiling owes nothing**
+(`frsUpperBound_attack` is fully axiom-clean). The *only* remaining owed external is
+the provable bound's τ-subspace-design `ε_mca` term, the FRS counterpart of the
+`koalaIRS` owed `ε_mca` (see `frsLowerBound`).
 
 ## References
 
@@ -96,27 +100,52 @@ namespace Impl.FRS
 open scoped NNReal ENNReal
 open Polynomial ReedSolomon.Folded Code
 
-/-- **Owed structural external (Tier 2): a high-order field element.** There exists
-`γ : KoalaSextic` with `γ ≠ 0` and multiplicative order at least `2^21`. This is a
-*true* fact — KoalaBear's prime `q = 2^31 - 2^24 + 1` has `2^24 | q - 1`, so the
-multiplicative group of `KoalaSextic = 𝔽_{q^6}` (order `q^6 - 1`, divisible by `q - 1`)
-contains an element of order `2^24 ≥ 2^21`. It is owed *only* because
-multiplicative-order facts over the **noncomputable** `GaloisField KoalaBear.fieldSize 6`
-are not available `sorry`-free here (they need the `UInt32^6` field-model lift — the
-multiplicative analogue of the additive `CharP.natCast_injOn_Iio` distinctness behind the
-original `koalaDomain`).
+/-- **A high-order field element (proven, `sorry`-free).** There exists `γ : KoalaSextic`
+with `γ ≠ 0` and multiplicative order at least `2^21`. KoalaBear's prime
+`q = 2^31 - 2^24 + 1` has `2^24 | q - 1`, so the multiplicative group of
+`KoalaSextic = 𝔽_{q^6}` (cyclic of order `q^6 - 1`, divisible by `q - 1`) contains an
+element of order exactly `2^21`. The proof is pure finite-group theory plus `ℕ`
+arithmetic: a generator of `KoalaSexticˣ` has order `q^6 - 1`, and the power
+`g ^ ((q^6 - 1) / 2^21)` has order `2^21` (`orderOf_pow'` + `Nat.div_div_self`); its unit
+coercion is the witness. No computation in the noncomputable field is needed.
 
-**This single fact is the only owed external behind both genuine multiplicative-coset FRS
+**This single fact is the structural keystone behind both genuine multiplicative-coset FRS
 rows.** From it, domain injectivity, `(L, s)`-admissibility (`koalaFRSDomain_admissible` /
 `koalaFRS12Domain_admissible`), encoder injectivity (`koalaFRSEnc_injective` /
 `koalaFRS12Enc_injective`), and the folded minimum distance (`koalaFRS_minRelDist` /
 `koalaFRS12_minRelDist`) all derive `sorry`-free. Both `s = 32` and `s = 2^12` use the
 *same* `γ` (each needs only order `≥ s · |L| = 2^21`). -/
 theorem koalaFRSγ_exists : ∃ γ : KoalaSextic, γ ≠ 0 ∧ 2 ^ 21 ≤ orderOf γ := by
-  -- TIER 2 (owed): the multiplicative order of a concrete element over the
-  -- noncomputable `GaloisField KoalaBear.fieldSize 6`. True (`2^24 | q - 1`); needs the
-  -- `UInt32^6` field-model lift to discharge `sorry`-free. Phase-5/external.
-  sorry
+  -- Abstract group theory: the multiplicative group `KoalaSexticˣ` of the finite field
+  -- `𝔽_{q^6}` is cyclic of order `q^6 - 1`. Since `q - 1 = 2^24 · 127` and
+  -- `(q - 1) ∣ (q^6 - 1)`, we have `2^21 ∣ q^6 - 1`, so a generator's appropriate power
+  -- has order exactly `2^21`; its unit coercion is the desired nonzero element.
+  classical
+  haveI : Fintype KoalaSextic := Fintype.ofFinite _
+  obtain ⟨g, hg⟩ := IsCyclic.exists_generator (α := KoalaSexticˣ)
+  set n : ℕ := orderOf g with hn_def
+  have hcardK : Fintype.card KoalaSextic = KoalaBear.fieldSize ^ 6 := by
+    rw [← Nat.card_eq_fintype_card]; exact koalaSextic_card
+  -- A generator's order is the cardinality of the unit group, `q^6 - 1`.
+  have hg_ord : n = KoalaBear.fieldSize ^ 6 - 1 := by
+    have h1 : orderOf g = Nat.card KoalaSexticˣ :=
+      orderOf_eq_card_of_forall_mem_zpowers hg
+    rw [hn_def, h1, Nat.card_eq_fintype_card, Fintype.card_units, hcardK]
+  -- `2^21 ∣ q - 1` (concretely `q - 1 = 2^21 · 1016`) and `(q - 1) ∣ (q^6 - 1)`.
+  have hdvd_q : (2 ^ 21 : ℕ) ∣ KoalaBear.fieldSize - 1 := by
+    norm_num [KoalaBear.fieldSize]
+  have hdvd_pow : (KoalaBear.fieldSize - 1) ∣ (KoalaBear.fieldSize ^ 6 - 1) := by
+    simpa using Nat.sub_one_dvd_pow_sub_one KoalaBear.fieldSize 6
+  have hdvd : (2 ^ 21 : ℕ) ∣ n := by rw [hg_ord]; exact hdvd_q.trans hdvd_pow
+  have hn_pos : n ≠ 0 := by rw [hg_ord]; norm_num [KoalaBear.fieldSize]
+  -- `u := g ^ (n / 2^21)` has order `n / gcd(n, n/2^21) = n / (n/2^21) = 2^21`.
+  refine ⟨(g ^ (n / 2 ^ 21) : KoalaSexticˣ), Units.ne_zero _, ?_⟩
+  rw [orderOf_units]
+  have hm_ne : n / 2 ^ 21 ≠ 0 := by
+    have := Nat.div_pos (Nat.le_of_dvd (Nat.pos_of_ne_zero hn_pos) hdvd) (by norm_num)
+    omega
+  rw [orderOf_pow' g hm_ne, ← hn_def, Nat.gcd_eq_right (Nat.div_dvd_of_dvd hdvd),
+    Nat.div_div_self hdvd hn_pos]
 
 /-- The shared high-order generator `γ` of `koalaFRSγ_exists`. -/
 noncomputable def koalaFRSγ : KoalaSextic := koalaFRSγ_exists.choose
@@ -159,7 +188,7 @@ open Classical in
 /-- **`(L, 32)`-admissibility of the coset domain.** The `32 · 2^16 = 2^21` folded points
 `γ^(32·a) · γ^i = γ^(32·a + i)` are pairwise distinct because all exponents lie below
 `2^21 ≤ orderOf γ`: both `Admissible` conjuncts reduce, via `koalaFRSγ_pow_left_inj`, to
-`ℕ`-arithmetic facts about `32·a + i` (`omega`). Derives `sorry`-free from the single owed
+`ℕ`-arithmetic facts about `32·a + i` (`omega`). Derives `sorry`-free from the (now-proven)
 order bound `koalaFRSγ_order`. -/
 lemma koalaFRSDomain_admissible :
     ReedSolomon.Folded.Admissible (Finset.univ.map koalaFRSDomain) 32 koalaFoldω := by
@@ -212,8 +241,8 @@ intra-orbit clause fails at `0`; see `koalaFRSDomain`).
 bridge that `dim_frsCode`'s `h_encoder_inj` hypothesis was waiting for): the encoder is
 `(injective domRestrict) ∘ (injective degreeLTEquiv.symm)`. The `domRestrict` injectivity
 consumes `koalaFRSDomain_admissible`, `koalaFRSγ_ne_zero`, and `k = 2^20 ≤ 32 · 2^16 =
-2^21 = s · |ι|`. The sole remaining owed external is the single order bound
-`koalaFRSγ_exists` flowing in through admissibility. -/
+2^21 = s · |ι|`. **Fully axiom-clean** (`[propext, Classical.choice, Quot.sound]`): the
+order witness `koalaFRSγ_exists` it rests on is itself proven (abstract cyclicity). -/
 theorem koalaFRSEnc_injective : Function.Injective koalaFRSEnc := by
   haveI : NeZero (2 ^ 20 : ℕ) := ⟨by norm_num⟩
   simp only [koalaFRSEnc, LinearMap.coe_comp, LinearEquiv.coe_toLinearMap]
@@ -340,9 +369,9 @@ distance for `FRS[F, L, 2^20, 32, ω]`: a nonzero degree-`< 2^20` polynomial has
 roots, so it vanishes on `≤ ⌊(2^20-1)/32⌋ = 32767` *whole* folded symbols, hence the folded
 Hamming distance is `D = |L| − 32767 = 65536 − 32767 = 32769` and `δ_min = D/|L| =
 32769/65536`. Via `koalaFRSEnc_range` (the code *is* `frsCode`), `minDist_frsCode`, and the
-absolute→relative bridge `minDist_div_card_eq_minRelHammingDistCode`. The sole remaining owed
-external is the single order bound `koalaFRSγ_exists`, flowing in through
-`koalaFRSDomain_admissible`. -/
+absolute→relative bridge `minDist_div_card_eq_minRelHammingDistCode`. **Fully axiom-clean**
+(`[propext, Classical.choice, Quot.sound]`): the order witness `koalaFRSγ_exists` reached
+through `koalaFRSDomain_admissible` is itself proven (abstract cyclicity). -/
 theorem koalaFRS_minRelDist :
     minRelHammingDistCode koalaFRS.code = (32769 / 65536 : ℚ≥0) := by
   haveI : Nonempty koalaFRS.ι := inferInstanceAs (Nonempty (Fin (2 ^ 16)))
@@ -446,8 +475,8 @@ theorem koalaFRS_combine :
 /-- **Folded-RS provable lower bound (`29.10` bits) at the KoalaBear/`s=32`/`t=128`
 point.** Cites the §6.3.2 subspace-design analysis
 (`tab:subspace-design-security-analysis`, `s = 2^5`, minimizing `r = 8`). As with
-`arklib_lowerBound_irs_t128`, the proof is a **full formalized derivation down to
-named owed externals** (no longer an opaque `sorry`):
+`arklib_lowerBound_irs_t128`, the proof is a **full formalized derivation down to a
+single named owed external** (no longer an opaque `sorry`):
 
 1. **Pick `δ := 7/48`** — the `r = 8` τ-subspace-design operating point (`τ(r+1) =
    τ(9) = s·ρ/(s−r+1) = 32·(1/2)/(32−9+1) = 2/3`, spot-check `1−δ = τ(9)+3/(2r) =
@@ -471,8 +500,9 @@ discipline as the interleaved anchor (`64 → 63.99`); the earlier opaque `sorry
 quoted the table's 2-dp magnitude `29.11`, which is unprovable as a strict bound
 (`2^(-29.1085) > 2^(-29.11)`).
 
-**The owed external** (τ-subspace-design `ε_mca`; `koalaFRSEnc_injective` flows in
-through the bridge). Below the folded unique-decoding radius the `ε_mca`/`|Λ|`
+**The single owed external** is the τ-subspace-design `ε_mca` (`koalaFRSEnc_injective`
+now flows in through the bridge as a *proven*, axiom-clean fact, not an owed one).
+Below the folded unique-decoding radius the `ε_mca`/`|Λ|`
 terms are negligible (`≈ 2^(-166.8)`); like every ArkLib `ε_mca` upper bound this
 is a by-design external literature admit (BCHKS25/ACFY25/KKH26 subspace-design
 list-decodability), the FRS counterpart of the `koalaIRS` owed `ε_mca`.
@@ -540,9 +570,11 @@ combination dominates its round-2 spot-check term `(1-δ)^t` (drop the nonnegati
 `winningSetSoundness` term), which is `≥ (1-δ_min)^128` by monotonicity. The folded
 code's **MDS relative distance** `δ_min = 32769/65536` (`koalaFRS_minRelDist`) pins
 `1 - δ > 32767/65536`, and `(32767/65536)^128 ≥ 2^(-128.01)` is the sorry-free leaf
-`koalaFRS_spotcheck_lb`. So the **only owed external is the folded distance** — no
-Elias/list-size lower bound enters (strictly better-owed than the interleaved
-attack `listDecoding_upperBound_attack`, which owes two list-size bounds).
+`koalaFRS_spotcheck_lb`. The folded distance `koalaFRS_minRelDist` is now itself proven
+(via `minDist_frsCode` + the proven `koalaFRSγ_exists`), so this attack anchor is **fully
+axiom-clean** (`[propext, Classical.choice, Quot.sound]`, no `sorryAx`) — the whole Y side
+owes nothing, and no Elias/list-size lower bound enters (strictly stronger than the
+interleaved attack `listDecoding_upperBound_attack`, which owes two list-size bounds).
 
 **Why `128.01`, and stronger than the paper's per-`δ*` reading.** `(1-δ_min)^128 =
 (32767/65536)^128 ≈ 2^(-128.006)`, so the ceiling rounds **up** to `128.01`. The
@@ -550,12 +582,13 @@ attack `listDecoding_upperBound_attack`, which owes two list-size bounds).
 reports `2^(-127.63) = (1-0.499)^128`, the *point* soundness at `δ*` — **not** the
 sweep floor: just above `δ*` the spot-check keeps dropping toward `2^(-128)` at
 `δ_min`, the same sub-band subtlety that forced the interleaved ceiling
-`116.49 → 117`. The owed fact here is a *distance* bound, not a list-size bound. -/
+`116.49 → 117`. The fact pinning the window here is a *distance* bound (now proven via
+`minDist_frsCode`), not a list-size bound — so this anchor is fully axiom-clean. -/
 noncomputable def frsUpperBound_attack : SecurityUpperBound koalaFRS where
   bits := 128.01
   proof := by
     -- Sweep floor from the spot-check term alone, fully formalized **down to the
-    -- owed folded distance** `koalaFRS_minRelDist`. `le_bestProvableError` reduces
+    -- (now-proven) folded distance** `koalaFRS_minRelDist`. `le_bestProvableError` reduces
     -- to a per-δ floor over (0, δ_min = 32769/65536); drop the nonnegative
     -- winningSetSoundness term, then `(1-δ)^128 ≥ (32767/65536)^128 ≥ 2^(-128.01)`
     -- by monotonicity + `koalaFRS_spotcheck_lb`. No Elias/list-size bound needed.
@@ -637,7 +670,7 @@ open Classical in
 /-- **`(L, 2^12)`-admissibility of the `s = 2^12` coset domain.** The `2^12 · 2^9 = 2^21`
 folded points `γ^(2^12·a) · γ^i = γ^(2^12·a + i)` are pairwise distinct, all exponents
 below `2^21 ≤ orderOf γ`; both `Admissible` conjuncts reduce to `ℕ`-arithmetic via
-`koalaFRSγ_pow_left_inj`. Same single owed order bound as `koalaFRSDomain_admissible`. -/
+`koalaFRSγ_pow_left_inj`. Same (now-proven) order bound as `koalaFRSDomain_admissible`. -/
 lemma koalaFRS12Domain_admissible :
     ReedSolomon.Folded.Admissible (Finset.univ.map koalaFRS12Domain) (2 ^ 12) koalaFoldω := by
   refine ⟨?_, ?_⟩
@@ -676,7 +709,8 @@ open Classical in
 `koalaFRSEnc_injective`, now a full `sorry`-free derivation through the in-tree bridge
 `ReedSolomon.Folded.frsEvalOnPoints_domRestrict_injective`, consuming
 `koalaFRS12Domain_admissible`, `koalaFRSγ_ne_zero`, and `k = 2^20 ≤ s·|L| = 2^12·2^9 =
-2^21`. Same single owed order bound (`koalaFRSγ_exists`) as the `s = 32` row. -/
+2^21`. Same (now-proven) shared order witness `koalaFRSγ_exists` as the `s = 32` row;
+fully axiom-clean. -/
 theorem koalaFRS12Enc_injective : Function.Injective koalaFRS12Enc := by
   haveI : NeZero (2 ^ 20 : ℕ) := ⟨by norm_num⟩
   simp only [koalaFRS12Enc, LinearMap.coe_comp, LinearEquiv.coe_toLinearMap]
@@ -734,7 +768,8 @@ derivation through `ReedSolomon.Folded.minDist_frsCode`, exactly as `koalaFRS_mi
 `minRelHammingDistCode koalaFRS12.code = 257/512`, the folded-Singleton distance for
 `FRS[F, L, 2^20, 4096, ω]`: a nonzero degree-`< 2^20` polynomial vanishes on
 `≤ ⌊(2^20−1)/4096⌋ = 255` whole folded symbols, so `D = |L| − 255 = 512 − 255 = 257` and
-`δ_min = 257/512`. Same single owed order bound (`koalaFRSγ_exists`) as the `s = 32` row. -/
+`δ_min = 257/512`. Same (now-proven) shared order witness `koalaFRSγ_exists` as the
+`s = 32` row; fully axiom-clean. -/
 theorem koalaFRS12_minRelDist :
     minRelHammingDistCode koalaFRS12.code = (257 / 512 : ℚ≥0) := by
   haveI : Nonempty koalaFRS12.ι := inferInstanceAs (Nonempty (Fin (2 ^ 9)))
@@ -897,7 +932,8 @@ noncomputable def frsLowerBound12 : SecurityLowerBound koalaFRS12 where
 `frsUpperBound_attack`: `le_bestProvableError` reduces to a per-δ floor over
 `(0, δ_min = 257/512)`; drop the nonnegative `winningSetSoundness` term, then
 `(1−δ)^128 ≥ (255/512)^128 ≥ 2^(-128.75)` by monotonicity + `koalaFRS12_spotcheck_lb`.
-The only owed external is the folded distance `koalaFRS12_minRelDist`.
+The folded distance `koalaFRS12_minRelDist` is itself proven, so this anchor is fully
+axiom-clean (`[propext, Classical.choice, Quot.sound]`).
 
 `(1−δ_min)^128 = (255/512)^128 ≈ 2^(-128.723)`, so the ceiling rounds **up** to
 `128.75` (the `3/4`-granularity needed to keep the sandwich integer-leaf tractable;
