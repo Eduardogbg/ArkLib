@@ -219,6 +219,18 @@ def fsSaltedVerify {Salt : Type} [VCVCompatible Salt]
     (Verifier.singleSaltFiatShamir (Salt := Salt) V).verify stmtIn
       (Fin.cons proof (fun i => i.elim0))
 
+/-- `Verifier.singleSaltFiatShamir`'s `verify` on the length-1 transcript `Fin.cons π 0` is, by
+definition, the bare FS-NARG `verify` map `fsSaltedVerify V x π`.  Bridges the NIV-shaped
+`adaptiveNARG*Exp init impl (Verifier.singleSaltFiatShamir V)` experiments back to the
+`fsSaltedVerify`-shaped §6.1/§6.2 game-match proofs (`simp only [fsSaltedNIV_verify]` after unfolding
+the experiment restores the `fsSaltedVerify`-form goal). -/
+theorem fsSaltedNIV_verify {Salt : Type} [VCVCompatible Salt]
+    (V : Verifier oSpec StmtIn StmtOut pSpec)
+    (x : StmtIn) (π : FSSaltedProof pSpec Salt) :
+    (Verifier.singleSaltFiatShamir (Salt := Salt) V).verify x (Fin.cons π (fun i => i.elim0))
+      = fsSaltedVerify V x π :=
+  rfl
+
 /-- CO25 Theorem 3.18 — Single-salt FS soundness from IP SR-soundness.
 
 If `saltedIPVerifier V` has state-restoration soundness (for `langInSalted langIn`) with error

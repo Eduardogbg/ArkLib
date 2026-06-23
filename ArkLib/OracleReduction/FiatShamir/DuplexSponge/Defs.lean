@@ -1039,7 +1039,7 @@ def runForwardVerifierWide (δ : Nat) (V : Verifier oSpec StmtIn StmtOut pSpec)
 /-- The DSFS NARG verifier `𝒱^{h,p}(𝕩, ·)` packaged as a `NonInteractiveVerifier` over the wide
 sponge spec, whose `verify` on the length-1 transcript is **definitionally** the §5.8 forward
 verifier `runForwardVerifierWide` (i.e. `dsfsNargVerify`-shaped).  This is the NIV consumed by CO25
-Thm 6.1/6.2's `Verifier.adaptiveNARG(Knowledge)Soundness` conclusions.
+Thm 6.1/6.2's `adaptiveNARG(Knowledge)Soundness` conclusions.
 
 NB this is **not** `duplexSpongeFiatShamirSalted δ V`: that one lifts only the transcript-derivation
 sub-computation and runs `V.verify` at the wide spec, so its `verify` is only *propositionally* (not

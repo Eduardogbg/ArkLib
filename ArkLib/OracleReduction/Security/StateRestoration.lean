@@ -170,32 +170,19 @@ namespace Verifier
 
 namespace StateRestoration
 
-/-- The false-acceptance probability of the state-restoration soundness experiment for a *fixed*
-prover `srProver`: sample the challenge function (`init`), run the prover and verifier under the
-handler (`impl` for `oSpec`, `srChallengeQueryImpl'` for the pre-sampled challenge oracle), and ask
-whether the verifier accepts a false statement.  Factored out of `soundness` so coin-bearing and
-downstream game-identifications can name it and instantiate it (e.g. at an extended `oSpec`). -/
-def srExperimentProb
+/-- State-restoration soundness -/
+def soundness
     (langIn : Set StmtIn) (langOut : Set StmtOut)
     (verifier : Verifier oSpec StmtIn StmtOut pSpec)
-    (srProver : Prover.StateRestoration.Soundness oSpec StmtIn pSpec) : ENNReal :=
+    (srSoundnessError : ENNReal) : Prop :=
+  ∀ srProver : Prover.StateRestoration.Soundness oSpec StmtIn pSpec,
   Pr[ fun | ⟨stmtIn, some stmtOut⟩ => stmtOut ∈ langOut ∧ stmtIn ∉ langIn | _ => False
     | do (simulateQ (impl.addLift srChallengeQueryImpl' : QueryImpl _ (StateT _ ProbComp))
         <| (do
     let ⟨transcript, stmtIn⟩ ← srSoundnessGame srProver
     let stmtOut ← liftComp (verifier.run stmtIn transcript) _
     return (stmtIn, stmtOut))).run' (← init)
-  ]
-
-/-- State-restoration soundness: every state-restoration prover's experiment false-acceptance
-probability is bounded by `srSoundnessError`. -/
-def soundness
-    (langIn : Set StmtIn) (langOut : Set StmtOut)
-    (verifier : Verifier oSpec StmtIn StmtOut pSpec)
-    (srSoundnessError : ENNReal) : Prop :=
-  ∀ srProver : Prover.StateRestoration.Soundness oSpec StmtIn pSpec,
-    srExperimentProb (init := init) (impl := impl) langIn langOut verifier srProver
-      ≤ srSoundnessError
+  ] ≤ srSoundnessError
 
 /-- The false-acceptance probability of the coin-bearing SR experiment (Option A) for a *fixed*
 prover `srProver`.  The handler is the standard SR handler `impl.addLift srChallengeQueryImpl'` with
@@ -231,30 +218,6 @@ def soundnessWithCoins {κ : Type} (auxSpec : OracleSpec κ)
     coinSRExperimentProb (init := init) (impl := impl) auxImpl langIn langOut verifier srProver
       ≤ srSoundnessError
 
-/-- The extraction-failure probability of the SR knowledge-soundness experiment for a *fixed*
-extractor `srExtractor` and prover `srProver`: run the prover and verifier, run the extractor on the
-transcript, and ask whether the verifier accepts (`some stmtOut`) into `relOut` while the extracted
-witness misses `relIn`.  Factored out of `knowledgeSoundness` so coin-bearing KS can name it and
-instantiate it at an extended `oSpec` (cf. `srExperimentProb`). -/
-def srKSExperimentProb
-    (srExtractor : Extractor.StateRestoration oSpec StmtIn WitIn WitOut pSpec)
-    (relIn : Set (StmtIn × WitIn)) (relOut : Set (StmtOut × WitOut))
-    (verifier : Verifier oSpec StmtIn StmtOut pSpec)
-    (srProver : Prover.StateRestoration.KnowledgeSoundness oSpec StmtIn WitOut pSpec) : ENNReal :=
-  Pr[ fun | (stmtIn, some witIn, some stmtOut, witOut) =>
-            (stmtOut, witOut) ∈ relOut ∧ (stmtIn, witIn) ∉ relIn
-          | (_, none, some stmtOut, witOut) =>
-            (stmtOut, witOut) ∈ relOut
-          | _ => False
-    | do
-      (simulateQ (impl.addLift srChallengeQueryImpl' : QueryImpl _ (StateT _ ProbComp))
-          <| (do
-            let ⟨transcript, stmtIn, witOut⟩ ← srKnowledgeSoundnessGame srProver
-            let stmtOut ← liftComp (verifier.run stmtIn transcript) _
-            let witInOpt ← liftComp (srExtractor stmtIn witOut transcript default default).run _
-            return (stmtIn, witInOpt, stmtOut, witOut))).run' (← init)
-    ]
-
 /-- State-restoration knowledge soundness (w/ straightline extractor).
 
 The state-restoration extractor returns an `OptionT` computation, so it may fail. We run this
@@ -269,8 +232,19 @@ def knowledgeSoundness
     (srKnowledgeSoundnessError : ENNReal) : Prop :=
   ∃ srExtractor : Extractor.StateRestoration oSpec StmtIn WitIn WitOut pSpec,
   ∀ srProver : Prover.StateRestoration.KnowledgeSoundness oSpec StmtIn WitOut pSpec,
-    srKSExperimentProb (init := init) (impl := impl) srExtractor relIn relOut verifier srProver
-      ≤ srKnowledgeSoundnessError
+    Pr[ fun
+      | ⟨stmtIn, extractedWitIn?, some stmtOut, witOut⟩ =>
+          (∀ extractedWitIn ∈ extractedWitIn?, (stmtIn, extractedWitIn) ∉ relIn) ∧
+            (stmtOut, witOut) ∈ relOut
+      | _ => False
+    | do
+      (simulateQ (impl.addLift srChallengeQueryImpl' : QueryImpl _ (StateT _ ProbComp))
+          <| (do
+            let ⟨transcript, stmtIn, witOut⟩ ← srKnowledgeSoundnessGame srProver
+            let stmtOut ← liftComp (verifier.run stmtIn transcript) _
+            let extractedWitIn? ← liftM (srExtractor stmtIn witOut transcript default default).run
+            return (stmtIn, extractedWitIn?, stmtOut, witOut))).run' (← init)
+    ] ≤ srKnowledgeSoundnessError
 
 /-- Coin-bearing SR knowledge-soundness experiment (Option A) for a *fixed* extractor + coin-prover.
 The prover lives over the Option-A ambient `(oSpec + chal) + auxSpec` (coins answered by `auxImpl`,

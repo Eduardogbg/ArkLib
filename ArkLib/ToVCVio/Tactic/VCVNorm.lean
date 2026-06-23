@@ -44,7 +44,7 @@ the hand-written `logging_strip₂` / `logging_strip₃`.
 
 open Lean Lean.Meta Lean.Elab.Tactic OracleComp OracleSpec
 
-namespace OracleReduction.VCVNorm
+namespace ToVCVio.VCVNorm
 
 universe u v
 
@@ -170,9 +170,9 @@ simproc_decl loggingStrip (Bind.bind _ _) := fun e => do
   let some (rhs, proof) ← mkStripEq e oa cont | return .continue
   return .visit { expr := rhs, proof? := proof }
 
-end OracleReduction.VCVNorm
+end ToVCVio.VCVNorm
 
-open OracleReduction.VCVNorm in
+open ToVCVio.VCVNorm in
 /-! ## The tactics -/
 
 open Lean.Parser.Tactic in
@@ -197,18 +197,18 @@ macro (name := vcvNorm) "vcv_norm" loc:(location)? : tactic =>
         -- OptionT run-level normal form
         OptionT.run_bind, OptionT.run_pure, OptionT.run_map, OptionT.run_mk,
         OptionT.run_monadLift, Option.elimM, Option.elim_some,
-        OracleReduction.VCVNorm.optionT_run_getM, OracleReduction.VCVNorm.optionT_elim_pure_map,
+        ToVCVio.VCVNorm.optionT_run_getM, ToVCVio.VCVNorm.optionT_elim_pure_map,
         -- StateT / WriterT run' normal form
         StateT.run'_map', StateT.run'_bind', StateT.run'_pure', WriterT.run_map',
         -- generic monad glue
         pure_bind, bind_map_left, map_bind, map_pure, Option.map_map, Function.comp_def,
         -- logging value-marginal strip
-        OracleReduction.VCVNorm.loggingStrip] $(loc)?)
+        ToVCVio.VCVNorm.loggingStrip] $(loc)?)
 
 open Lean.Parser.Tactic in
 /-- Strip all unused `loggingOracle` value-marginals reachable in the goal. -/
 macro "vcv_strip_log" loc:(location)? : tactic =>
-  `(tactic| simp only [OracleReduction.VCVNorm.loggingStrip] $(loc)?)
+  `(tactic| simp only [ToVCVio.VCVNorm.loggingStrip] $(loc)?)
 
 /-- Peel a shared `do let s ← init; (simulateQ … ).run' s` prelude from a distribution equality,
 reducing it to the underlying `simulateQ … = simulateQ …` body equality (under `bind_congr`). -/
@@ -224,7 +224,7 @@ macro "vcv_congr" : tactic =>
   `(tactic|
     (repeat' first
       | rfl
-      | refine OracleReduction.VCVNorm.simulateQ_bind_congr _ _ _ _ rfl (fun a => ?_)
+      | refine ToVCVio.VCVNorm.simulateQ_bind_congr _ _ _ _ rfl (fun a => ?_)
       | refine bind_congr (fun a => ?_)))
 
 /-- Umbrella: normalize, then drive congruence. -/
@@ -239,8 +239,8 @@ macro "vcv_simp" : tactic =>
   `(tactic| simp only [
       OptionT.run_bind, Option.elimM, OptionT.run_monadLift, monadLift_eq_self,
       OptionT.run_mk, OptionT.run_pure, pure_bind, bind_map_left, map_bind,
-      Option.elim_some, OracleReduction.VCVNorm.optionT_run_getM,
-      OracleReduction.VCVNorm.optionT_elim_pure_map, map_pure, Option.map_map, Function.comp_def,
+      Option.elim_some, ToVCVio.VCVNorm.optionT_run_getM,
+      ToVCVio.VCVNorm.optionT_elim_pure_map, map_pure, Option.map_map, Function.comp_def,
       simulateQ_bind, simulateQ_pure, simulateQ_map, QueryImpl.simulateQ_compose])
 
 /-- The generic `Pr`-level closing chain of a recipe: rewrite by the distribution equality
