@@ -98,7 +98,9 @@ verifier's `if accepts then pure () else failure` never fails.
 `Quot.sound` only; closed 2026-06-11).** The proof unfolds
 `OracleReduction.perfectCompleteness` through `toReduction`, expands the
 prover's three-round `runToRound` via `Fin.induction_three`, resolves the three
-round directions, and reduces the `Pr[…] = 1` goal to a support-membership
+round directions via the framework per-direction `processRound` unfolds
+(`Prover.processRound_of_dir_eq_{V_to_P,P_to_V}`, `OracleReduction/Execution.lean`),
+and reduces the `Pr[…] = 1` goal to a support-membership
 obligation via `OptionT.probEvent_eq_one_of_simulateQ_support_bind`
 (`ArkLib/ToVCVio/OracleComp/SimSemantics/SimulateQ.lean`). The support
 obligation splits into:
@@ -147,25 +149,20 @@ theorem oracleReduction_perfectCompleteness
   unfold OracleReduction.perfectCompleteness
   rw [Reduction.perfectCompleteness_eq_prob_one]
   intro stmtIn witIn hRel
-  -- Unfold the reduction run, expand the 3-round prover (`Fin.induction_three`),
-  -- and inline the oracle verifier's `toVerifier` wrapper.
+  -- Resolve the three round directions (`V_to_P` / `P_to_V` / `V_to_P`) via the framework-level
+  -- per-direction `processRound` unfolds (`processRound_of_dir_eq_{V_to_P,P_to_V}`) instead of
+  -- three hand-rolled `split`/`absurd` blocks, then unfold the reduction run, the 3-round prover
+  -- (`Fin.induction_three`), and the oracle verifier's `toVerifier` wrapper. (`dir N` is proven by
+  -- `rfl`, not `decide`, since the toy `pSpec`'s type vector carries the free vars `k`/`t`.)
+  have h0 : (pSpec (ι := ι) (F := F) k t).dir 0 = .V_to_P := rfl
+  have h1 : (pSpec (ι := ι) (F := F) k t).dir 1 = .P_to_V := rfl
+  have h2 : (pSpec (ι := ι) (F := F) k t).dir 2 = .V_to_P := rfl
   simp only [OracleReduction.toReduction, Reduction.run, oracleReduction,
     oracleProver, OracleVerifier.toVerifier, oracleVerifier,
-    Prover.run, Prover.runToRound, Fin.induction_three, Prover.processRound,
+    Prover.run, Prover.runToRound, Fin.induction_three,
+    Prover.processRound_of_dir_eq_V_to_P 0 h0, Prover.processRound_of_dir_eq_P_to_V 1 h1,
+    Prover.processRound_of_dir_eq_V_to_P 2 h2,
     Verifier.run, pSpec, bind_pure_comp]
-  -- Resolve round 0 direction (`V_to_P`, the combination randomness `γ`).
-  split <;> rename_i hDir0
-  swap
-  · exact absurd hDir0 (by decide)
-  try simp only [pure_bind, map_pure, Functor.map_map, Function.comp, bind_pure_comp]
-  -- Resolve round 1 direction (`P_to_V`, the prover's claim `g`).
-  split <;> rename_i hDir1
-  · exact absurd hDir1 (by decide)
-  try simp only [pure_bind, map_pure, Functor.map_map, Function.comp, bind_pure_comp]
-  -- Resolve round 2 direction (`V_to_P`, the spot-check positions `xs`).
-  split <;> rename_i hDir2
-  swap
-  · exact absurd hDir2 (by decide)
   -- Reduce `Pr[…] = 1` to a support-membership obligation on the (pre-simulation)
   -- `OracleComp` body via the toolkit lemma, which peels the `(← init)` bind, the
   -- `simulateQ`/`StateT.run'` layers, and the `OptionT.mk` failure bookkeeping.
