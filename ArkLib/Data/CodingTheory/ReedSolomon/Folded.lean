@@ -131,6 +131,80 @@ lemma dim_frsCode {ι : Type} [Fintype ι] [DecidableEq ι]
   rw [(Submodule.equivMapOfInjective _ h_encoder_inj _).finrank_eq.symm]
   exact (Polynomial.degreeLTEquiv F k).finrank_eq.trans (by simp)
 
+/-- **The `s · |ι|` folded evaluation points are pairwise distinct.** This is the
+injective-map reformulation of `Admissible` (its docstring's "every evaluation point
+appears only once across all folds"): given `(L, s)`-admissibility of `ω` on
+`L = image domain` together with `ω ≠ 0`, the map `(x, j) ↦ domain x · ω^j` on
+`ι × Fin s` is injective. The two `Admissible` conjuncts (inter-orbit + intra-orbit)
+together with cancellation by the unit `ω^m` are exactly what rules out the two ways a
+collision could occur (across distinct base points, or within one orbit). -/
+lemma admissible_foldedPoints_injective {ι : Type} [Fintype ι] [DecidableEq ι]
+    {F : Type} [Field F] [DecidableEq F] {s : ℕ}
+    (domain : ι ↪ F) (ω : F)
+    (hadm : Admissible (Finset.univ.map domain) s ω) (hω : ω ≠ 0) :
+    Function.Injective (fun xi : ι × Fin s => domain xi.1 * ω ^ (xi.2 : ℕ)) := by
+  obtain ⟨hinter, hintra⟩ := hadm
+  -- The ordered-exponent core: if `m ≤ n < s` and the two folded points agree, then
+  -- the base points and exponents agree. Both `Admissible` clauses feed in here.
+  have key : ∀ (a b : ι) (m n : ℕ), m ≤ n → n < s →
+      domain a * ω ^ m = domain b * ω ^ n → a = b ∧ m = n := by
+    intro a b m n hmn hns heq
+    have hωm : ω ^ m ≠ 0 := pow_ne_zero _ hω
+    have heq' : domain a = domain b * ω ^ (n - m) := by
+      have hn : n = (n - m) + m := by omega
+      rw [hn, pow_add, ← mul_assoc] at heq
+      exact mul_right_cancel₀ hωm heq
+    by_cases hab : a = b
+    · subst hab
+      rcases Nat.eq_zero_or_pos (n - m) with h0 | hpos
+      · exact ⟨rfl, by omega⟩
+      · exact absurd heq'.symm
+          (hintra (domain a) (Finset.mem_map_of_mem _ (Finset.mem_univ _)) (n - m) hpos
+            (by omega))
+    · have hdab : domain a ≠ domain b := fun h => hab (domain.injective h)
+      exact absurd heq'.symm
+        (hinter (domain b) (Finset.mem_map_of_mem _ (Finset.mem_univ _)) (domain a)
+          (Finset.mem_map_of_mem _ (Finset.mem_univ _)) (Ne.symm hdab) (n - m) (by omega))
+  rintro ⟨x, i⟩ ⟨y, j⟩ heq
+  simp only at heq
+  rcases le_total (i : ℕ) (j : ℕ) with hij | hji
+  · obtain ⟨hxy, hijv⟩ := key x y i j hij j.isLt heq
+    exact Prod.ext hxy (Fin.ext hijv)
+  · obtain ⟨hyx, hjiv⟩ := key y x j i hji i.isLt heq.symm
+    exact Prod.ext hyx.symm (Fin.ext hjiv.symm)
+
+/-- **Injectivity of folded RS evaluation on low-degree polynomials** (the folded
+analogue of `ReedSolomon.evalOnPoints_domRestrict_injective`). When `ω` is
+`(L, s)`-admissible (`L = image domain`), `ω ≠ 0`, and there are at least `k` folded
+evaluation points (`k ≤ s · |ι|`), the FRS evaluation map restricted to `degreeLT F k`
+is injective: a nonzero polynomial of degree `< k ≤ s · |ι|` cannot vanish at all
+`s · |ι|` distinct folded points (`admissible_foldedPoints_injective`). This is the
+in-tree bridge that `dim_frsCode`'s `h_encoder_inj` hypothesis was waiting for. -/
+lemma frsEvalOnPoints_domRestrict_injective {ι : Type} [Fintype ι] [DecidableEq ι]
+    {F : Type} [Field F] [DecidableEq F] {k s : ℕ} [NeZero k]
+    (domain : ι ↪ F) (ω : F)
+    (hadm : Admissible (Finset.univ.map domain) s ω) (hω : ω ≠ 0)
+    (hk : k ≤ s * Fintype.card ι) :
+    Function.Injective
+      ((frsEvalOnPoints domain s ω).domRestrict (Polynomial.degreeLT F k)) := by
+  rw [← LinearMap.ker_eq_bot]
+  ext p
+  simp only [LinearMap.mem_ker, LinearMap.domRestrict_apply, Submodule.mem_bot]
+  constructor
+  · intro hfp
+    apply Subtype.ext
+    refine Polynomial.eq_zero_of_natDegree_lt_card_of_eval_eq_zero (p := p.val)
+      (f := fun xi : ι × Fin s => domain xi.1 * ω ^ (xi.2 : ℕ))
+      (admissible_foldedPoints_injective domain ω hadm hω) ?_ ?_
+    · rintro ⟨x, j⟩
+      exact congrFun (congrFun hfp x) j
+    · rw [Fintype.card_prod, Fintype.card_fin]
+      calc p.val.natDegree < k := natDegree_lt_of_mem_degreeLT p.2
+        _ ≤ s * Fintype.card ι := hk
+        _ = Fintype.card ι * s := Nat.mul_comm _ _
+  · intro hp
+    simp [hp]
+
 /-- Mirror of `mem_frsCode_iff` with the equation oriented `encoder = f` rather than
 `f = encoder` — useful for `rw` / `simp` from the encoder side. -/
 lemma mem_frsCode_iff_flipped {ι : Type} [Fintype ι] [DecidableEq ι]
