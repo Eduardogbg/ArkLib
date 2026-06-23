@@ -247,8 +247,7 @@ is `δ`-far, so spot-checks pass with probability `≤ (1 − δ)^t`. Monotonici
 in `Pr_γ[p]` (since `(1 − δ)^t ≤ 1`) gives the closed form above. Dropping
 the `(1 − (1 − δ)^t) ≤ 1` factor yields the *natural sum form*
 `ε₀ + (1 − δ)^t` — the L6.8 round-error sum — at additive cost exactly
-`ε₀·(1 − δ)^t` (a second-order term; negligible in the prize regime). That
-weaker bound is `protocol62_knowledgeSound_sum` below, derived from this one.
+`ε₀·(1 − δ)^t` (a second-order term; negligible in the prize regime).
 
 The `(Lambda …).toNat` in `ε₀` is faithful: `Lambda` is never `⊤` over a
 finite alphabet (`ListDecodable.Lambda_ne_top`), so `toNat` loses nothing.
