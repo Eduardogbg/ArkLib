@@ -190,39 +190,35 @@ private lemma prover_run_map_eq {β : Type}
       let out ← liftComp (prover.output (f2 xs))
         ([]ₒ + [(pSpec (ι := ι) (F := F) k t).Challenge]ₒ)
       pure (post c pre.1 xs out)) := by
-  -- Unfold the prover run and resolve the three round directions (V_to_P / P_to_V / V_to_P).
-  simp only [Prover.run, Prover.runToRound, Fin.induction_three, Prover.processRound,
-    pSpec, bind_pure_comp, map_eq_bind_pure_comp, bind_assoc, liftComp_eq_liftM]
-  split <;> rename_i hDir0; swap; · exact absurd hDir0 (by decide)
-  try simp only [pure_bind, map_pure, Functor.map_map, Function.comp, bind_pure_comp, bind_assoc]
-  split <;> rename_i hDir1; · exact absurd hDir1 (by decide)
-  try simp only [pure_bind, map_pure, Functor.map_map, Function.comp, bind_pure_comp, bind_assoc]
-  split <;> rename_i hDir2; swap; · exact absurd hDir2 (by decide)
-  try simp only [pure_bind, map_pure, Functor.map_map, Function.comp, bind_pure_comp, bind_assoc]
-  -- The run is a dependently-typed fold: each round outputs `(Transcript/PrvState)` at
-  -- `((j:Fin 3).succ)` and the next consumes them at `((j+1:Fin 3).castSucc)`. These are *defeq*
-  -- equal but not *syntactically*, so `pure_bind` won't substitute across round boundaries until
-  -- the index heads are normalized. Align them to shared `Fin 4` literals (`succ` of 0/1 have
-  -- named lemmas; `castSucc` of 1/2 and `succ` of 2 are `rfl`), then `dsimp` the residual
-  -- `Fin`-operation heads in the types.
-  simp only [Fin.castSucc_zero', Fin.succ_zero_eq_one', Fin.succ_one_eq_two', Fin.isValue,
-    show ((1 : Fin 3).castSucc) = (1 : Fin 4) from rfl,
-    show ((2 : Fin 3).castSucc) = (2 : Fin 4) from rfl,
-    show ((2 : Fin 3).succ) = (3 : Fin 4) from rfl]
+  -- Resolve the three round directions *once* via the framework-level per-direction unfolds of
+  -- `Prover.processRound` (`processRound_of_dir_eq_{V_to_P,P_to_V}`), instead of re-deriving the
+  -- dependent `match`/index split by hand. With the direction `match`es gone, `Fin.induction_three`
+  -- exposes the run as the three challenge-first `do`-blocks directly.
+  have h0 : (pSpec (ι := ι) (F := F) k t).dir 0 = .V_to_P := rfl
+  have h1 : (pSpec (ι := ι) (F := F) k t).dir 1 = .P_to_V := rfl
+  have h2 : (pSpec (ι := ι) (F := F) k t).dir 2 = .V_to_P := rfl
+  -- Unfold the run and resolve all three round directions in one shot via the framework-level
+  -- per-direction `processRound` unfolds, then flatten the resulting `do`-blocks to the
+  -- challenge-first form. Note: because each `processRound` already emits a concrete `do`-block,
+  -- the cross-round `Fin`-index alignment (`(0).succ` vs `(1).castSucc`, …) collapses under a
+  -- single `dsimp` of the `Fin`-operation heads — none of the old per-index `show … = … from rfl`
+  -- casts are needed any more.
+  simp only [Prover.run, Prover.runToRound, Fin.induction_three,
+    Prover.processRound_of_dir_eq_V_to_P 0 h0, Prover.processRound_of_dir_eq_P_to_V 1 h1,
+    Prover.processRound_of_dir_eq_V_to_P 2 h2,
+    map_eq_bind_pure_comp, bind_assoc, liftComp_eq_liftM, pure_bind, Function.comp,
+    Fin.castSucc_zero', Fin.isValue]
   dsimp only [Fin.succ, Fin.castSucc, Fin.castAdd, Fin.castLE, Fin.castLT, Fin.last]
-  -- Now expose canonical `OracleComp` binds (unfold the `monadLift`/`liftM` internals), fully
-  -- flatten the run to the challenge-first form via `pure_bind`/`bind_assoc` — which now fires
-  -- across rounds — and reduce the assembled `Fin.snoc` transcript read-backs
-  -- (`challenge[0] = c`, `message[1] = pre.1`, `challenge[2] = xs`). The residual identity
-  -- `cast`s from `Fin.snoc`'s dependent eliminator are defeq, closed by `rfl`.
-  simp only [MonadLift.monadLift, liftM, monadLift, MonadLiftT.monadLift,
-    OracleComp.liftComp_pure, OracleComp.liftComp_bind, map_eq_bind_pure_comp, pure_bind,
-    map_pure, Function.comp_def, bind_assoc,
+  -- Expose canonical `OracleComp` binds (unfold the `monadLift`/`liftM` internals), finish
+  -- flattening, and reduce the assembled `Fin.snoc` transcript read-backs (`challenge[0] = c`,
+  -- `message[1] = pre.1`, `challenge[2] = xs`). The residual identity `cast`s from `Fin.snoc`'s
+  -- dependent eliminator are defeq, closed by `rfl`.
+  simp only [MonadLift.monadLift, liftM, monadLift, MonadLiftT.monadLift, pure_bind, bind_assoc,
     FullTranscript.challenges, FullTranscript.messages, Transcript.concat, Fin.snoc,
     Fin.val_zero, Fin.val_one, Fin.val_two, lt_self_iff_false, Fin.val_castLT,
     Fin.castSucc_castLT, show (0 : ℕ) < 2 from by norm_num, show (0 : ℕ) < 1 from by norm_num,
     show (1 : ℕ) < 2 from by norm_num, show ¬ ((2 : ℕ) < 0) from by norm_num,
-    show ¬ ((2 : ℕ) < 2) from by norm_num, dif_pos, dif_neg, cast_eq, dite_false]
+    dif_pos, cast_eq, dite_false]
   rfl
 
 /-- **Lemma 6.6 of [ABF26], corrected** (knowledge soundness of Construction 6.2).
