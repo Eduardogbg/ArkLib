@@ -463,33 +463,36 @@ theorem frs_epsMCA_capacity_gg25
         + 24 / (η ^ 3 * Fintype.card F)) := by
   sorry -- ABF26-T4.14; external admit [GG25 Cor 4.10].
 
-/-- **ABF26 BCGM25 extension to T4.13 / T4.14 (polynomial generators preserve
-correlated agreement).**
+/-- **Tracked placeholder (NOT a faithful formalization of [BCGM25]).** This statement is
+strictly *weaker* than the cited [BCGM25] result and must not be read as capturing it; it is
+a survey-ledger shadow to be replaced by PR #489's real MCA-generator framework. It is recorded
+here only so the §4.2.2 row is not silently missing.
 
-[BCGM25] shows that the correlated/mutual agreement of subspace-design codes is
-preserved not only under affine line combinations `u₀ + γ · u₁` but under arbitrary
-*polynomial generators* — combinations of the form `∑ᵢ Gᵢ(γ) · uᵢ` for a large class
-of functions called "polynomial generators". Stated in ABF26 §4.2.2 (subsection on
-"subspace-design codes") and footnote 2 of the introduction; not separately numbered
-as `T4.x`, but materially extends the reach of T4.13 / T4.14.
+How it under-claims the source, on three axes:
+* **CA, not MCA.** [BCGM25] establishes *mutual* correlated agreement; this theorem bounds the
+  plain *correlated-agreement* curve error `epsCA_curves` (MCA ⇒ CA, so CA is strictly weaker).
+  The ABF26 branch has no curve-MCA notion yet — PR #489 supplies the real one.
+* **Single power curve, not general generators.** It fixes the power-curve family
+  `∑ i : Fin (k+1), γ^i · uᵢ` rather than [BCGM25]'s general class of polynomial generators.
+  (It is at least not a copy of T4.13 `subspaceDesign_epsMCA_gg25`, whose LHS is the affine
+  `epsMCA`.)
+* **Borrowed constants & extra hypothesis.** It gates on `IsSubspaceDesign` (BCGM25 covers all
+  linear codes) and reuses the GG25 affine bound shape `(t·n + 4t²)/|F|` rather than [BCGM25]'s
+  own polynomial-generator constants.
 
-**Canonical formalization lives elsewhere — this is the survey-ledger shadow.** The
-genuine polynomial-generator MCA framework (the `Generator` / `IsMCAGenerator` / `IsMCA`
-abstraction, formalizing [BSGM25] Lemmas 4.1, 4.2 and Definition 4.3) is being built in
-`ProximityGap/MCAGenerator.lean` and `ProximityGap/ProximityGenerators.lean` by PR #489
-(`Katy/MCAgens`). Once that lands on `main` and merges into this branch, **this entry
-should be restated in terms of `IsMCAGenerator` (or removed in favour of it)** rather than
-the affine-style `epsCA`/`epsMCA` errors here. Do not grow a parallel polynomial-generator
-notion under `CapacityBounds`.
+**What [BCGM25] actually says.** The correlated/mutual agreement of subspace-design codes is
+preserved not only under affine line combinations `u₀ + γ · u₁` but under arbitrary *polynomial
+generators* `∑ᵢ Gᵢ(γ) · uᵢ`. Stated in ABF26 §4.2.2 and footnote 2 of the introduction; not
+separately numbered as `T4.x`. [BCGM25] = ePrint 2025/2051 (Bordage–Chiesa–Guan–Manzur, "All
+Polynomial Generators Preserve Distance with Mutual Correlated Agreement").
 
-**What this placeholder captures meanwhile.** Unlike T4.13 (`subspaceDesign_epsMCA_gg25`),
-the left-hand side is the **power-curve** correlated-agreement error `epsCA_curves … k`
-(combinations `∑ i : Fin (k+1), γ^i · uᵢ`) — the genuine polynomial-generator family, so
-this is not a copy of T4.13. Two honesty caveats: (i) [BSGM25] proves *mutual* correlated
-agreement; this shadow uses the *correlated-agreement* curve error because the ABF26 branch
-has no curve-MCA notion yet (PR #489 supplies the real one); (ii) the RHS reuses the GG25
-affine bound shape `(t·n + 4t²)/|F|`, with the precise polynomial-generator constants as
-in [BSGM25]. Admitted as an external result. -/
+**Canonical formalization lives elsewhere.** The genuine polynomial-generator MCA framework
+(`Generator` / `IsMCAGenerator` / `IsMCA`, formalizing [BCGM25] Lemmas 4.1, 4.2 and Definition
+4.3) is being built in `ProximityGap/MCAGenerator.lean` and `ProximityGap/ProximityGenerators.lean`
+by PR #489 (`Katy/MCAgens`). Once that lands and merges, **this entry should be restated in terms
+of `IsMCAGenerator` (or removed in favour of it).** Do not grow a parallel polynomial-generator
+notion under `CapacityBounds`. The `sorry` itself is a legitimate external admit (the paper gives
+no proof); the caveat above is solely about the statement being weaker than the source. -/
 theorem subspaceDesign_epsCA_curves_polynomial_generators_bcgm25
     {ι : Type} [Fintype ι] [Nonempty ι] [DecidableEq ι]
     {F : Type} [Field F] [Fintype F] [DecidableEq F]

@@ -151,11 +151,16 @@ rate `ρ := dim C / n` and `η > 0`:
 
   `|Λ(C, 1 - √ρ - η)| ≤ 1 / (2 · η · ρ)`
 
-Derives from L2.6 (Singleton bound: MDS implies `δ_min = 1 - ρ + 1/n`, available via
-the `IsMDS_iff_rate_distance` bridge) plus T3.2 (or its asymptotic version via `Jcap`).
-Admitted as an external result; the path to a machine-checked proof requires the
-asymptotic-Johnson form `Lambda C δ ≤ 1/(2·(Jcap δ - δ))` plus MDS rate-distance
-manipulation.
+**Status: DEFERRED IN-TREE DERIVATION, not an independent literature citation.** The paper
+*derives* this corollary itself (it is not cited to an external source); it reduces to
+L2.6 (Singleton bound: MDS implies `δ_min = 1 - ρ + 1/n`, available via the
+`IsMDS_iff_rate_distance` bridge) plus the already-owed Johnson bound T3.2
+(`johnson_bound_lambda_le_ell`). So the only genuinely external content here is T3.2; this
+`sorry` adds **no new external debt**, it merely defers the Singleton + arithmetic glue. A
+machine-checked proof requires first establishing the asymptotic-Johnson form
+`Lambda C δ ≤ 1/(2·(Jcap δ - δ))` from the `Jqℓ`-form T3.2 (the standard optimise-over-`ℓ`
+step), then the MDS rate-distance manipulation. Tracked as a coverage gap, not a faithfulness
+defect (the statement below is exactly the paper's `cor:Jonhson-for-mds`).
 
 **Rate derivation.** `ρ` is bound inline as `(Module.finrank F C : ℝ) / Fintype.card ι`
 rather than passed as a separate parameter — this matches the upstream `IsMDS`
@@ -169,6 +174,7 @@ theorem mds_johnson_lambda_le
     let ρ : ℝ := (Module.finrank F C : ℝ) / Fintype.card ι
     (Lambda ((C : Set (ι → F))) (1 - Real.sqrt ρ - η) : ENNReal) ≤
       ENNReal.ofReal (1 / (2 * η * ρ)) := by
-  sorry -- ABF26-C3.3; derivable from L2.6 (via IsMDS_iff_rate_distance) + Jcap form of T3.2.
+  sorry -- ABF26-C3.3; DEFERRED in-tree derivation (no new external debt): reduces to the
+        -- owed T3.2 (johnson_bound_lambda_le_ell) + L2.6 Singleton via IsMDS_iff_rate_distance.
 
 end CodingTheory

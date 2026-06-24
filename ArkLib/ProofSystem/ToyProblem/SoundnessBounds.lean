@@ -38,10 +38,11 @@ Items in this file:
    `mcaEvent`, unique decoding below `δ_min`, and a per-list-entry affine
    solution count).
 
-(Lemma 6.5 — every additive code supports erasure correction — is a generic
-coding-theory statement and is **proven** as
-`CodingTheory.additive_code_supports_erasure_correction_grs25` in
-`ArkLib/Data/CodingTheory/Erasure.lean`.)
+(Lemma 6.5 — every additive code supports erasure correction — has its
+*existence* half proven as
+`CodingTheory.additive_code_supports_erasure_correction_grs12` in
+`ArkLib/Data/CodingTheory/Erasure.lean`; the cited [GRS12] `O((s·n)^3)`
+polynomial-time corrector is out of ArkLib's cost-free model and not formalized.)
 
 Proof status:
 

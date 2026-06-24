@@ -100,19 +100,23 @@ theorem eq_of_consistent_with_erased [DecidableEq F] {C : Set (ι → F)}
     Nat.sInf_le ⟨u, hu, v, hv, hne, rfl⟩
   omega
 
-/-- **Lemma 6.5 of [ABF26]** (= [GRS25]): every code — in particular every
-`F`-additive code `C : F^k → (F^s)^n` — supports erasure correction in the
-sense of `CodingTheory.SupportsErasureCorrection`.
+/-- **Existence half of ABF26 Lemma 6.5** (`lemma:efficient-erasure-correction`,
+[GuruswamiRS12]): a corrector witnessing `CodingTheory.SupportsErasureCorrection C`
+*exists*. We formalize only this existence claim; it holds for an arbitrary code
+`C` (additivity of `C : F^k → (F^s)^n` is not needed for existence).
 
 The corrector is defined classically: if a codeword of `C` consistent with the
 non-erased positions exists (necessarily unique below `minDist C` erasures, by
 `eq_of_consistent_with_erased`), return it; otherwise return `none`.
 
-The paper's `O((s · n)^3)` field-operation bound (Gaussian elimination on the
-code's parity-check matrix) is out of ArkLib's cost-free model — extractors
-are uniformly unclocked across the library — so only the existence of the
-corrector is formalized. -/
-theorem additive_code_supports_erasure_correction_grs25 [DecidableEq F]
+**Scope caveat — this theorem does NOT capture the cited [GRS12] content.** The
+substance of the paper's citation is the *algorithmic* claim that an `F`-additive
+code is erasure-corrected in `O((s · n)^3)` field operations (Gaussian elimination
+on the parity-check matrix). That polynomial-time bound is out of ArkLib's
+cost-free model — extractors are uniformly unclocked across the library — so it is
+deliberately not formalized here, and the existence statement below requires
+nothing from [GRS12]. -/
+theorem additive_code_supports_erasure_correction_grs12 [DecidableEq F]
     (C : Set (ι → F)) : SupportsErasureCorrection C := by
   classical
   refine ⟨fun f ↦
