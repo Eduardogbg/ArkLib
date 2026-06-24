@@ -10,9 +10,11 @@ import ArkLib.ProofSystem.ToyProblem.SoundnessBounds
 # The toy-protocol soundness experiment is the MCA experiment of the constrained code
 
 This file formalizes the observation (G. Fenzi) that the soundness experiment of
-the §6 toy reduction `T[C, t]` is *itself* the mutual-correlated-agreement (MCA)
-experiment of the **constrained code** — the code obtained by adjoining the extra
-linear constraint `⟨m, v⟩ = μ` to `C`.
+the §6 toy reduction `T[C, t]` is captured by the mutual-correlated-agreement
+(MCA) experiment of the **constrained code** — the code obtained by adjoining the
+extra linear constraint `⟨m, v⟩ = μ` to `C`. Concretely we prove a one-directional
+bound (`toy γ-event ≤ ε_mca(constrained code)`); see the *caveat* below on why this
+is an upper bound rather than the equality the observation suggests.
 
 Concretely, for the scalar alphabet `A = F` we adjoin the constraint value
 `⟨m, v⟩` as one extra coordinate (indexed by `Unit`):
@@ -29,17 +31,37 @@ The main result, `gamma_transition_prob_le_constrained`, shows that the
 
   `ε_mca(constrainedCode enc v, δ)`,
 
-a **single** MCA quantity. Compare with the paper's split bound
-`ε_mca(C, δ) + |Λ(C^{≡2}, δ)| / |F|` proved by `ToyProblem.gamma_transition_prob_le`:
-the `|Λ|/|F|` list-size term is *absorbed* into the constrained code's MCA error,
-because a γ that violates the folded constraint becomes part of the constrained
-code's MCA bad event (its extra coordinate disagrees with every codeword).
+a **single** MCA quantity in which the linear constraint is internalized as a code
+coordinate, so no separate `|Λ|/|F|` list-size term appears (compare the paper's
+split bound `ε_mca(C, δ) + |Λ(C^{≡2}, δ)| / |F|` proved by
+`ToyProblem.gamma_transition_prob_le`).
 
 The proof is purely structural — no coding-theory external is invoked — so it is
 sorry-free: the toy bad event implies `mcaEvent (constrainedCode enc v) δ`, taking
 the agreement set `S' = S ∪ {extra coordinate}`; the `+1` slack from the extra
 coordinate absorbs the `(1-δ)` factor, so the *same* `δ` works with no proximity
 rescaling.
+
+## Caveat: this is an upper bound, not an equality or a proven improvement
+
+The result is `toy γ-event ≤ ε_mca(C_v, δ)`, established by a single `le_iSup`.
+Two things it does **not** establish, and should not be read to:
+
+* **Not an equality.** `mcaEvent` (hence `ε_mca`) quantifies over *all* agreement
+  sets `S'` of size `≥ (1-δ)(n+1)`, including sets that *omit* the extra `Unit`
+  coordinate. On such an `S'` the constraint is never tested, so that branch
+  reduces to a plain base-code-`C` MCA bad event. Hence `ε_mca(C_v, δ)`
+  *over-counts*: it is `≥ ε_mca(C, δ)` and is only an upper bound on the toy
+  soundness, not equal to it. Faithfully capturing the observation as an
+  *equality* would require a **constraint-pinned** MCA variant (requiring
+  `S' ∋` the extra coordinate), which is not the stock `ε_mca`.
+
+* **Not a proven improvement.** Whether `ε_mca(C_v, δ) ≤ ε_mca(C, δ) + |Λ|/|F|`
+  (i.e. whether this single quantity is tighter than / equal to the paper's split
+  bound, rather than looser) is **not** proved here, and is non-trivial: the
+  `|Λ|/|F|` control on the constraint-pinned part of `ε_mca(C_v)` would itself
+  need the counting argument of `gamma_transition_prob_le`. Treat the relationship
+  to the paper bound as open.
 
 ## Scope
 
@@ -70,21 +92,28 @@ variable {ι F : Type} [Fintype ι] [Field F] [Fintype F] [DecidableEq F]
 Adjoin the linear-constraint value `⟨m, v⟩ = ∑ j, m j * v j` as one extra
 coordinate (indexed by `Unit`), so the affine constraint becomes an exact
 coordinate match and the code stays `F`-additive (it is the range of a linear
-map). Its MCA experiment *is* the toy-protocol soundness experiment
-(`gamma_transition_prob_le_constrained`). -/
+map). Its MCA error upper-bounds the toy-protocol soundness experiment
+(`gamma_transition_prob_le_constrained`; see that lemma's caveat — the bound is
+one-directional, not an equality). -/
 def constrainedCode {k : ℕ} (enc : (Fin k → F) →ₗ[F] (ι → F)) (v : Fin k → F) :
     Set ((ι ⊕ Unit) → F) :=
   Set.range (fun m : Fin k → F ↦ Sum.elim (enc m) (fun _ ↦ ∑ j, m j * v j))
 
-/-- **The toy-protocol γ-round soundness experiment is the MCA experiment of the
-constrained code.** For an instance `(v, μ₁, μ₂, f₁, f₂)` of the toy reduction
+/-- **The toy-protocol γ-round soundness experiment is bounded by the MCA error of
+the constrained code.** For an instance `(v, μ₁, μ₂, f₁, f₂)` of the toy reduction
 admitting **no** relaxed-relation witness (`hNoWit`), the probability over a
 uniform challenge `γ` that some message `m` satisfies the post-`γ` knowledge
 state is at most `ε_mca(constrainedCode enc v, δ)`.
 
-This is the constrained-code reformulation of `ToyProblem.gamma_transition_prob_le`:
-the paper's `ε_mca(C, δ) + |Λ(C^{≡2}, δ)| / |F|` collapses to the single MCA error
-of the constrained code (`A = F`).
+This is the constrained-code reformulation of `ToyProblem.gamma_transition_prob_le`
+(`A = F`): the linear constraint is internalized as a code coordinate, so the bound
+is a single MCA quantity with no separate `|Λ(C^{≡2}, δ)| / |F|` term.
+
+**Caveat (one-directional).** This is an upper bound, established by a single
+`le_iSup`. It is *not* an equality (`ε_mca C_v` over-counts: `mcaEvent` admits
+agreement sets omitting the constraint coordinate, which reduce to base-code-`C`
+MCA events), and it is *not* shown to be `≤` the paper's split bound `ε_mca(C,δ) +
+|Λ|/|F|`. See the module docstring's caveat section.
 
 Sorry-free and external-free: the toy bad event implies
 `mcaEvent (constrainedCode enc v) δ`, witnessed by the agreement set
