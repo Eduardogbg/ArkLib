@@ -14,9 +14,9 @@ asserting that a deterministic algorithm exists that recovers any codeword
 `u ∈ C` from a partial observation `f : ι → Option F` with strictly fewer
 than `δ_min(C) · |ι|` erasures, and returns `⊥` otherwise.
 
-`additive_code_supports_erasure_correction_grs25` (**Lemma 6.5 of [ABF26]**,
-citing [GRS25]) proves that *every* code satisfies the predicate: with fewer
-than `minDist C` erasures the consistent codeword is unique
+`additive_code_supports_erasure_correction_grs12` (**existence half of Lemma 6.5
+of [ABF26]**, citing [GuruswamiRS12]) proves that *every* code satisfies the
+predicate: with fewer than `minDist C` erasures the consistent codeword is unique
 (`eq_of_consistent_with_erased`, a Hamming-distance pigeonhole), so a
 classical corrector exists.
 
@@ -56,7 +56,7 @@ makes the predicate non-vacuous: without it,
 
 The paper additionally tracks the corrector's running time (`ecor`); ArkLib's
 extractors are uniformly cost-free (unclocked), so no cost parameter is
-carried here — see `additive_code_supports_erasure_correction_grs25`. -/
+carried here — see `additive_code_supports_erasure_correction_grs12`. -/
 def SupportsErasureCorrection [DecidableEq F]
     (C : Set (ι → F)) : Prop :=
   ∃ E : (ι → Option F) → Option (ι → F),
