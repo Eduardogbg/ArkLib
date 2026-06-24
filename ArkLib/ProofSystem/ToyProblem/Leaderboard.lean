@@ -749,7 +749,7 @@ theorem koala_spotcheck :
 `128·2.39794 = 306.93 ≤ 271.85 + 35.22 = 307.07 = 128·log 133 + 117·log 2`). This
 is *tight* — the `≈ 0.14`-decade (`≈ 0.46-bit`) margin is exactly why the attack
 ceiling rounds **up** to `bits := 117`, not `116` (a 116-bit floor fails on the
-band `(0.46604, 0.468)`; see `listDecoding_upperBound_attack`). A proven integer
+band `(0.46604, 0.468)`; see `listDecodingUpperBoundAttack`). A proven integer
 inequality, no float `#eval`. -/
 theorem koala_spotcheck_lb :
     (2 : ℝ≥0) ^ (-(117 : ℝ)) ≤ ((133 : ℝ≥0) / 250) ^ (128 : ℕ) := by
@@ -861,7 +861,7 @@ the paper itself notes (`.tex` 2817–2819) that `(1/√2 + η)^128 > 2^(-64)`
 *strictly* — the tables' `2^(-64.00)` entries are rounding. `bits := 63.99` is the
 honest certified anchor; the `δ=3/10` route above certifies `≤ 2^(-64) ≤ 2^(-63.99)`
 with margin. -/
-noncomputable def arklib_lowerBound_irs_t128 : SecurityLowerBound koalaIRS where
+noncomputable def irsLowerBoundT128 : SecurityLowerBound koalaIRS where
   bits := 63.99
   proof := by
     -- ABF26-§6.3.1, fully formalized **down to one external coding-theory bound**.
@@ -975,7 +975,7 @@ the crossover `δ* = 117/250`:
    irreducibly external — exactly the status of the lower anchor's `ε_mca`
    ceiling. **Axiom-clean is infeasible by design** (it is the prize's own
    coding-theory content); the reduction is full down to these named admits. -/
-noncomputable def listDecoding_upperBound_attack : SecurityUpperBound koalaIRS where
+noncomputable def listDecodingUpperBoundAttack : SecurityUpperBound koalaIRS where
   bits := 117
   proof := by
     -- ABF26 §6.4.1, fully formalized **down to owed external list-size bounds**.
@@ -1047,8 +1047,8 @@ readoff of the two `bits` fields — it does not depend on the anchors' owed §6
 their tagged `sorry`; the metric lemma `bits_le_of` is the anchor-independent,
 axiom-clean guarantee). -/
 theorem securityGap_koalaIRS_anchors :
-    securityGap arklib_lowerBound_irs_t128 listDecoding_upperBound_attack = 53.01 := by
-  simp only [securityGap, arklib_lowerBound_irs_t128, listDecoding_upperBound_attack]
+    securityGap irsLowerBoundT128 listDecodingUpperBoundAttack = 53.01 := by
+  simp only [securityGap, irsLowerBoundT128, listDecodingUpperBoundAttack]
   norm_num
 
 end ToyProblem

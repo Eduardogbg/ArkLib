@@ -5,6 +5,7 @@ Authors: Alexander Hicks
 -/
 
 import Mathlib.Analysis.SpecialFunctions.Log.Base
+import Mathlib.Analysis.SpecialFunctions.BinaryEntropy
 
 /-!
 # `q`-ary entropy function
@@ -48,5 +49,19 @@ noncomputable def qEntropy (q : ℕ) (x : ℝ) : ℝ :=
 @[simp]
 lemma qEntropy_zero (q : ℕ) : qEntropy q 0 = 0 := by
   simp [qEntropy]
+
+/-- Bridge to Mathlib's `Real.qaryEntropy`: ABF26's base-`q` entropy is Mathlib's
+(natural-log) `q`-ary entropy rescaled by `log q`. Concretely
+`qEntropy q x = Real.qaryEntropy q x / Real.log q`, since each `logb q ·` term is the
+corresponding `log ·` divided by `log q`, and `-x·log x - (1-x)·log(1-x) = binEntropy x`.
+Holds unconditionally: for `q ∈ {0, 1}` both sides are `0` (`log q = 0`, and `Real.log`/`logb`
+send the degenerate arguments to `0`). Lets the `q = 2` boundary checks reuse Mathlib's
+`binEntropy`/`qaryEntropy` API. -/
+lemma qEntropy_eq_qaryEntropy_div_log (q : ℕ) (x : ℝ) :
+    qEntropy q x = Real.qaryEntropy q x / Real.log q := by
+  rw [qEntropy, Real.qaryEntropy, Real.binEntropy]
+  simp only [Real.logb, Real.log_inv]
+  push_cast
+  ring
 
 end CodingTheory

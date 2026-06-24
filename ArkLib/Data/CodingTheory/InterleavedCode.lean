@@ -840,7 +840,6 @@ theorem lambda_le_ggr11 {ι F : Type} [Fintype ι] [Field F] [DecidableEq F]
                   Real.log 2⌉₊
     Lambda (interleavedCodeSet (κ := Fin m) C) δ ≤
       ((b + r).choose r : ℕ∞) * (Lambda C δ) ^ r := by
-  -- ABF26-L2.10; external admit [GGR11].
-  sorry
+  sorry -- ABF26-L2.10; external admit [GGR11].
 
 end InterleavedCode

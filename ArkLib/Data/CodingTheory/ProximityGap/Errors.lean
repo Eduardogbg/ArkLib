@@ -560,7 +560,7 @@ theorem epsMCA_eq_epsCA_below_udr
               (Code.dist ((C : Set (ι → A))) : ℝ≥0)) :
     epsMCA (F := F) (A := A) ((C : Set (ι → A))) δ =
     epsCA (F := F) (A := A) ((C : Set (ι → A))) δ δ := by
-  sorry -- ABF26 L4.6: external result from ACFY25 Lemma 4.10
+  sorry -- ABF26-L4.6; external admit [ACFY25 Lem 4.10].
 
 /-- Row-extraction: the `k`-th row of a `Fin t → A`-valued word, as an `A`-valued word. -/
 private def row_of {ι : Type} {A : Type} {t : ℕ}

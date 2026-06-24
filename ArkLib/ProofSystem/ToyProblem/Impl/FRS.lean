@@ -83,7 +83,7 @@ structural side entirely:** the folded MDS distance `koalaFRS_minRelDist`
 new `ReedSolomon/Folded.lean` bridges (`frsEvalOnPoints_domRestrict_injective`,
 `minDist_frsCode`) on a genuine multiplicative-coset domain, resting on the
 proven order witness `koalaFRSγ_exists` — so the **attack ceiling owes nothing**
-(`frsUpperBound_attack` is fully axiom-clean). The *only* remaining owed external is
+(`frsUpperBound` is fully axiom-clean). The *only* remaining owed external is
 the provable bound's τ-subspace-design `ε_mca` term, the FRS counterpart of the
 `koalaIRS` owed `ε_mca` (see `frsLowerBound`).
 
@@ -475,7 +475,7 @@ theorem koalaFRS_combine :
 /-- **Folded-RS provable lower bound (`29.10` bits) at the KoalaBear/`s=32`/`t=128`
 point.** Cites the §6.3.2 subspace-design analysis
 (`tab:subspace-design-security-analysis`, `s = 2^5`, minimizing `r = 8`). As with
-`arklib_lowerBound_irs_t128`, the proof is a **full formalized derivation down to a
+`irsLowerBoundT128`, the proof is a **full formalized derivation down to a
 single named owed external** (no longer an opaque `sorry`):
 
 1. **Pick `δ := 7/48`** — the `r = 8` τ-subspace-design operating point (`τ(r+1) =
@@ -574,7 +574,7 @@ code's **MDS relative distance** `δ_min = 32769/65536` (`koalaFRS_minRelDist`) 
 (via `minDist_frsCode` + the proven `koalaFRSγ_exists`), so this attack anchor is **fully
 axiom-clean** (`[propext, Classical.choice, Quot.sound]`, no `sorryAx`) — the whole Y side
 owes nothing, and no Elias/list-size lower bound enters (strictly stronger than the
-interleaved attack `listDecoding_upperBound_attack`, which owes two list-size bounds).
+interleaved attack `listDecodingUpperBoundAttack`, which owes two list-size bounds).
 
 **Why `128.01`, and stronger than the paper's per-`δ*` reading.** `(1-δ_min)^128 =
 (32767/65536)^128 ≈ 2^(-128.006)`, so the ceiling rounds **up** to `128.01`. The
@@ -584,7 +584,7 @@ sweep floor: just above `δ*` the spot-check keeps dropping toward `2^(-128)` at
 `δ_min`, the same sub-band subtlety that forced the interleaved ceiling
 `116.49 → 117`. The fact pinning the window here is a *distance* bound (now proven via
 `minDist_frsCode`), not a list-size bound — so this anchor is fully axiom-clean. -/
-noncomputable def frsUpperBound_attack : SecurityUpperBound koalaFRS where
+noncomputable def frsUpperBound : SecurityUpperBound koalaFRS where
   bits := 128.01
   proof := by
     -- Sweep floor from the spot-check term alone, fully formalized **down to the
@@ -611,7 +611,7 @@ noncomputable def frsUpperBound_attack : SecurityUpperBound koalaFRS where
 
 /-- **The folded-RS leaderboard frontier (`s = 32`, `t = 128`).** The honest
 certified anchors are `29.10` provable bits and a `128.01`-bit attack ceiling (the
-spot-check sweep floor; see `frsUpperBound_attack`), so the §6.3.2 gap at this
+spot-check sweep floor; see `frsUpperBound`), so the §6.3.2 gap at this
 folded point is `128.01 − 29.10 = 98.91` bits. As with
 `securityGap_koalaIRS_anchors`, this is a pure arithmetic readoff of the two
 `bits` fields (it inherits the anchors' owed `sorry`s). At fixed `t = 128` this
@@ -619,8 +619,8 @@ gap is *wider* than the interleaved `koalaIRS` frontier (`53.01`) — folding's
 advantage is argument-size at enforced 128-bit security and gap-closing at large
 folding, not the fixed-`t` δ-swept frontier (see `frsLowerBound`). -/
 theorem securityGap_koalaFRS :
-    securityGap frsLowerBound frsUpperBound_attack = 98.91 := by
-  simp only [securityGap, frsLowerBound, frsUpperBound_attack]
+    securityGap frsLowerBound frsUpperBound = 98.91 := by
+  simp only [securityGap, frsLowerBound, frsUpperBound]
   norm_num
 
 /-! ## The large-folding row `s = 2^12 = 4096` at `t = 128` — gap-closing
@@ -929,7 +929,7 @@ noncomputable def frsLowerBound12 : SecurityLowerBound koalaFRS12 where
 
 /-- **Folded-RS attack upper bound (`128.75` bits) at the KoalaBear/`s=2^12`/
 `t=128` point — the δ-sweep floor.** Same full-reduction shape as
-`frsUpperBound_attack`: `le_bestProvableError` reduces to a per-δ floor over
+`frsUpperBound`: `le_bestProvableError` reduces to a per-δ floor over
 `(0, δ_min = 257/512)`; drop the nonnegative `winningSetSoundness` term, then
 `(1−δ)^128 ≥ (255/512)^128 ≥ 2^(-128.75)` by monotonicity + `koalaFRS12_spotcheck_lb`.
 The folded distance `koalaFRS12_minRelDist` is itself proven, so this anchor is fully
@@ -938,7 +938,7 @@ axiom-clean (`[propext, Classical.choice, Quot.sound]`).
 `(1−δ_min)^128 = (255/512)^128 ≈ 2^(-128.723)`, so the ceiling rounds **up** to
 `128.75` (the `3/4`-granularity needed to keep the sandwich integer-leaf tractable;
 a tighter `128.73` would force an intractable `≥ 1234`-digit power). -/
-noncomputable def frsUpperBound_attack12 : SecurityUpperBound koalaFRS12 where
+noncomputable def frsUpperBound12 : SecurityUpperBound koalaFRS12 where
   bits := 128.75
   proof := by
     refine le_bestProvableError koalaFRS12 (fun δ hδ => ?_)
@@ -964,8 +964,8 @@ gap at this folded point is `128.75 − 118.13 = 10.62` bits — versus `98.91` 
 collapsing the fixed-`t` δ-swept gap by `≈ 88` bits. A pure arithmetic readoff of
 the two `bits` fields (inherits the anchors' owed `sorry`s). -/
 theorem securityGap_koalaFRS12 :
-    securityGap frsLowerBound12 frsUpperBound_attack12 = 10.62 := by
-  simp only [securityGap, frsLowerBound12, frsUpperBound_attack12]
+    securityGap frsLowerBound12 frsUpperBound12 = 10.62 := by
+  simp only [securityGap, frsLowerBound12, frsUpperBound12]
   norm_num
 
 end Impl.FRS
