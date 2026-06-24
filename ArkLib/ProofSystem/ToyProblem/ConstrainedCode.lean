@@ -10,11 +10,18 @@ import ArkLib.ProofSystem.ToyProblem.SoundnessBounds
 # The toy-protocol soundness experiment is the MCA experiment of the constrained code
 
 This file formalizes the observation (G. Fenzi) that the soundness experiment of
-the §6 toy reduction `T[C, t]` is captured by the mutual-correlated-agreement
-(MCA) experiment of the **constrained code** — the code obtained by adjoining the
-extra linear constraint `⟨m, v⟩ = μ` to `C`. Concretely we prove a one-directional
-bound (`toy γ-event ≤ ε_mca(constrained code)`); see the *caveat* below on why this
-is an upper bound rather than the equality the observation suggests.
+the §6 toy reduction `T[C, t]` is the mutual-correlated-agreement (MCA) experiment
+of the **constrained code** — the code obtained by adjoining the extra linear
+constraint `⟨m, v⟩ = μ` to `C`. Two results, of increasing fidelity:
+
+* `gamma_transition_prob_le_constrained` — an upper bound `toy γ-event ≤
+  ε_mca(C_v, δ)` against the **stock** MCA error of the appended-coordinate code
+  `C_v` (see the caveat: this over-counts, so it is only a bound).
+* `gamma_event_iff_constrainedMCA` / `gamma_transition_prob_eq_constrainedMCA` —
+  the faithful **equality**: under `hNoWit`, the toy γ-event coincides exactly with
+  the *constraint-pinned* MCA event `mcaEventConstrained` (constraint coordinate
+  mandatory, proximity measured on the data coordinates). This is the precise sense
+  in which "soundness *is* the constrained code's MCA experiment".
 
 Concretely, for the scalar alphabet `A = F` we adjoin the constraint value
 `⟨m, v⟩` as one extra coordinate (indexed by `Unit`):
@@ -52,9 +59,12 @@ Two things it does **not** establish, and should not be read to:
   coordinate. On such an `S'` the constraint is never tested, so that branch
   reduces to a plain base-code-`C` MCA bad event. Hence `ε_mca(C_v, δ)`
   *over-counts*: it is `≥ ε_mca(C, δ)` and is only an upper bound on the toy
-  soundness, not equal to it. Faithfully capturing the observation as an
-  *equality* would require a **constraint-pinned** MCA variant (requiring
-  `S' ∋` the extra coordinate), which is not the stock `ε_mca`.
+  soundness, not equal to it. The faithful *equality* uses the **constraint-pinned**
+  MCA event `mcaEventConstrained` (constraint coordinate mandatory; proximity on the
+  data coordinates `ι`) — see `gamma_event_iff_constrainedMCA`. Pinning into the
+  *full* index `ι ⊕ Unit` with the stock `(1-δ)(n+1)` size budget does **not** give
+  an equality: the backward direction loses a `δ` of slack (recovering only
+  `|S ∩ ι| ≥ (1-δ)n - δ`), so the pinned event must measure size on `ι` only.
 
 * **Not a proven improvement.** Whether `ε_mca(C_v, δ) ≤ ε_mca(C, δ) + |Λ|/|F|`
   (i.e. whether this single quantity is tighter than / equal to the paper's split
@@ -172,5 +182,80 @@ theorem gamma_transition_prob_le_constrained {k : ℕ} [DecidableEq ι]
     unfold epsMCA
     exact le_iSup (fun u : WordStack F (Fin 2) (ι ⊕ Unit) ↦
       Pr_{let γ ← $ᵖ F}[mcaEvent (constrainedCode enc v) δ (u 0) (u 1) γ]) ![U₀, U₁]
+
+/-! ## The faithful equality (constraint-pinned MCA, proximity on data coordinates)
+
+The `≤` bound above over-counts, because `mcaEvent` over `ι ⊕ Unit` admits agreement
+sets that omit the constraint coordinate. The faithful statement of "soundness *is*
+the constrained code's MCA experiment" requires (i) the constraint coordinate to be
+mandatory and (ii) proximity measured on the data coordinates `ι` only — pinning
+into the full index with the stock `(1-δ)(n+1)` budget loses a `δ` of slack in the
+backward direction and fails to give an equality.
+-/
+
+set_option linter.unusedFintypeInType false in
+/-- **Constraint-pinned MCA event of the constrained code** (proximity measured on
+the data coordinates `ι`; the constraint coordinate is mandatory but outside the
+size budget). The folded constrained codeword (target `μ₁ + γ·μ₂`) agrees with the
+folded word on `S`, while no constrained-codeword *pair* (targets `μ₁, μ₂`) agrees
+with `(f₁, f₂)` on `S`. -/
+def mcaEventConstrained {k : ℕ} (enc : (Fin k → F) →ₗ[F] (ι → F)) (v : Fin k → F)
+    (δ : ℝ≥0) (μ₁ μ₂ : F) (f₁ f₂ : ι → F) (γ : F) : Prop :=
+  ∃ S : Finset ι, (1 - (δ : ℝ)) * Fintype.card ι ≤ S.card ∧
+    (∃ m : Fin k → F, (∑ j, m j * v j = μ₁ + γ * μ₂) ∧ ∀ j ∈ S, f₁ j + γ • f₂ j = enc m j) ∧
+    ¬ ∃ M : Fin 2 → (Fin k → F),
+      (∀ i : Fin 2, ∑ j, M i j * v j = ![μ₁, μ₂] i) ∧
+      (∀ i : Fin 2, ∀ j ∈ S, ![f₁, f₂] i j = enc (M i) j)
+
+set_option linter.unusedFintypeInType false in
+/-- **Per-instance EQUALITY (headline).** Under `hNoWit` (the instance admits no
+relaxed-relation witness), the toy γ-event and the constraint-pinned MCA event of
+the constrained code coincide for every `γ`.
+
+This is the faithful form of "toy-protocol soundness *is* the MCA experiment of the
+constrained code": an exact equivalence, not just the upper bound of
+`gamma_transition_prob_le_constrained`.
+
+Forward (`mp`, uses `hNoWit`): the toy event's witness set `S` satisfies the
+`¬`-clause because a local witness on `S` would be a global witness. Backward
+(`mpr`, no `hNoWit`): drop the `¬`-clause and read off the message `m`. -/
+theorem gamma_event_iff_constrainedMCA {k : ℕ}
+    (enc : (Fin k → F) →ₗ[F] (ι → F)) (δ : ℝ≥0)
+    (v : Fin k → F) (μ₁ μ₂ : F) (f₁ f₂ : ι → F)
+    (hNoWit : ¬ ∃ M : Fin 2 → (Fin k → F),
+      (∀ i : Fin 2, ∑ j, M i j * v j = ![μ₁, μ₂] i) ∧
+      ∃ S : Finset ι, (1 - (δ : ℝ)) * Fintype.card ι ≤ S.card ∧
+        ∀ i : Fin 2, ∀ j ∈ S, ![f₁, f₂] i j = enc (M i) j) (γ : F) :
+    (∃ m : Fin k → F, (∑ j, m j * v j = μ₁ + γ * μ₂) ∧
+        ∃ S : Finset ι, (1 - (δ : ℝ)) * Fintype.card ι ≤ S.card ∧
+          ∀ j ∈ S, f₁ j + γ • f₂ j = enc m j)
+      ↔ mcaEventConstrained enc v δ μ₁ μ₂ f₁ f₂ γ := by
+  constructor
+  · rintro ⟨m, hconstr, S, hScard, hagree⟩
+    refine ⟨S, hScard, ⟨m, hconstr, hagree⟩, ?_⟩
+    rintro ⟨M, hMc, hMa⟩
+    exact hNoWit ⟨M, hMc, S, hScard, hMa⟩
+  · rintro ⟨S, hScard, ⟨m, hconstr, hagree⟩, _⟩
+    exact ⟨m, hconstr, S, hScard, hagree⟩
+
+set_option linter.unusedFintypeInType false in
+/-- **Probability form of the equality**: the toy γ-round transition probability
+equals the probability of the constraint-pinned MCA event of the constrained code. -/
+theorem gamma_transition_prob_eq_constrainedMCA {k : ℕ}
+    (enc : (Fin k → F) →ₗ[F] (ι → F)) (δ : ℝ≥0)
+    (v : Fin k → F) (μ₁ μ₂ : F) (f₁ f₂ : ι → F)
+    (hNoWit : ¬ ∃ M : Fin 2 → (Fin k → F),
+      (∀ i : Fin 2, ∑ j, M i j * v j = ![μ₁, μ₂] i) ∧
+      ∃ S : Finset ι, (1 - (δ : ℝ)) * Fintype.card ι ≤ S.card ∧
+        ∀ i : Fin 2, ∀ j ∈ S, ![f₁, f₂] i j = enc (M i) j) :
+    Pr_{let γ ← $ᵖ F}[∃ m : Fin k → F, (∑ j, m j * v j = μ₁ + γ * μ₂) ∧
+        ∃ S : Finset ι, (1 - (δ : ℝ)) * Fintype.card ι ≤ S.card ∧
+          ∀ j ∈ S, f₁ j + γ • f₂ j = enc m j]
+      = Pr_{let γ ← $ᵖ F}[mcaEventConstrained enc v δ μ₁ μ₂ f₁ f₂ γ] := by
+  refine le_antisymm ?_ ?_
+  · exact Pr_le_Pr_of_implies ($ᵖ F) _ _
+      (fun γ h ↦ (gamma_event_iff_constrainedMCA enc δ v μ₁ μ₂ f₁ f₂ hNoWit γ).mp h)
+  · exact Pr_le_Pr_of_implies ($ᵖ F) _ _
+      (fun γ h ↦ (gamma_event_iff_constrainedMCA enc δ v μ₁ μ₂ f₁ f₂ hNoWit γ).mpr h)
 
 end ToyProblem
