@@ -10,6 +10,7 @@ import ArkLib.Data.CodingTheory.HammingBallVolume
 import ArkLib.Data.CodingTheory.SubspaceDesign
 import ArkLib.Data.CodingTheory.ReedSolomon
 import Mathlib.Analysis.SpecialFunctions.Pow.Real
+import Mathlib.FieldTheory.Finiteness
 
 /-!
 # List-decoding bounds from ABF26 §3
@@ -103,14 +104,87 @@ section LowerBounds_General
 variable {ι : Type} [Fintype ι] [Nonempty ι] [DecidableEq ι]
 variable {F : Type} [Field F] [Fintype F] [DecidableEq F]
 
+/-- **Hamming-ball fiber count.** For a fixed centre `c`, the number of words `f` within
+absolute distance `⌊δ · n⌋` of `c` equals `Vol_q(δ, n)` (independent of `c`), via the
+existing `hammingBallVolume_eq_ncard_hammingBall` bridge. -/
+theorem card_filter_hammingDist_le_eq_hammingBallVolume
+    (c : ι → F) (δ : ℝ) :
+    (Finset.univ.filter (fun f : ι → F => hammingDist c f ≤ ⌊δ * Fintype.card ι⌋₊)).card
+      = hammingBallVolume (Fintype.card F) δ (Fintype.card ι) := by
+  rw [hammingBallVolume_eq_ncard_hammingBall δ c]
+  have hfin : (hammingBall (F := F) c ⌊δ * Fintype.card ι⌋₊).Finite := Set.toFinite _
+  rw [Set.ncard_eq_toFinset_card _ hfin]
+  apply Finset.card_bij (fun x _ => x)
+  · intro x hx
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and] at hx
+    rw [Set.Finite.mem_toFinset, hammingBall, Set.mem_setOf_eq]
+    convert hx using 2
+  · intros; assumption
+  · intro x hx
+    rw [Set.Finite.mem_toFinset, hammingBall, Set.mem_setOf_eq] at hx
+    refine ⟨x, ?_, rfl⟩
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and]
+    convert hx using 2
+
+/-- **Relative-distance close-codeword set as an explicit absolute-distance set.** -/
+theorem closeCodewordsRel_eq_setOf
+    (C : Submodule F (ι → F)) (δ : ℝ) (hδ : 0 ≤ δ) (f : ι → F) :
+    closeCodewordsRel ((C : Set (ι → F))) f δ =
+      {c : ι → F | c ∈ C ∧ hammingDist c f ≤ ⌊δ * Fintype.card ι⌋₊} := by
+  have h_n_pos : 0 < Fintype.card ι := Fintype.card_pos
+  ext c
+  simp only [closeCodewordsRel, relHammingBall, Set.mem_setOf_eq, SetLike.mem_coe,
+    Code.relHammingDist, NNRat.cast_div, NNRat.cast_natCast]
+  refine and_congr_right (fun _ => ?_)
+  rw [div_le_iff₀ (by exact_mod_cast h_n_pos), ← Nat.le_floor_iff (by positivity)]
+  rw [hammingDist_comm c f]
+  constructor <;> intro h <;> · convert h using 2
+
+open Classical in
+/-- **Averaging identity (Fubini).** Summing the point-list size `|Λ(C, δ, f)|` over all
+centres `f` gives `|C| · Vol_q(δ, n)`: swap the order of summation and use that each
+codeword `c ∈ C` is counted once per centre in its `⌊δ·n⌋`-ball, of which there are
+exactly `Vol_q(δ, n)`. -/
+theorem sum_ncard_closeCodewordsRel_eq
+    (C : Submodule F (ι → F)) (δ : ℝ) (hδ : 0 ≤ δ) :
+    ∑ f : ι → F, (closeCodewordsRel ((C : Set (ι → F))) f δ).ncard
+      = (C : Set (ι → F)).ncard * hammingBallVolume (Fintype.card F) δ (Fintype.card ι) := by
+  have hsummand : ∀ f : ι → F, (closeCodewordsRel ((C : Set (ι → F))) f δ).ncard
+      = (Finset.univ.filter
+          (fun c : ι → F => c ∈ C ∧ hammingDist c f ≤ ⌊δ * Fintype.card ι⌋₊)).card := by
+    intro f
+    rw [closeCodewordsRel_eq_setOf C δ hδ f, ← Set.ncard_coe_finset]
+    congr 1
+    ext c
+    simp
+  simp_rw [hsummand, Finset.card_filter]
+  rw [Finset.sum_comm]
+  have hstep : ∀ c : ι → F,
+      (∑ f : ι → F, if c ∈ C ∧ hammingDist c f ≤ ⌊δ * Fintype.card ι⌋₊ then 1 else 0)
+        = if c ∈ C then hammingBallVolume (Fintype.card F) δ (Fintype.card ι) else 0 := by
+    intro c
+    by_cases hc : c ∈ C
+    · simp only [hc, true_and, if_true]
+      rw [← Finset.card_filter]
+      exact card_filter_hammingDist_le_eq_hammingBallVolume c δ
+    · simp [hc]
+  simp_rw [hstep]
+  rw [Finset.sum_ite, Finset.sum_const, Finset.sum_const_zero, add_zero, smul_eq_mul]
+  congr 1
+  rw [← Set.ncard_coe_finset]
+  congr 1
+  ext c; simp
+
 /-- **ABF26 Lemma 3.7 [Eli57].** Elias volume lower bound on list size:
 
   `|Λ(C, δ)| ≥ Vol_q(δ, n) / q^(n-k)`
 
 where `q = |F|`, `n = |ι|`, and `k = dim(C)` is the dimension of the linear code `C`
-(so `|C| = q^k`). The paper's proof uses an averaging argument over random words; we
-admit it here as an external result. Uses `hammingBallVolume` (ABF26 D2.4) from
-`HammingBallVolume.lean`. -/
+(so `|C| = q^k`). **Now proved in-tree** by the paper's averaging argument: the mean of
+the point-list size `|Λ(C, δ, f)|` over uniformly random centres `f` is
+`|C| · Vol / q^n = Vol / q^{n-k}` (`sum_ncard_closeCodewordsRel_eq`), so some centre
+attains at least the mean, and `Lambda` is the supremum over centres. Uses
+`hammingBallVolume` (ABF26 D2.4) from `HammingBallVolume.lean`. -/
 theorem linear_lambda_ge_elias_volume_eli57
     (C : Submodule F (ι → F)) (δ : ℝ) (_hδ_pos : 0 < δ) (_hδ_lt : δ < 1) :
     ENNReal.ofReal
@@ -118,7 +192,63 @@ theorem linear_lambda_ge_elias_volume_eli57
           / (Fintype.card F : ℝ) ^
               ((Fintype.card ι : ℝ) - Module.finrank F C))
       ≤ (Lambda ((C : Set (ι → F))) δ : ENNReal) := by
-  sorry -- ABF26-L3.7; external admit [Eli57].
+  classical
+  set q : ℕ := Fintype.card F with hq
+  set n : ℕ := Fintype.card ι with hn
+  set k : ℕ := Module.finrank F C with hk
+  set Vol : ℕ := hammingBallVolume q δ n with hVol
+  have hq_pos : 0 < q := Fintype.card_pos
+  have hq_pos_real : (0 : ℝ) < q := by exact_mod_cast hq_pos
+  have hδ_nonneg : 0 ≤ δ := le_of_lt _hδ_pos
+  set cnt : (ι → F) → ℕ := fun f => (closeCodewordsRel ((C : Set (ι → F))) f δ).ncard with hcnt
+  -- `|C| = q ^ k` as naturals.
+  have hcard_C : (C : Set (ι → F)).ncard = q ^ k := by
+    have h1 : (C : Set (ι → F)).ncard = Nat.card C := by
+      rw [← Nat.card_coe_set_eq]; rfl
+    rw [h1, hq, hk, ← Nat.card_eq_fintype_card (α := F)]
+    exact Module.natCard_eq_pow_finrank (K := F) (V := C)
+  -- Total count over all centres `= |C| · Vol = q^k · Vol`.
+  have hsum : ∑ f : ι → F, cnt f = q ^ k * Vol := by
+    rw [hcnt]
+    rw [sum_ncard_closeCodewordsRel_eq C δ hδ_nonneg, hcard_C]
+  -- Number of centres is `q ^ n`.
+  have hcard_univ : (Finset.univ : Finset (ι → F)).card = q ^ n := by
+    rw [Finset.card_univ, hq, hn, Fintype.card_fun]
+  -- Real arithmetic identity `q^n · (Vol / q^(n-k)) = q^k · Vol`.
+  have h_arith : (q : ℝ) ^ n * ((Vol : ℝ) / (q : ℝ) ^ ((n : ℝ) - k)) = (q : ℝ) ^ k * Vol := by
+    rw [Real.rpow_sub hq_pos_real, Real.rpow_natCast, Real.rpow_natCast]
+    field_simp
+  -- A centre `f₀` whose point list realises at least the mean.
+  have hmean_le : ∃ f₀ : ι → F,
+      ((Vol : ℝ) / (q : ℝ) ^ ((n : ℝ) - k)) ≤ (cnt f₀ : ℝ) := by
+    by_contra hcon
+    push Not at hcon
+    have hsum_real : (∑ f : ι → F, (cnt f : ℝ)) = (q : ℝ) ^ k * Vol := by
+      have : ((∑ f : ι → F, cnt f : ℕ) : ℝ) = ((q ^ k * Vol : ℕ) : ℝ) := by exact_mod_cast hsum
+      push_cast at this ⊢
+      convert this using 2
+    have hlt : (∑ f : ι → F, (cnt f : ℝ))
+        < ∑ _f : ι → F, ((Vol : ℝ) / (q : ℝ) ^ ((n : ℝ) - k)) := by
+      apply Finset.sum_lt_sum_of_nonempty
+      · exact Finset.univ_nonempty
+      · intro f _; exact hcon f
+    rw [Finset.sum_const, hcard_univ, hsum_real] at hlt
+    have : (q : ℝ) ^ k * Vol < (q : ℝ) ^ k * Vol := by
+      calc (q : ℝ) ^ k * Vol < (q ^ n : ℕ) • ((Vol : ℝ) / (q : ℝ) ^ ((n : ℝ) - k)) := hlt
+        _ = (q : ℝ) ^ n * ((Vol : ℝ) / (q : ℝ) ^ ((n : ℝ) - k)) := by
+              rw [nsmul_eq_mul]; push_cast; ring
+        _ = (q : ℝ) ^ k * Vol := h_arith
+    exact lt_irrefl _ this
+  obtain ⟨f₀, hf₀⟩ := hmean_le
+  -- Conclude: `Lambda ≥ |Λ(C, δ, f₀)| ≥ ofReal(mean)`.
+  have hLam : ((cnt f₀ : ℕ∞) : ENNReal) ≤ (Lambda ((C : Set (ι → F))) δ : ENNReal) := by
+    apply ENat.toENNReal_mono
+    rw [hcnt]
+    exact le_iSup (fun f => ((closeCodewordsRel ((C : Set (ι → F))) f δ).ncard : ℕ∞)) f₀
+  calc ENNReal.ofReal ((Vol : ℝ) / (q : ℝ) ^ ((n : ℝ) - k))
+      ≤ ENNReal.ofReal (cnt f₀ : ℝ) := ENNReal.ofReal_le_ofReal hf₀
+    _ = ((cnt f₀ : ℕ∞) : ENNReal) := by rw [ENNReal.ofReal_natCast, ENat.toENNReal_coe]
+    _ ≤ (Lambda ((C : Set (ι → F))) δ : ENNReal) := hLam
 
 /-- **ABF26 Corollary 3.8.** Volume-based lower bound on list size, using the MS77
 volume estimate `Vol_q(δ, n) ≥ q^{n·(ρ-1+H_q(δ))} / √(8·n·δ·(1-δ))`. With `ρ := k/n`:
