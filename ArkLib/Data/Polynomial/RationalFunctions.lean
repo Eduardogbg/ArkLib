@@ -31,7 +31,7 @@ We define the notions of Appendix A of [BCIKS20].
 
 -/
 
-set_option linter.style.longFile 3300
+set_option linter.style.longFile 3800
 
 open Polynomial Polynomial.Bivariate ToRatFunc Ideal
 
@@ -500,6 +500,21 @@ lemma regularElementsSet_sum {ι : Type} {H : F[X][Y]} (s : Finset ι) {f : ι �
   · intro a s ha ih hf
     rw [Finset.sum_insert ha]
     exact regularElementsSet_add
+      (hf a (by simp [ha]))
+      (ih fun i hi => hf i (by simp [hi]))
+
+/-- Finite products of regular elements are regular. -/
+lemma regularElementsSet_prod {ι : Type} {H : F[X][Y]} (s : Finset ι) {f : ι → 𝕃 H}
+    (hf : ∀ i ∈ s, f i ∈ regularElementsSet H) :
+    (∏ i ∈ s, f i) ∈ regularElementsSet H := by
+  classical
+  revert hf
+  refine Finset.induction_on s ?_ ?_
+  · intro _hf
+    simpa using regularElementsSet_one H
+  · intro a s ha ih hf
+    rw [Finset.prod_insert ha]
+    exact regularElementsSet_mul
       (hf a (by simp [ha]))
       (ih fun i hi => hf i (by simp [hi]))
 
@@ -3160,6 +3175,316 @@ theorem exists_hensel_alpha_sequence (x₀ : F) (R : F[X][X][Y]) (H : F[X][Y])
       evalRAtPowerSeries x₀ H R (gammaFromAlpha H αseq) = 0 := by
   exact formalHenselAlphaSequence x₀ R H (initial_root_at_x0 x₀ R H hHyp) (zeta_ne_zero_of_Hypotheses x₀ R H hHyp)
 
+/-- Predicate: all coefficients of a power series over `𝕃 H` are regular (lie in the image of
+`𝒪 H`). This abstracts the "regular power series" used throughout the Hensel clearing argument. -/
+def AllCoeffRegular (H : F[X][Y]) (φ : PowerSeries (𝕃 H)) : Prop :=
+  ∀ n, PowerSeries.coeff n φ ∈ regularElementsSet H
+
+theorem AllCoeffRegular.add {H : F[X][Y]} {φ ψ : PowerSeries (𝕃 H)}
+    (hφ : AllCoeffRegular H φ) (hψ : AllCoeffRegular H ψ) :
+    AllCoeffRegular H (φ + ψ) := by
+  intro n; rw [map_add]; exact regularElementsSet_add (hφ n) (hψ n)
+
+theorem AllCoeffRegular.mul {H : F[X][Y]} {φ ψ : PowerSeries (𝕃 H)}
+    (hφ : AllCoeffRegular H φ) (hψ : AllCoeffRegular H ψ) :
+    AllCoeffRegular H (φ * ψ) := by
+  intro n
+  rw [PowerSeries.coeff_mul]
+  apply regularElementsSet_sum
+  intro p _
+  exact regularElementsSet_mul (hφ p.1) (hψ p.2)
+
+theorem AllCoeffRegular.pow {H : F[X][Y]} {φ : PowerSeries (𝕃 H)}
+    (hφ : AllCoeffRegular H φ) (m : ℕ) :
+    AllCoeffRegular H (φ ^ m) := by
+  induction m with
+  | zero =>
+      intro n; rw [pow_zero, PowerSeries.coeff_one]; split
+      · exact regularElementsSet_one H
+      · exact regularElementsSet_zero H
+  | succ m ih => rw [pow_succ]; exact ih.mul hφ
+
+theorem AllCoeffRegular.const {H : F[X][Y]} {c : 𝕃 H} (hc : c ∈ regularElementsSet H) :
+    AllCoeffRegular H (PowerSeries.C c) := by
+  intro n; rw [PowerSeries.coeff_C]; split
+  · exact hc
+  · exact regularElementsSet_zero H
+
+theorem AllCoeffRegular.X {H : F[X][Y]} : AllCoeffRegular H (PowerSeries.X) := by
+  intro n; rw [PowerSeries.coeff_X]; split
+  · exact regularElementsSet_one H
+  · exact regularElementsSet_zero H
+
+theorem AllCoeffRegular.zero {H : F[X][Y]} :
+    AllCoeffRegular H (0 : PowerSeries (𝕃 H)) := by
+  intro n; rw [map_zero]; exact regularElementsSet_zero H
+
+/-- The image of a field constant `x₀ : F` in `𝕃 H` is a regular element. -/
+theorem fieldTo𝕃_regular (x₀ : F) (H : F[X][Y]) :
+    fieldTo𝕃 (H := H) x₀ ∈ regularElementsSet H := by
+  show RingHom.comp liftToFunctionField Polynomial.C x₀ ∈ regularElementsSet H
+  rw [RingHom.comp_apply]
+  exact regularElementsSet_liftToFunctionField H _
+
+/-- Every coefficient of `liftCoeffToPowerSeries x₀ H p` is regular: the construction only uses
+`liftToFunctionField`-images of `F[X]`-coefficients, the regular constant `x₀`, and the
+power-series variable, all of which preserve regularity. -/
+theorem coeff_liftCoeff_regular (x₀ : F) (H : F[X][Y]) (p : F[X][X]) :
+    AllCoeffRegular H (liftCoeffToPowerSeries x₀ H p) := by
+  classical
+  have heq : liftCoeffToPowerSeries x₀ H p =
+      Polynomial.eval₂ (RingHom.comp PowerSeries.C (liftToFunctionField (H := H)))
+        (PowerSeries.C (fieldTo𝕃 (H := H) x₀) + PowerSeries.X) p := rfl
+  rw [heq, Polynomial.eval₂_eq_sum_range]
+  apply Finset.sum_induction _ (AllCoeffRegular H) (fun _ _ => AllCoeffRegular.add)
+    AllCoeffRegular.zero
+  intro m _
+  apply AllCoeffRegular.mul
+  · rw [RingHom.comp_apply]
+    exact AllCoeffRegular.const (regularElementsSet_liftToFunctionField H _)
+  · exact AllCoeffRegular.pow
+      ((AllCoeffRegular.const (fieldTo𝕃_regular x₀ H)).add AllCoeffRegular.X) m
+
+/-- **Residual simplification** (paper A.4): replacing `αseq` by its truncation `αtrunc i =
+if i ≤ t then αseq i else 0` cancels the linear term `ζ · αseq (t+1)` exactly. Hence the Hensel
+residual at step `t` equals the `(t+1)`-st coefficient of `R` evaluated at the *truncated*
+power series. This uses only the splitting lemma `coeff_evalR_split`; `hroot` is not needed. -/
+theorem henselCoeffResidual_eq_trunc (x₀ : F) (R : F[X][X][Y]) (H : F[X][Y])
+    [Fact (Irreducible H)] [Fact (0 < H.natDegree)]
+    (αseq : ℕ → 𝕃 H)
+    (hα0 : αseq 0 = functionFieldT (H := H) /
+      liftToFunctionField (H := H) H.leadingCoeff)
+    (t : ℕ) :
+    henselCoeffResidual x₀ R H αseq t =
+      PowerSeries.coeff (t + 1)
+        (evalRAtPowerSeries x₀ H R
+          (PowerSeries.mk (fun i => if i ≤ t then αseq i else 0))) := by
+  classical
+  unfold henselCoeffResidual gammaFromAlpha
+  set αtrunc : ℕ → 𝕃 H := fun i => if i ≤ t then αseq i else 0 with hαtrunc
+  set δ : PowerSeries (𝕃 H) := PowerSeries.mk αseq - PowerSeries.mk αtrunc with hδ_def
+  have hsum : PowerSeries.mk αseq = PowerSeries.mk αtrunc + δ := by rw [hδ_def]; ring
+  have hδlow : ∀ i < t + 1, PowerSeries.coeff i δ = 0 := by
+    intro i hi
+    rw [hδ_def, map_sub, PowerSeries.coeff_mk, PowerSeries.coeff_mk, hαtrunc]
+    simp only []
+    rw [if_pos (by omega)]; ring
+  have hδtop : PowerSeries.coeff (t + 1) δ = αseq (t + 1) := by
+    rw [hδ_def, map_sub, PowerSeries.coeff_mk, PowerSeries.coeff_mk, hαtrunc]
+    simp only []
+    rw [if_neg (by omega)]; ring
+  have hΓ0 : PowerSeries.constantCoeff (PowerSeries.mk αtrunc) =
+      functionFieldT (H := H) / liftToFunctionField (H := H) H.leadingCoeff := by
+    rw [← PowerSeries.coeff_zero_eq_constantCoeff_apply, PowerSeries.coeff_mk, hαtrunc]
+    simp only []
+    rw [if_pos (by omega), hα0]
+  rw [hsum, coeff_evalR_split x₀ R (t + 1) (by omega) (PowerSeries.mk αtrunc) δ hδlow hΓ0,
+    hδtop]
+  ring
+
+/-- **Per-degree clearing lemma** (paper A.4 core combinatorial bound).
+
+For the truncated power series `g = mk αtrunc` whose nonzero coefficients (`i ≤ t`) have the
+Hensel shape `αtrunc i = embeddingOf𝒪Into𝕃 (βprev ⟨i⟩) / (W^{i+1} · eta^{e_i})` with `βprev`
+regular and `e_i = henselDenominatorExponent i`, each degree-`j` summand of the expansion of
+`coeff (t+1) (eval₂ liftCoeff g R)`, after multiplication by the global clearing denominator
+`Ddiv = W^{t+2} · eta^{E-1} · W^{d-2}`, is a regular element.
+
+This is the combinatorial heart of [BCIKS20] Appendix A.4 (pp. 52–53). The denominator of a
+partition term with `∑ iₗ = b ≤ t+1` over `j` parts is `W^{b+j} · eta^{∑ e_{iₗ}}`; the
+exponent bounds `∑ e_{iₗ} ≤ E-1 = 2t` and (for `b ≤ t`) `b+j ≤ t+d` make the leftover `W`/`eta`
+powers nonnegative. The single boundary case `a = 0, b = t+1, j = R.natDegree` has a one-`W`
+deficit covered by the leading-coefficient divisibility `leadingCoeff_dvd_evalX_coeff_natDegree`
+(the coefficient `coeff 0 (liftCoeff (R.coeff d))` is `liftToFunctionField` of the top
+coefficient of `R(x₀,·)`, which is divisible by `W`). The leftover `eta = W^{d-2}·ζ` factors
+and `embeddingOf𝒪Into𝕃_ξ` close the regularity. -/
+theorem henselClearedTerm_regular (x₀ : F) (R : F[X][X][Y]) (H : F[X][Y])
+    [_H_irreducible : Fact (Irreducible H)] [_H_natDegree_pos : Fact (0 < H.natDegree)]
+    (hHyp : Hypotheses x₀ R H) (t : ℕ) (βprev : Fin (t + 1) → 𝒪 H)
+    (αtrunc : ℕ → 𝕃 H)
+    (hshape : ∀ i : ℕ, αtrunc i =
+      if h : i ≤ t then
+        embeddingOf𝒪Into𝕃 H (βprev ⟨i, by omega⟩) /
+          (liftToFunctionField (H := H) H.leadingCoeff ^ (i + 1) *
+            (embeddingOf𝒪Into𝕃 H (ξ x₀ R H hHyp)) ^ henselDenominatorExponent i)
+      else 0)
+    (j : ℕ) (hj : j ∈ Finset.range (R.natDegree + 1)) :
+    PowerSeries.coeff (t + 1)
+        (liftCoeffToPowerSeries x₀ H (R.coeff j) * (PowerSeries.mk αtrunc) ^ j) *
+      (liftToFunctionField (H := H) H.leadingCoeff ^ (t + 1 + 1) *
+        (embeddingOf𝒪Into𝕃 H (ξ x₀ R H hHyp)) ^ (henselDenominatorExponent (t + 1) - 1) *
+        liftToFunctionField (H := H) H.leadingCoeff ^ (R.natDegree - 2)) ∈
+      regularElementsSet H := by
+  classical
+  set W : 𝕃 H := liftToFunctionField (H := H) H.leadingCoeff with hWdef
+  set eta : 𝕃 H := embeddingOf𝒪Into𝕃 H (ξ x₀ R H hHyp) with hetadef
+  have hWne : W ≠ 0 := liftToFunctionField_leadingCoeff_ne_zero (H := H)
+  have hetane : eta ≠ 0 := by
+    rw [hetadef, embeddingOf𝒪Into𝕃_ξ]
+    exact mul_ne_zero (pow_ne_zero _ hWne) (zeta_ne_zero_of_Hypotheses x₀ R H hHyp)
+  have hjle : j ≤ R.natDegree := by
+    rw [Finset.mem_range] at hj; omega
+  -- regularity of cleared numerators (clearing the denominator of each `αtrunc i`, `i ≤ t`)
+  have hnumReg : ∀ i, i ≤ t →
+      αtrunc i * (W ^ (i + 1) * eta ^ henselDenominatorExponent i) ∈ regularElementsSet H := by
+    intro i hi
+    rw [hshape i, dif_pos hi, hWdef, hetadef,
+      div_mul_cancel₀ _ (mul_ne_zero (pow_ne_zero _ hWne) (pow_ne_zero _ hetane))]
+    exact ⟨βprev ⟨i, by omega⟩, rfl⟩
+  -- `αtrunc` vanishes above the truncation point
+  have hαzero : ∀ i, t < i → αtrunc i = 0 := by
+    intro i hi; rw [hshape i, dif_neg (by omega)]
+  -- Step: distribute `coeff_mul` and `coeff_pow`, reduce to a single composition `l`.
+  rw [PowerSeries.coeff_mul, Finset.sum_mul]
+  apply regularElementsSet_sum
+  intro p _hp
+  rw [PowerSeries.coeff_pow]
+  simp only [PowerSeries.coeff_mk]
+  rw [Finset.mul_sum, Finset.sum_mul]
+  apply regularElementsSet_sum
+  intro l hl
+  rw [Finset.mem_finsuppAntidiag] at hl
+  have hbsum : (∑ i ∈ Finset.range j, l i) = p.2 := hl.1
+  have hcoeffReg : PowerSeries.coeff p.1 (liftCoeffToPowerSeries x₀ H (R.coeff j))
+      ∈ regularElementsSet H := coeff_liftCoeff_regular x₀ H (R.coeff j) p.1
+  have hab : p.1 + p.2 = t + 1 := Finset.mem_antidiagonal.mp _hp
+  -- Case A: some part exceeds `t`  ⇒  the product has a zero factor.
+  by_cases hbig : ∃ i ∈ Finset.range j, t < l i
+  · obtain ⟨i₀, hi₀, hi₀t⟩ := hbig
+    have hz : (∏ i ∈ Finset.range j, αtrunc (l i)) = 0 :=
+      Finset.prod_eq_zero hi₀ (hαzero _ hi₀t)
+    rw [hz]
+    simpa using regularElementsSet_zero H
+  · -- Case B: all parts `≤ t`.
+    push_neg at hbig
+    have hle : ∀ i ∈ Finset.range j, l i ≤ t := hbig
+    -- product-clearing: `(∏ αtrunc) · W^{∑(lᵢ+1)} · eta^{∑e} ∈ regular`
+    have hprodReg : (∏ i ∈ Finset.range j, αtrunc (l i)) *
+        (W ^ (∑ i ∈ Finset.range j, (l i + 1)) *
+          eta ^ (∑ i ∈ Finset.range j, henselDenominatorExponent (l i)))
+        ∈ regularElementsSet H := by
+      rw [← Finset.prod_pow_eq_pow_sum, ← Finset.prod_pow_eq_pow_sum,
+        ← Finset.prod_mul_distrib, ← Finset.prod_mul_distrib]
+      exact regularElementsSet_prod _ fun i hi => hnumReg (l i) (hle i hi)
+    -- the eta exponent bound `∑ e ≤ E - 1 = 2t`
+    have hPe : (∑ i ∈ Finset.range j, henselDenominatorExponent (l i)) ≤
+        henselDenominatorExponent (t + 1) - 1 := by
+      set Pe := (∑ i ∈ Finset.range j, henselDenominatorExponent (l i)) with hPedef
+      set S1 := (∑ i ∈ Finset.range j, (if l i = 0 then 0 else 1)) with hS1def
+      have h2b : 2 * p.2 = Pe + S1 := by
+        rw [hPedef, hS1def, ← hbsum, Finset.mul_sum, ← Finset.sum_add_distrib]
+        exact Finset.sum_congr rfl fun i _ => by
+          unfold henselDenominatorExponent; split <;> omega
+      have hbS1 : p.2 ≤ t * S1 := by
+        rw [← hbsum, hS1def, Finset.mul_sum]
+        refine Finset.sum_le_sum fun i hi => ?_
+        split
+        · next h => rw [h]; simp
+        · next h => rw [Nat.mul_one]; exact hle i hi
+      have hE1 : henselDenominatorExponent (t + 1) - 1 = 2 * t := by
+        rw [henselDenominatorExponent_succ]; omega
+      rw [hE1]
+      rcases Nat.lt_or_ge p.2 (t + 1) with hbt | hbt
+      · omega
+      · have hS1ge : 2 ≤ S1 := by
+          by_contra h
+          push_neg at h
+          interval_cases S1 <;> omega
+        omega
+    -- `Pw = ∑(lᵢ + 1) = p.2 + j`
+    have hPweq : (∑ i ∈ Finset.range j, (l i + 1)) = p.2 + j := by
+      rw [Finset.sum_add_distrib, hbsum]; simp
+    set Pw := (∑ i ∈ Finset.range j, (l i + 1)) with hPwdef
+    set Pe := (∑ i ∈ Finset.range j, henselDenominatorExponent (l i)) with hPedef
+    set E1 := henselDenominatorExponent (t + 1) - 1 with hE1def
+    -- helper: given a `W`-budget `wb ≥ Pw` and a regular `cf`, finish.
+    have finish_with : ∀ (cf : 𝕃 H) (wb : ℕ),
+        cf ∈ regularElementsSet H → Pw ≤ wb →
+        cf * ((∏ i ∈ Finset.range j, αtrunc (l i)) * (W ^ Pw * eta ^ Pe)) *
+          (W ^ (wb - Pw) * eta ^ (E1 - Pe)) ∈ regularElementsSet H := by
+      intro cf wb hcf _hwb
+      refine regularElementsSet_mul (regularElementsSet_mul hcf hprodReg) ?_
+      exact regularElementsSet_mul
+        (by rw [hWdef]; exact regularElementsSet_pow (regularElementsSet_liftToFunctionField H _) _)
+        (by rw [hetadef]; exact regularElementsSet_pow ⟨_, rfl⟩ _)
+    -- boundary detection
+    by_cases hbdry : p.2 = t + 1 ∧ j = R.natDegree ∧ 2 ≤ R.natDegree
+    · -- boundary: `p.1 = 0`, `j = d`, `d ≥ 2`; one extra `W` comes from the leading-coeff
+      -- divisibility `W ∣ coeff 0 (liftCoeff (R.coeff d))`.
+      obtain ⟨hb, hjeq, hdge⟩ := hbdry
+      have ha0 : p.1 = 0 := by omega
+      -- coeff 0 (liftCoeff (R.coeff d)) = W * q, q regular
+      have hWdvd : ∃ q : 𝕃 H, q ∈ regularElementsSet H ∧
+          PowerSeries.coeff p.1 (liftCoeffToPowerSeries x₀ H (R.coeff j)) = W * q := by
+        rw [ha0, hjeq, PowerSeries.coeff_zero_eq_constantCoeff_apply,
+          constantCoeff_liftCoeffToPowerSeries]
+        have hcoeff : (R.coeff R.natDegree).eval (Polynomial.C x₀) =
+            (Bivariate.evalX (Polynomial.C x₀) R).coeff R.natDegree := by
+          simp [Bivariate.evalX_eq_map, Polynomial.coeff_map]
+        rw [hcoeff]
+        obtain ⟨c, hc⟩ := leadingCoeff_dvd_evalX_coeff_natDegree hHyp
+        rw [hc, map_mul]
+        exact ⟨liftToFunctionField (H := H) c, regularElementsSet_liftToFunctionField H c, by
+          rw [hWdef]⟩
+      obtain ⟨q, hqReg, hqeq⟩ := hWdvd
+      -- W-budget: total available `W` power is `(t+2) + (d-2) + 1` (the `+1` from `q`'s `W`).
+      have hbudget : Pw ≤ (t + 1 + 1) + (R.natDegree - 2) + 1 := by
+        rw [hPweq]; omega
+      -- rewrite Ddiv with the extra `W` from `coeffReg = W * q`
+      rw [hqeq]
+      have hreassoc :
+          (W * q) * (∏ i ∈ Finset.range j, αtrunc (l i)) *
+              (W ^ (t + 1 + 1) * eta ^ E1 * W ^ (R.natDegree - 2)) =
+          q * ((∏ i ∈ Finset.range j, αtrunc (l i)) * (W ^ Pw * eta ^ Pe)) *
+            (W ^ (((t + 1 + 1) + (R.natDegree - 2) + 1) - Pw) * eta ^ (E1 - Pe)) := by
+        have hwsplit : ((t + 1 + 1) + (R.natDegree - 2) + 1) =
+            Pw + (((t + 1 + 1) + (R.natDegree - 2) + 1) - Pw) := by omega
+        have hesplit : E1 = Pe + (E1 - Pe) := by omega
+        rw [show (W * q) * (∏ i ∈ Finset.range j, αtrunc (l i)) *
+              (W ^ (t + 1 + 1) * eta ^ E1 * W ^ (R.natDegree - 2)) =
+            q * ((∏ i ∈ Finset.range j, αtrunc (l i)) *
+              (W ^ ((t + 1 + 1) + (R.natDegree - 2) + 1) * eta ^ E1)) by ring]
+        conv_lhs => rw [hwsplit, hesplit, pow_add, pow_add]
+        ring
+      rw [hreassoc]
+      exact finish_with q _ hqReg hbudget
+    · -- non-boundary: the `W`-budget `(t+2)+(d-2)` already covers `Pw = p.2 + j`.
+      have hbudget : Pw ≤ (t + 1 + 1) + (R.natDegree - 2) := by
+        rw [hPweq]
+        rw [Finset.mem_range] at hj
+        -- `¬(p.2 = t+1 ∧ j = d ∧ 2 ≤ d)`; with `p.2 ≤ t+1`, `j ≤ d`
+        rcases Nat.lt_or_ge R.natDegree 2 with hd | hd
+        · omega
+        · -- d ≥ 2:  the negated boundary forces `p.2 ≤ t` or `j ≤ d - 1`
+          rcases not_and_or.mp hbdry with h1 | h2
+          · -- p.2 ≠ t+1, so p.2 ≤ t
+            omega
+          · rcases not_and_or.mp h2 with h3 | h4
+            · -- j ≠ R.natDegree, so j ≤ d - 1
+              omega
+            · exact absurd hd h4
+      -- rewrite Ddiv directly
+      have hreassoc :
+          PowerSeries.coeff p.1 (liftCoeffToPowerSeries x₀ H (R.coeff j)) *
+              (∏ i ∈ Finset.range j, αtrunc (l i)) *
+                (W ^ (t + 1 + 1) * eta ^ E1 * W ^ (R.natDegree - 2)) =
+          PowerSeries.coeff p.1 (liftCoeffToPowerSeries x₀ H (R.coeff j)) *
+            ((∏ i ∈ Finset.range j, αtrunc (l i)) * (W ^ Pw * eta ^ Pe)) *
+            (W ^ (((t + 1 + 1) + (R.natDegree - 2)) - Pw) * eta ^ (E1 - Pe)) := by
+        have hwsplit : ((t + 1 + 1) + (R.natDegree - 2)) =
+            Pw + (((t + 1 + 1) + (R.natDegree - 2)) - Pw) := by omega
+        have hesplit : E1 = Pe + (E1 - Pe) := by omega
+        rw [show PowerSeries.coeff p.1 (liftCoeffToPowerSeries x₀ H (R.coeff j)) *
+              (∏ i ∈ Finset.range j, αtrunc (l i)) *
+                (W ^ (t + 1 + 1) * eta ^ E1 * W ^ (R.natDegree - 2)) =
+            PowerSeries.coeff p.1 (liftCoeffToPowerSeries x₀ H (R.coeff j)) *
+              ((∏ i ∈ Finset.range j, αtrunc (l i)) *
+                (W ^ ((t + 1 + 1) + (R.natDegree - 2)) * eta ^ E1)) by ring]
+        conv_lhs => rw [hwsplit, hesplit, pow_add, pow_add]
+        ring
+      rw [hreassoc]
+      exact finish_with _ _ hcoeffReg hbudget
+
 theorem henselCoeffResidual_regular_after_clearing (x₀ : F) (R : F[X][X][Y]) (H : F[X][Y])
     [_H_irreducible : Fact (Irreducible H)] [_H_natDegree_pos : Fact (0 < H.natDegree)]
     (hHyp : Hypotheses x₀ R H) (αseq : ℕ → 𝕃 H)
@@ -3178,14 +3503,37 @@ theorem henselCoeffResidual_regular_after_clearing (x₀ : F) (R : F[X][X][Y]) (
     let E : ℕ := henselDenominatorExponent (t + 1)
     let Ddiv : 𝕃 H := W ^ (t + 1 + 1) * eta ^ (E - 1) * W ^ (R.natDegree - 2)
     henselCoeffResidual x₀ R H αseq t * Ddiv ∈ regularElementsSet H := by
-  -- Residual-regularity (paper A.4): expand `coeff (t+1) (evalRAtPowerSeries x₀ H R (mk α))`
-  -- as the partition sum `∑_{i₁, λ ∈ P(t+1-i₁)} A_{i₁,λ} ∏ αₗ^{λₗ}`. Subtracting the unique
-  -- linear term `ζ * α (t+1)` (the `λ = λ⁽ᵗ⁺¹⁾` summand) leaves only terms using `αᵢ, i ≤ t`.
-  -- Replace those via `hprev`, then multiply by the clearing denominator `Ddiv`; conclude
-  -- regularity from closure of `regularElementsSet` under +, -, *, powers and finite sums
-  -- (`regularElementsSet_{add,neg,mul,pow,sum,liftBivariate,liftToFunctionField}`),
-  -- `embeddingOf𝒪Into𝕃_ξ`, and `liftToFunctionField_leadingCoeff_ne_zero`.
-  sorry
+  -- Residual-regularity (paper A.4). Step 1 (`henselCoeffResidual_eq_trunc`): the residual is
+  -- the `(t+1)`-st coefficient of `R` evaluated at the truncated series `mk αtrunc` (the linear
+  -- term `ζ · α(t+1)` cancels exactly). Step 2: expand `eval₂ liftCoeff (mk αtrunc) R` as a
+  -- finite sum over `j`, distribute `Ddiv`, and apply the per-degree clearing lemma
+  -- `henselClearedTerm_regular` to each summand.
+  classical
+  intro W eta E Ddiv
+  set αtrunc : ℕ → 𝕃 H := fun i => if i ≤ t then αseq i else 0 with hαtrunc
+  rw [henselCoeffResidual_eq_trunc x₀ R H αseq hα0 t]
+  -- shape of `αtrunc` from `hprev`
+  have hshape : ∀ i : ℕ, αtrunc i =
+      if h : i ≤ t then
+        embeddingOf𝒪Into𝕃 H (βprev ⟨i, by omega⟩) /
+          (liftToFunctionField (H := H) H.leadingCoeff ^ (i + 1) *
+            (embeddingOf𝒪Into𝕃 H (ξ x₀ R H hHyp)) ^ henselDenominatorExponent i)
+      else 0 := by
+    intro i
+    by_cases h : i ≤ t
+    · have hval : αtrunc i = αseq i := by rw [hαtrunc]; simp only [if_pos h]
+      rw [hval, dif_pos h]
+      have := hprev ⟨i, by omega⟩
+      simpa using this.symm
+    · have hval : αtrunc i = 0 := by rw [hαtrunc]; simp only [if_neg h]
+      rw [hval, dif_neg h]
+  show PowerSeries.coeff (t + 1)
+      (evalRAtPowerSeries x₀ H R (PowerSeries.mk αtrunc)) * Ddiv ∈ regularElementsSet H
+  unfold evalRAtPowerSeries
+  rw [Polynomial.eval₂_eq_sum_range, map_sum, Finset.sum_mul]
+  apply regularElementsSet_sum
+  intro j hj
+  exact henselClearedTerm_regular x₀ R H hHyp t βprev αtrunc hshape j hj
 
 theorem numerator_shape_weight_succ_le_strong (x₀ : F) (R : F[X][X][Y]) (H : F[X][Y])
     [_H_irreducible : Fact (Irreducible H)] [_H_natDegree_pos : Fact (0 < H.natDegree)]
