@@ -1,5 +1,5 @@
 {
-  "count": 50,
+  "count": 51,
   "entries": {
     "ACFY24": {
       "authors": [
@@ -735,6 +735,31 @@
       "url": "https://doi.org/10.1145/146585.146605",
       "venue": "J. ACM",
       "year": "1992"
+    },
+    "LNP22": {
+      "authors": [
+        "Lyubashevsky, Vadim",
+        "Nguyen, Ngoc Khanh",
+        "Plan{\\c{c}}on, Maxime"
+      ],
+      "authors_text": "Lyubashevsky, Vadim and Nguyen, Ngoc Khanh and Plan{\\c{c}}on, Maxime",
+      "doi": "",
+      "entry_type": "inproceedings",
+      "fields": {
+        "author": "Lyubashevsky, Vadim and Nguyen, Ngoc Khanh and Plan{\\c{c}}on, Maxime",
+        "booktitle": "Advances in Cryptology -- CRYPTO 2022",
+        "pages": "71--101",
+        "publisher": "Springer",
+        "series": "Lecture Notes in Computer Science",
+        "title": "Lattice-Based Zero-Knowledge Proofs and Applications: Shorter, Simpler, and More General",
+        "volume": "13508",
+        "year": "2022"
+      },
+      "key": "LNP22",
+      "title": "Lattice-Based Zero-Knowledge Proofs and Applications: Shorter, Simpler, and More General",
+      "url": "",
+      "venue": "Advances in Cryptology -- CRYPTO 2022",
+      "year": "2022"
     },
     "LPS24": {
       "authors": [

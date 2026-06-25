@@ -4,7 +4,7 @@ Generated from `docs/kb/_generated/declarations.json`. **Eyeball, do not auto-re
 
 ## Stats
 
-- `ArkLib` — 240 files, 4348 declarations
+- `ArkLib` — 259 files, 4495 declarations
 
 ## Same short-name across multiple files (125 groups)
 
@@ -251,13 +251,13 @@ Each group lists declarations sharing a short name across ≥2 files. Most are l
 
 - `def KZG.commit` [ArkLib/Commitments/Functional/KZG/Basic.lean:55](../../../ArkLib/Commitments/Functional/KZG/Basic.lean#L55) — To commit to an `n + 1`-tuple of coefficients `coeffs` (corresponding to a polynomial of maximum deg
 - `def ArkLib.Lattices.Ajtai.Simple.commit` [ArkLib/Commitments/Ordinary/Ajtai/Simple/Scheme.lean:38](../../../ArkLib/Commitments/Ordinary/Ajtai/Simple/Scheme.lean#L38) — Deterministically commit by multiplying the public matrix by the message vector.
-- `def SimpleRO.commit` [ArkLib/Commitments/Ordinary/SimpleRO.lean:41](../../../ArkLib/Commitments/Ordinary/SimpleRO.lean#L41) — Commit to message `v` under the random oracle `ro` and randomness `r` by hashing `(v, r)`.
+- `def SimpleRO.commit` [ArkLib/Commitments/Ordinary/SimpleRO.lean:48](../../../ArkLib/Commitments/Ordinary/SimpleRO.lean#L48) — Commit to message `v` under the random oracle `ro` and randomness `r` by hashing `(v, r)`.
 
 ### `commitmentScheme` (3 declarations, 3 files)
 
 - `def ArkLib.Lattices.Ajtai.InnerOuter.commitmentScheme` [ArkLib/Commitments/Functional/Hachi/InnerOuter/Scheme.lean:200](../../../ArkLib/Commitments/Functional/Hachi/InnerOuter/Scheme.lean#L200) — The inner-outer Ajtai commitment as a `CommitmentScheme`, verified with the Hachi/Greyhound weak ver
 - `def ArkLib.Lattices.Ajtai.Simple.commitmentScheme` [ArkLib/Commitments/Ordinary/Ajtai/Simple/Scheme.lean:56](../../../ArkLib/Commitments/Ordinary/Ajtai/Simple/Scheme.lean#L56) — The simple Ajtai commitment as a `CommitmentScheme`. An opening is accepted only when the message sa
-- `def SimpleRO.commitmentScheme` [ArkLib/Commitments/Ordinary/SimpleRO.lean:51](../../../ArkLib/Commitments/Ordinary/SimpleRO.lean#L51) — The simple random-oracle commitment as an (ordinary) `CommitmentScheme`. Setup samples a uniformly r
+- `def SimpleRO.commitmentScheme` [ArkLib/Commitments/Ordinary/SimpleRO.lean:58](../../../ArkLib/Commitments/Ordinary/SimpleRO.lean#L58) — The simple random-oracle commitment as an (ordinary) `CommitmentScheme`. Setup samples a uniformly r
 
 ### `coreInteractionOracleReduction` (3 declarations, 3 files)
 
@@ -585,12 +585,12 @@ Each group lists declarations sharing a short name across ≥2 files. Most are l
 
 ### `coeffHom` (2 declarations, 2 files)
 
-- `def ArkLib.Lattices.CyclotomicModulus.Rq.coeffHom` [ArkLib/Data/Lattices/CyclotomicRing/Rq.lean:175](../../../ArkLib/Data/Lattices/CyclotomicRing/Rq.lean#L175) — Reading off the `k`-th coefficient of the underlying polynomial, as an additive homomorphism `Rq Φ →
+- `def ArkLib.Lattices.CyclotomicModulus.Rq.coeffHom` [ArkLib/Data/Lattices/CyclotomicRing/Rq.lean:244](../../../ArkLib/Data/Lattices/CyclotomicRing/Rq.lean#L244) — Reading off the `k`-th coefficient of the underlying polynomial, as an additive homomorphism `Rq Φ →
 - `def CompPoly.CPolynomial.coeffHom` [ArkLib/ToCompPoly/Univariate/Basic.lean:282](../../../ArkLib/ToCompPoly/Univariate/Basic.lean#L282) — Extracting the `k`-th coefficient as an additive homomorphism.
 
 ### `coeffHom_apply` (2 declarations, 2 files)
 
-- `theorem ArkLib.Lattices.CyclotomicModulus.Rq.coeffHom_apply` [ArkLib/Data/Lattices/CyclotomicRing/Rq.lean:180](../../../ArkLib/Data/Lattices/CyclotomicRing/Rq.lean#L180) — (no docstring)
+- `theorem ArkLib.Lattices.CyclotomicModulus.Rq.coeffHom_apply` [ArkLib/Data/Lattices/CyclotomicRing/Rq.lean:249](../../../ArkLib/Data/Lattices/CyclotomicRing/Rq.lean#L249) — (no docstring)
 - `theorem CompPoly.CPolynomial.coeffHom_apply` [ArkLib/ToCompPoly/Univariate/Basic.lean:288](../../../ArkLib/ToCompPoly/Univariate/Basic.lean#L288) — (no docstring)
 
 ### `coreInteractionOracleRbrKnowledgeError` (2 declarations, 2 files)
@@ -720,7 +720,7 @@ Each group lists declarations sharing a short name across ≥2 files. Most are l
 
 ### `ofFinCoeff` (2 declarations, 2 files)
 
-- `def ArkLib.Lattices.CyclotomicModulus.Rq.ofFinCoeff` [ArkLib/Data/Lattices/CyclotomicRing/Rq.lean:184](../../../ArkLib/Data/Lattices/CyclotomicRing/Rq.lean#L184) — The reduced representative with prescribed finite coefficients `Σ_{k<N} cₖ Xᵏ`, valid when `N` does 
+- `def ArkLib.Lattices.CyclotomicModulus.Rq.ofFinCoeff` [ArkLib/Data/Lattices/CyclotomicRing/Rq.lean:253](../../../ArkLib/Data/Lattices/CyclotomicRing/Rq.lean#L253) — The reduced representative with prescribed finite coefficients `Σ_{k<N} cₖ Xᵏ`, valid when `N` does 
 - `def CompPoly.CPolynomial.ofFinCoeff` [ArkLib/ToCompPoly/Univariate/Basic.lean:291](../../../ArkLib/ToCompPoly/Univariate/Basic.lean#L291) — The polynomial with prescribed finite coefficient function: `Σ_{k<N} cₖ Xᵏ`.
 
 ### `pSpecCoreInteraction` (2 declarations, 2 files)
@@ -735,7 +735,7 @@ Each group lists declarations sharing a short name across ≥2 files. Most are l
 
 ### `perfectlyCorrect` (2 declarations, 2 files)
 
-- `theorem ArkLib.Lattices.Ajtai.InnerOuter.perfectlyCorrect` [ArkLib/Commitments/Functional/Hachi/InnerOuter/Correctness.lean:198](../../../ArkLib/Commitments/Functional/Hachi/InnerOuter/Correctness.lean#L198) — **Unconditional perfect correctness with the concrete binary decomposition.** Both message and inner
+- `theorem ArkLib.Lattices.Ajtai.InnerOuter.perfectlyCorrect` [ArkLib/Commitments/Functional/Hachi/InnerOuter/Correctness.lean:197](../../../ArkLib/Commitments/Functional/Hachi/InnerOuter/Correctness.lean#L197) — **Unconditional perfect correctness with the concrete binary decomposition.** Both message and inner
 - `theorem ArkLib.Lattices.Ajtai.Simple.perfectlyCorrect` [ArkLib/Commitments/Ordinary/Ajtai/Simple/Correctness.lean:33](../../../ArkLib/Commitments/Ordinary/Ajtai/Simple/Correctness.lean#L33) — Simple Ajtai commitments are correct on short messages: an honest commitment to a message accepted b
 
 ### `proximityCondition` (2 declarations, 2 files)
@@ -801,7 +801,7 @@ Each group lists declarations sharing a short name across ≥2 files. Most are l
 ### `verify` (2 declarations, 2 files)
 
 - `def ArkLib.Lattices.Ajtai.Simple.verify` [ArkLib/Commitments/Ordinary/Ajtai/Simple/Scheme.lean:46](../../../ArkLib/Commitments/Ordinary/Ajtai/Simple/Scheme.lean#L46) — Verify a simple Ajtai opening by checking the matrix product.
-- `def SimpleRO.verify` [ArkLib/Commitments/Ordinary/SimpleRO.lean:44](../../../ArkLib/Commitments/Ordinary/SimpleRO.lean#L44) — Verify an opening `r` of the commitment `cm` to message `v` by recomputing the hash.
+- `def SimpleRO.verify` [ArkLib/Commitments/Ordinary/SimpleRO.lean:51](../../../ArkLib/Commitments/Ordinary/SimpleRO.lean#L51) — Verify an opening `r` of the commitment `cm` to message `v` by recomputing the hash.
 
 ### `witnessStructuralInvariant` (2 declarations, 2 files)
 
