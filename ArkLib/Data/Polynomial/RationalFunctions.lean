@@ -2733,6 +2733,284 @@ theorem beta_zero_eq_X_of_shape (x₀ : F) (R : F[X][X][Y]) (H : F[X][Y])
   rw [embeddingOf𝒪Into𝕃_mk, liftBivariate_X]
   exact h0
 
+theorem coeff_mul_eq_zero_of_orders {A : Type} [CommRing A] {m : ℕ}
+    (u v : PowerSeries A) (a b : ℕ)
+    (hab : m < a + b) (hu : ∀ i < a, PowerSeries.coeff i u = 0)
+    (hv : ∀ i < b, PowerSeries.coeff i v = 0) :
+    PowerSeries.coeff m (u * v) = 0 := by
+  rw [PowerSeries.coeff_mul]
+  apply Finset.sum_eq_zero
+  intro p hp
+  have hsum : p.1 + p.2 = m := Finset.mem_antidiagonal.mp hp
+  rcases lt_or_ge p.1 a with h1 | h1
+  · rw [hu p.1 h1, zero_mul]
+  · have : p.2 < b := by omega
+    rw [hv p.2 this, mul_zero]
+
+theorem coeff_mul_of_low_order {A : Type} [CommRing A] (n : ℕ) (P δ : PowerSeries A)
+    (hδ : ∀ i < n, PowerSeries.coeff i δ = 0) :
+    PowerSeries.coeff n (P * δ) = PowerSeries.constantCoeff P * PowerSeries.coeff n δ := by
+  rw [PowerSeries.coeff_mul]
+  rw [Finset.sum_eq_single (0, n)]
+  · simp [PowerSeries.coeff_zero_eq_constantCoeff]
+  · intro b hb hbne
+    have hmem : b.1 + b.2 = n := Finset.mem_antidiagonal.mp hb
+    have hb2 : b.2 < n := by
+      rcases Nat.eq_zero_or_pos b.1 with h | h
+      · exfalso; apply hbne; ext
+        · simp [h]
+        · simp; omega
+      · omega
+    rw [hδ b.2 hb2, mul_zero]
+  · intro h; exact absurd (Finset.mem_antidiagonal.mpr (by simp)) h
+
+theorem remainder_low_order {A B : Type} [CommRing A] [CommRing B] (n : ℕ)
+    (φ : A →+* PowerSeries B)
+    (Γ δ : PowerSeries B) (hδ : ∀ i < n, PowerSeries.coeff i δ = 0) (p : A[X]) :
+    ∀ i < 2 * n, PowerSeries.coeff i
+      (Polynomial.eval₂ φ (Γ + δ) p - Polynomial.eval₂ φ Γ p
+        - Polynomial.eval₂ φ Γ (Polynomial.derivative p) * δ) = 0 := by
+  induction p using Polynomial.induction_on with
+  | C a =>
+      intro i hi
+      simp [Polynomial.derivative_C]
+  | add p q hp hq =>
+      intro i hi
+      have e1 := hp i hi
+      have e2 := hq i hi
+      simp only [Polynomial.eval₂_add, add_mul, map_sub, map_add] at *
+      linear_combination e1 + e2
+  | monomial m a hp =>
+      intro i hi
+      set q : A[X] := Polynomial.C a * Polynomial.X ^ m with hq_def
+      have hmulX : Polynomial.C a * Polynomial.X ^ (m+1) = q * Polynomial.X := by
+        rw [hq_def]; ring
+      rw [hmulX]
+      have hderiv : Polynomial.derivative (q * Polynomial.X)
+          = Polynomial.derivative q * Polynomial.X + q := by
+        rw [Polynomial.derivative_mul, Polynomial.derivative_X, mul_one]
+      rw [hderiv]
+      simp only [Polynomial.eval₂_mul, Polynomial.eval₂_X, Polynomial.eval₂_add]
+      set u := Polynomial.eval₂ φ Γ q with hu_def
+      set up := Polynomial.eval₂ φ (Γ + δ) q with hup_def
+      set d := Polynomial.eval₂ φ Γ (Polynomial.derivative q) with hd_def
+      have hrewrite : up * (Γ + δ) - u * Γ - (d * Γ + u) * δ
+          = d * (δ * δ) + (up - u - d * δ) * (Γ + δ) := by ring
+      rw [hrewrite, map_add]
+      have h1 : PowerSeries.coeff i (d * (δ * δ)) = 0 := by
+        apply coeff_mul_eq_zero_of_orders d (δ * δ) 0 (2*n) (by omega)
+        · intro j hj; omega
+        · intro j hj
+          exact coeff_mul_eq_zero_of_orders δ δ n n (by omega) hδ hδ
+      have h2 : PowerSeries.coeff i ((up - u - d * δ) * (Γ + δ)) = 0 := by
+        apply coeff_mul_eq_zero_of_orders (up - u - d * δ) (Γ + δ) (2*n) 0 (by omega)
+        · intro j hj; exact hp j hj
+        · intro j hj; omega
+      rw [h1, h2, add_zero]
+
+
+
+theorem constantCoeff_liftCoeffToPowerSeries (x₀ : F) (p : F[X][X]) :
+    PowerSeries.constantCoeff (liftCoeffToPowerSeries x₀ H p) =
+      liftToFunctionField (H := H) (p.eval (Polynomial.C x₀)) := by
+  unfold liftCoeffToPowerSeries
+  rw [coe_eval₂RingHom, Polynomial.hom_eval₂]
+  have hconst : RingHom.comp (PowerSeries.constantCoeff (R := 𝕃 H))
+      (RingHom.comp PowerSeries.C (liftToFunctionField (H := H)))
+      = liftToFunctionField (H := H) := by
+    refine RingHom.ext fun z => ?_
+    simp
+  rw [hconst]
+  have hs : PowerSeries.constantCoeff (R := 𝕃 H)
+      (PowerSeries.C (fieldTo𝕃 (H := H) x₀) + PowerSeries.X) = fieldTo𝕃 (H := H) x₀ := by
+    simp
+  rw [hs]
+  have : fieldTo𝕃 (H := H) x₀ = liftToFunctionField (H := H) (Polynomial.C x₀) := rfl
+  rw [this, Polynomial.eval₂_hom]
+
+theorem constantCoeff_eval₂_liftCoeff (x₀ : F) (q : F[X][X][Y]) (Γ : PowerSeries (𝕃 H)) :
+    PowerSeries.constantCoeff (Polynomial.eval₂ (liftCoeffToPowerSeries x₀ H) Γ q) =
+      Polynomial.eval₂ (liftToFunctionField (H := H))
+        (PowerSeries.constantCoeff Γ) (Bivariate.evalX (Polynomial.C x₀) q) := by
+  rw [Polynomial.hom_eval₂]
+  rw [Bivariate.evalX_eq_map, Polynomial.eval₂_map]
+  congr 1
+  refine RingHom.ext fun p => ?_
+  show PowerSeries.constantCoeff (liftCoeffToPowerSeries x₀ H p) = _
+  rw [constantCoeff_liftCoeffToPowerSeries]
+  rfl
+
+-- constantCoeff of derivative eval = ζ when constantCoeff Γ = T/W
+theorem constantCoeff_eval₂_derivative_eq_zeta (x₀ : F) (R : F[X][X][Y])
+    (Γ : PowerSeries (𝕃 H))
+    (hΓ0 : PowerSeries.constantCoeff Γ =
+      functionFieldT (H := H) / liftToFunctionField (H := H) H.leadingCoeff) :
+    PowerSeries.constantCoeff
+        (Polynomial.eval₂ (liftCoeffToPowerSeries x₀ H) Γ R.derivative)
+      = ζ R x₀ H := by
+  rw [constantCoeff_eval₂_liftCoeff, hΓ0]
+  rfl
+
+
+
+theorem coeff_evalR_split (x₀ : F) (R : F[X][X][Y]) (n : ℕ) (hn : 1 ≤ n)
+    (Γ δ : PowerSeries (𝕃 H)) (hδ : ∀ i < n, PowerSeries.coeff i δ = 0)
+    (hΓ0 : PowerSeries.constantCoeff Γ =
+      functionFieldT (H := H) / liftToFunctionField (H := H) H.leadingCoeff) :
+    PowerSeries.coeff n (evalRAtPowerSeries x₀ H R (Γ + δ)) =
+      PowerSeries.coeff n (evalRAtPowerSeries x₀ H R Γ)
+        + ζ R x₀ H * PowerSeries.coeff n δ := by
+  unfold evalRAtPowerSeries
+  have hrem := remainder_low_order n (liftCoeffToPowerSeries x₀ H) Γ δ hδ R n (by omega)
+  rw [map_sub, map_sub, sub_eq_zero, sub_eq_iff_eq_add] at hrem
+  rw [hrem, coeff_mul_of_low_order n _ δ hδ,
+    constantCoeff_eval₂_derivative_eq_zeta x₀ R Γ hΓ0, add_comm]
+
+-- base case n=0
+theorem coeff_zero_evalR (x₀ : F) (R : F[X][X][Y]) (Γ : PowerSeries (𝕃 H)) :
+    PowerSeries.coeff 0 (evalRAtPowerSeries x₀ H R Γ) =
+      Polynomial.eval₂ (liftToFunctionField (H := H)) (PowerSeries.constantCoeff Γ)
+        (Bivariate.evalX (Polynomial.C x₀) R) := by
+  unfold evalRAtPowerSeries
+  rw [PowerSeries.coeff_zero_eq_constantCoeff_apply, constantCoeff_eval₂_liftCoeff]
+
+
+
+theorem coeff_evalR_stable (x₀ : F) (R : F[X][X][Y]) (n m : ℕ) (hm : m < n)
+    (Γ δ : PowerSeries (𝕃 H)) (hδ : ∀ i < n, PowerSeries.coeff i δ = 0) :
+    PowerSeries.coeff m (evalRAtPowerSeries x₀ H R (Γ + δ)) =
+      PowerSeries.coeff m (evalRAtPowerSeries x₀ H R Γ) := by
+  unfold evalRAtPowerSeries
+  have hrem := remainder_low_order n (liftCoeffToPowerSeries x₀ H) Γ δ hδ R m (by omega)
+  rw [map_sub, map_sub, sub_eq_zero, sub_eq_iff_eq_add] at hrem
+  rw [hrem]
+  have hz : PowerSeries.coeff m
+      (Polynomial.eval₂ (liftCoeffToPowerSeries x₀ H) Γ (derivative R) * δ) = 0 := by
+    apply coeff_mul_eq_zero_of_orders _ δ 0 n (by omega)
+    · intro j hj; omega
+    · exact hδ
+  rw [hz, zero_add]
+
+
+-- The recursive construction.
+noncomputable def bSeq (x₀ : F) (R : F[X][X][Y]) (H : F[X][Y])
+    [Fact (Irreducible H)] [Fact (0 < H.natDegree)] : ℕ → (ℕ → 𝕃 H)
+  | 0 => fun i => if i = 0 then
+      functionFieldT (H := H) / liftToFunctionField (H := H) H.leadingCoeff else 0
+  | (N+1) => Function.update (bSeq x₀ R H N) (N+1)
+      (- PowerSeries.coeff (N+1)
+          (evalRAtPowerSeries x₀ H R (PowerSeries.mk (bSeq x₀ R H N))) / ζ R x₀ H)
+
+noncomputable def alphaSeq (x₀ : F) (R : F[X][X][Y]) (H : F[X][Y])
+    [Fact (Irreducible H)] [Fact (0 < H.natDegree)] : ℕ → 𝕃 H :=
+  fun n => bSeq x₀ R H n n
+
+-- bSeq N agrees with bSeq (N+1) below N+1
+theorem bSeq_succ_def (x₀ : F) (R : F[X][X][Y]) (N : ℕ) :
+    bSeq x₀ R H (N+1) = Function.update (bSeq x₀ R H N) (N+1)
+      (- PowerSeries.coeff (N+1)
+          (evalRAtPowerSeries x₀ H R (PowerSeries.mk (bSeq x₀ R H N))) / ζ R x₀ H) := by
+  rfl
+
+theorem bSeq_succ_eq_below (x₀ : F) (R : F[X][X][Y]) (N i : ℕ) (hi : i < N + 1) :
+    bSeq x₀ R H (N+1) i = bSeq x₀ R H N i := by
+  rw [bSeq_succ_def, Function.update_apply, if_neg (by omega)]
+
+-- value 0 is T/W for all N
+theorem bSeq_zero (x₀ : F) (R : F[X][X][Y]) (N : ℕ) :
+    bSeq x₀ R H N 0 =
+      functionFieldT (H := H) / liftToFunctionField (H := H) H.leadingCoeff := by
+  induction N with
+  | zero => simp [bSeq]
+  | succ N ih => rw [bSeq_succ_eq_below x₀ R N 0 (by omega), ih]
+
+
+
+theorem bSeq_stable (x₀ : F) (R : F[X][X][Y]) (N i : ℕ) (hi : i ≤ N) :
+    bSeq x₀ R H N i = alphaSeq x₀ R H i := by
+  induction N with
+  | zero =>
+      interval_cases i
+      rfl
+  | succ N ih =>
+      rcases Nat.lt_or_ge i (N+1) with h | h
+      · rw [bSeq_succ_eq_below x₀ R N i h]
+        exact ih (by omega)
+      · have : i = N + 1 := by omega
+        subst this
+        rfl
+
+-- mk (bSeq N) agrees with mk (alphaSeq) at indices ≤ N
+theorem mk_bSeq_coeff_eq (x₀ : F) (R : F[X][X][Y]) (N i : ℕ) (hi : i ≤ N) :
+    PowerSeries.coeff i (PowerSeries.mk (bSeq x₀ R H N)) =
+      PowerSeries.coeff i (PowerSeries.mk (alphaSeq x₀ R H)) := by
+  rw [PowerSeries.coeff_mk, PowerSeries.coeff_mk, bSeq_stable x₀ R N i hi]
+
+
+
+theorem bSeq_eq_zero_of_gt (x₀ : F) (R : F[X][X][Y]) (N j : ℕ) (hj : N < j) :
+    bSeq x₀ R H N j = 0 := by
+  induction N generalizing j with
+  | zero =>
+      have : j ≠ 0 := by omega
+      simp [bSeq, this]
+  | succ N ih =>
+      rw [bSeq_succ_def, Function.update_apply, if_neg (by omega)]
+      exact ih j (by omega)
+
+-- δ helper: mk (bSeq (N+1)) = mk (bSeq N) + δ with δ low order N+1
+theorem coeff_delta_below (x₀ : F) (R : F[X][X][Y]) (N i : ℕ) (hi : i < N + 1) :
+    PowerSeries.coeff i
+      (PowerSeries.mk (bSeq x₀ R H (N+1)) - PowerSeries.mk (bSeq x₀ R H N)) = 0 := by
+  rw [map_sub, PowerSeries.coeff_mk, PowerSeries.coeff_mk, bSeq_succ_eq_below x₀ R N i hi,
+    sub_self]
+
+theorem root_bSeq (x₀ : F) (R : F[X][X][Y])
+    (hinit : Polynomial.eval₂ (liftToFunctionField (H := H))
+      (functionFieldT (H := H) / liftToFunctionField (H := H) H.leadingCoeff)
+      (Bivariate.evalX (Polynomial.C x₀) R) = 0)
+    (hzeta : ζ R x₀ H ≠ 0) :
+    ∀ N, ∀ m ≤ N, PowerSeries.coeff m
+      (evalRAtPowerSeries x₀ H R (PowerSeries.mk (bSeq x₀ R H N))) = 0 := by
+  intro N
+  induction N with
+  | zero =>
+      intro m hm
+      interval_cases m
+      rw [coeff_zero_evalR]
+      have hcc : PowerSeries.constantCoeff (PowerSeries.mk (bSeq x₀ R H 0)) =
+          functionFieldT (H := H) / liftToFunctionField (H := H) H.leadingCoeff := by
+        rw [← PowerSeries.coeff_zero_eq_constantCoeff_apply, PowerSeries.coeff_mk, bSeq_zero]
+      rw [hcc, hinit]
+  | succ N ih =>
+      intro m hm
+      set Γ := PowerSeries.mk (bSeq x₀ R H N) with hΓ
+      set δ := PowerSeries.mk (bSeq x₀ R H (N+1)) - PowerSeries.mk (bSeq x₀ R H N) with hδ_def
+      have hsum : PowerSeries.mk (bSeq x₀ R H (N+1)) = Γ + δ := by rw [hδ_def]; ring
+      have hδlow : ∀ i < N + 1, PowerSeries.coeff i δ = 0 := by
+        intro i hi; rw [hδ_def]; exact coeff_delta_below x₀ R N i hi
+      have hΓ0 : PowerSeries.constantCoeff Γ =
+          functionFieldT (H := H) / liftToFunctionField (H := H) H.leadingCoeff := by
+        rw [hΓ, ← PowerSeries.coeff_zero_eq_constantCoeff_apply, PowerSeries.coeff_mk, bSeq_zero]
+      rw [hsum]
+      rcases Nat.lt_or_ge m (N+1) with hlt | hge
+      · rw [coeff_evalR_stable x₀ R (N+1) m hlt Γ δ hδlow]
+        exact ih m (by omega)
+      · have hmeq : m = N + 1 := by omega
+        subst hmeq
+        rw [coeff_evalR_split x₀ R (N+1) (by omega) Γ δ hδlow hΓ0]
+        -- coeff (N+1) δ = bSeq (N+1)(N+1) - bSeq N (N+1)
+        have hδval : PowerSeries.coeff (N+1) δ =
+            bSeq x₀ R H (N+1) (N+1) - bSeq x₀ R H N (N+1) := by
+          rw [hδ_def, map_sub, PowerSeries.coeff_mk, PowerSeries.coeff_mk]
+        have hbN1 : bSeq x₀ R H N (N+1) = 0 := bSeq_eq_zero_of_gt x₀ R N (N+1) (by omega)
+        have hval : bSeq x₀ R H (N+1) (N+1) =
+            - PowerSeries.coeff (N+1) (evalRAtPowerSeries x₀ H R Γ) / ζ R x₀ H := by
+          rw [bSeq_succ_def, Function.update_self, hΓ]
+        rw [hδval, hbN1, sub_zero, hval]
+        field_simp
+        ring
+
 theorem formalHenselAlphaSequence (x₀ : F) (R : F[X][X][Y]) (H : F[X][Y])
     [_H_irreducible : Fact (Irreducible H)] [_H_natDegree_pos : Fact (0 < H.natDegree)]
     (hinit : Polynomial.eval₂ (liftToFunctionField (H := H))
@@ -2750,7 +3028,22 @@ theorem formalHenselAlphaSequence (x₀ : F) (R : F[X][X][Y]) (H : F[X][Y])
   -- `αₙ` first appears at degree `n` with coefficient `A₀,λ⁽ⁿ⁾ = ζ`). Since `hzeta` makes
   -- `ζ` a unit, solve `α n = -c n / ζ`, so every coefficient of `evalR` vanishes; conclude
   -- with `PowerSeries.ext`. (`𝕃 H⟦S⟧` is also Henselian, but `R` need not be monic in `Y`.)
-  sorry
+  refine ⟨alphaSeq x₀ R H, ?_, ?_⟩
+  · show bSeq x₀ R H 0 0 = _
+    simp [bSeq]
+  · unfold gammaFromAlpha
+    ext m
+    rw [map_zero]
+    set α := PowerSeries.mk (alphaSeq x₀ R H) with hα
+    set Γ := PowerSeries.mk (bSeq x₀ R H m) with hΓ
+    set δ := α - Γ with hδ_def
+    have hsum : α = Γ + δ := by rw [hδ_def]; ring
+    have hδlow : ∀ i < m + 1, PowerSeries.coeff i δ = 0 := by
+      intro i hi
+      rw [hδ_def, map_sub, hα, hΓ, mk_bSeq_coeff_eq x₀ R m i (by omega), sub_self]
+    have hstable := coeff_evalR_stable x₀ R (m+1) m (by omega) Γ δ hδlow
+    rw [hsum, hstable]
+    exact root_bSeq x₀ R hinit hzeta m m (le_refl m)
 
 theorem gammaOfNumerators_eq_gammaFromAlpha (x₀ : F) (R : F[X][X][Y]) (H : F[X][Y])
     [_H_irreducible : Fact (Irreducible H)] [_H_natDegree_pos : Fact (0 < H.natDegree)]
