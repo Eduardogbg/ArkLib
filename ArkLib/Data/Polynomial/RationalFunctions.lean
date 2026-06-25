@@ -31,7 +31,7 @@ We define the notions of Appendix A of [BCIKS20].
 
 -/
 
-set_option linter.style.longFile 2000
+set_option linter.style.longFile 3300
 
 open Polynomial Polynomial.Bivariate ToRatFunc Ideal
 
@@ -2615,18 +2615,20 @@ lemma defaultDegreeBound_ge_R_coeff (R : F[X][X][Y]) (H : F[X][Y]) {i : ℕ}
   (coeff_totalDegree_add_index_le_trivariateTotalDegree R hi).trans (le_max_right _ _)
 
 /-- Coefficients in `F[Z][X]` evaluated as power series over the function field: `Z` is sent to
-the function-field coefficient embedding, and `X` is sent to the power-series variable. -/
-noncomputable def liftCoeffToPowerSeries (H : F[X][Y]) :
+the function-field coefficient embedding, and the `X` variable is sent to `x₀ + S`, where `S` is
+the power-series variable. This realizes the local coordinate `S = X - x₀` of [BCIKS20] A.4, so
+that a root condition becomes an identity in `𝕃 H⟦S⟧ = L[[X - x₀]]`. -/
+noncomputable def liftCoeffToPowerSeries (x₀ : F) (H : F[X][Y]) :
     F[X][X] →+* PowerSeries (𝕃 H) :=
   Polynomial.eval₂RingHom (RingHom.comp PowerSeries.C (liftToFunctionField (H := H)))
-    PowerSeries.X
+    (PowerSeries.C (fieldTo𝕃 (H := H) x₀) + PowerSeries.X)
 
 /-- Evaluation of the trivariate polynomial `R(X,Y,Z)` at a power series `Γ` for the `Y`
-variable, with the `X` variable interpreted as the power-series variable and `Z` interpreted in
-the function field of `H`. -/
-noncomputable def evalRAtPowerSeries (H : F[X][Y]) (R : F[X][X][Y])
+variable, with the `X` variable interpreted as `x₀ + S` (`S` the power-series variable, i.e. the
+local coordinate `X - x₀`) and `Z` interpreted in the function field of `H`. -/
+noncomputable def evalRAtPowerSeries (x₀ : F) (H : F[X][Y]) (R : F[X][X][Y])
     (Γ : PowerSeries (𝕃 H)) : PowerSeries (𝕃 H) :=
-  Polynomial.eval₂ (liftCoeffToPowerSeries H) Γ R
+  Polynomial.eval₂ (liftCoeffToPowerSeries x₀ H) Γ R
 
 /-- The coefficient sequence obtained from a candidate sequence of regular numerators. -/
 noncomputable def alphaOfNumerators (x₀ : F) (R : F[X][X][Y]) (H : F[X][Y])
@@ -2637,27 +2639,452 @@ noncomputable def alphaOfNumerators (x₀ : F) (R : F[X][X][Y]) (H : F[X][Y])
     (W ^ (t + 1) * (embeddingOf𝒪Into𝕃 _ (ξ x₀ R H hHyp)) ^
       henselDenominatorExponent t)
 
-/-- The power series induced by a candidate sequence of regular numerators. -/
+/-- The local power series `γ = ∑ αₜ Sᵗ` induced by a candidate sequence of regular numerators,
+where `S = X - x₀` is the local coordinate of [BCIKS20] A.4. The `x₀`-shift is carried by
+`evalRAtPowerSeries` (`X ↦ x₀ + S`), not by `γ`, matching the paper's `γ ∈ L[[X - x₀]]`. -/
 noncomputable def gammaOfNumerators (x₀ : F) (R : F[X][X][Y]) (H : F[X][Y])
     [φ : Fact (Irreducible H)] [H_natDegree_pos : Fact (0 < H.natDegree)]
     (hHyp : Hypotheses x₀ R H) (βseq : ℕ → 𝒪 H) :
     PowerSeries (𝕃 H) :=
-  let subst (t : ℕ) : 𝕃 H :=
-    match t with
-    | 0 => fieldTo𝕃 (-x₀)
-    | 1 => 1
-    | _ => 0
-  PowerSeries.subst (PowerSeries.mk subst)
-    (PowerSeries.mk (alphaOfNumerators x₀ R H hHyp βseq))
+  PowerSeries.mk (alphaOfNumerators x₀ R H hHyp βseq)
 
 /-- A numerator sequence has the semantic content required by Claim A.2: it gives the Hensel
-lift starting at `T / W`, and the induced power series is a root of `R(X,Y,Z)`. -/
+lift starting at `T / W`, and the induced power series is a root of `R(x₀ + S, ·, Z)`. -/
 def IsHenselNumeratorSequence (x₀ : F) (R : F[X][X][Y]) (H : F[X][Y])
     [φ : Fact (Irreducible H)] [H_natDegree_pos : Fact (0 < H.natDegree)]
     (hHyp : Hypotheses x₀ R H) (βseq : ℕ → 𝒪 H) : Prop :=
   alphaOfNumerators x₀ R H hHyp βseq 0 =
       functionFieldT (H := H) / liftToFunctionField (H := H) H.leadingCoeff ∧
-    evalRAtPowerSeries H R (gammaOfNumerators x₀ R H hHyp βseq) = 0
+    evalRAtPowerSeries x₀ H R (gammaOfNumerators x₀ R H hHyp βseq) = 0
+
+theorem evalX_totalDegree_le_of_coeff_bound (x₀ : F) (R : F[X][X][Y]) {D : ℕ}
+    (hD_R : ∀ i ∈ R.support, Bivariate.totalDegree (R.coeff i) + i ≤ D) :
+    Bivariate.totalDegree (Bivariate.evalX (Polynomial.C x₀) R) ≤ D := by
+  classical
+  unfold Bivariate.totalDegree
+  refine Finset.sup_le ?_
+  intro i hi
+  have hcoeff_eval_ne : (Bivariate.evalX (Polynomial.C x₀) R).coeff i ≠ 0 :=
+    Polynomial.mem_support_iff.mp hi
+  have hcoeff_eq : (Bivariate.evalX (Polynomial.C x₀) R).coeff i =
+      (R.coeff i).eval (Polynomial.C x₀) := by
+    simp [Bivariate.evalX_eq_map, Polynomial.coeff_map]
+  have hRcoeff_ne : R.coeff i ≠ 0 := by
+    intro h0
+    apply hcoeff_eval_ne
+    rw [hcoeff_eq, h0]
+    simp
+  have hiR : i ∈ R.support := Polynomial.mem_support_iff.mpr hRcoeff_ne
+  have heval_deg : ((Bivariate.evalX (Polynomial.C x₀) R).coeff i).natDegree ≤
+      Bivariate.totalDegree (R.coeff i) := by
+    rw [hcoeff_eq]
+    have hP : (Polynomial.C x₀ : F[X]).natDegree ≤ 1 - 1 := by
+      simp [Polynomial.natDegree_C]
+    have hle := Bivariate.degree_eval_le_weightedDegree (Q := R.coeff i)
+      (P := Polynomial.C x₀) (k := 1) hP
+    have hw_le_total : Bivariate.natWeightedDegree (R.coeff i) 1 (1 - 1) ≤
+        Bivariate.totalDegree (R.coeff i) := by
+      unfold Bivariate.natWeightedDegree Bivariate.totalDegree
+      simp only [Nat.sub_self, one_mul, zero_mul, add_zero]
+      refine Finset.sup_le ?_
+      intro j hj
+      have hsup : ((R.coeff i).coeff j).natDegree + j ≤
+          (R.coeff i).support.sup (fun m => ((R.coeff i).coeff m).natDegree + m) :=
+        Finset.le_sup (s := (R.coeff i).support)
+          (f := fun m => ((R.coeff i).coeff m).natDegree + m) hj
+      exact le_trans (Nat.le_add_right ((R.coeff i).coeff j).natDegree j) hsup
+    exact hle.trans hw_le_total
+  have hD := hD_R i hiR
+  omega
+
+/-- The local power series `γ = ∑ αₜ Sᵗ ∈ 𝕃 H⟦S⟧`, where `S = X - x₀` is the local coordinate
+of [BCIKS20] Appendix A.4. The `x₀`-shift lives in `evalRAtPowerSeries` (`X ↦ x₀ + S`), not in
+`γ` itself, matching the paper's `γ ∈ L[[X - x₀]]`. -/
+noncomputable def gammaFromAlpha (H : F[X][Y]) (αseq : ℕ → 𝕃 H) :
+    PowerSeries (𝕃 H) :=
+  PowerSeries.mk αseq
+
+def HasNumeratorShape (x₀ : F) (R : F[X][X][Y]) (H : F[X][Y])
+    [φ : Fact (Irreducible H)] [H_natDegree_pos : Fact (0 < H.natDegree)]
+    (hHyp : Hypotheses x₀ R H) (αseq : ℕ → 𝕃 H) (βseq : ℕ → 𝒪 H) : Prop :=
+  ∀ t : ℕ, alphaOfNumerators x₀ R H hHyp βseq t = αseq t
+
+theorem beta_zero_eq_X_of_shape (x₀ : F) (R : F[X][X][Y]) (H : F[X][Y])
+    [_H_irreducible : Fact (Irreducible H)] [_H_natDegree_pos : Fact (0 < H.natDegree)]
+    (hHyp : Hypotheses x₀ R H) (hH : 0 < H.natDegree) {D : ℕ}
+    (hD_H : Bivariate.totalDegree H ≤ D)
+    (hD_R : ∀ i ∈ R.support, Bivariate.totalDegree (R.coeff i) + i ≤ D)
+    (αseq : ℕ → 𝕃 H) (βseq : ℕ → 𝒪 H)
+    (hα0 : αseq 0 = functionFieldT (H := H) /
+      liftToFunctionField (H := H) H.leadingCoeff)
+    (hroot : evalRAtPowerSeries x₀ H R (gammaFromAlpha H αseq) = 0)
+    (hshape : HasNumeratorShape x₀ R H hHyp αseq βseq) :
+    βseq 0 =
+      (Ideal.Quotient.mk (Ideal.span {H_tilde' H}) (Polynomial.X : F[X][Y]) : 𝒪 H) := by
+  classical
+  apply embeddingOf𝒪Into𝕃_injective hH
+  have h0 := hshape 0
+  unfold alphaOfNumerators at h0
+  simp only [henselDenominatorExponent_zero, pow_zero, mul_one, zero_add, pow_one] at h0
+  rw [hα0] at h0
+  have hW : liftToFunctionField (H := H) H.leadingCoeff ≠ 0 :=
+    liftToFunctionField_leadingCoeff_ne_zero (H := H)
+  field_simp [hW] at h0
+  rw [embeddingOf𝒪Into𝕃_mk, liftBivariate_X]
+  exact h0
+
+theorem formalHenselAlphaSequence (x₀ : F) (R : F[X][X][Y]) (H : F[X][Y])
+    [_H_irreducible : Fact (Irreducible H)] [_H_natDegree_pos : Fact (0 < H.natDegree)]
+    (hinit : Polynomial.eval₂ (liftToFunctionField (H := H))
+      (functionFieldT (H := H) / liftToFunctionField (H := H) H.leadingCoeff)
+      (Bivariate.evalX (Polynomial.C x₀) R) = 0)
+    (hzeta : ζ R x₀ H ≠ 0) :
+    ∃ αseq : ℕ → 𝕃 H,
+      αseq 0 = functionFieldT (H := H) / liftToFunctionField (H := H) H.leadingCoeff ∧
+      evalRAtPowerSeries x₀ H R (gammaFromAlpha H αseq) = 0 := by
+  -- Formal-Hensel / Newton iteration over the field `𝕃 H`, in the local coordinate
+  -- `S = X - x₀` (so `evalRAtPowerSeries` evaluates `R` at `X ↦ x₀ + S`).
+  -- Construct `αseq` coefficient-by-coefficient with `α₀ = T/W` (`hinit` is the base).
+  -- Key linearity lemma: `coeff (n) (evalRAtPowerSeries x₀ H R (mk α)) = ζ * α n + c n`
+  -- where `c n` depends only on `α i, i < n` (the partition expansion of A.4, in which
+  -- `αₙ` first appears at degree `n` with coefficient `A₀,λ⁽ⁿ⁾ = ζ`). Since `hzeta` makes
+  -- `ζ` a unit, solve `α n = -c n / ζ`, so every coefficient of `evalR` vanishes; conclude
+  -- with `PowerSeries.ext`. (`𝕃 H⟦S⟧` is also Henselian, but `R` need not be monic in `Y`.)
+  sorry
+
+theorem gammaOfNumerators_eq_gammaFromAlpha (x₀ : F) (R : F[X][X][Y]) (H : F[X][Y])
+    [_H_irreducible : Fact (Irreducible H)] [_H_natDegree_pos : Fact (0 < H.natDegree)]
+    (hHyp : Hypotheses x₀ R H) (αseq : ℕ → 𝕃 H) (βseq : ℕ → 𝒪 H)
+    (hshape : HasNumeratorShape x₀ R H hHyp αseq βseq) :
+    gammaOfNumerators x₀ R H hHyp βseq = gammaFromAlpha H αseq := by
+  unfold HasNumeratorShape at hshape
+  unfold gammaOfNumerators gammaFromAlpha
+  ext n
+  rw [PowerSeries.coeff_mk, PowerSeries.coeff_mk]
+  exact hshape n
+
+noncomputable def henselCoeffResidual (x₀ : F) (R : F[X][X][Y]) (H : F[X][Y])
+    [Fact (Irreducible H)] [Fact (0 < H.natDegree)]
+    (αseq : ℕ → 𝕃 H) (t : ℕ) : 𝕃 H :=
+  PowerSeries.coeff (t + 1) (evalRAtPowerSeries x₀ H R (gammaFromAlpha H αseq)) -
+    ζ R x₀ H * αseq (t + 1)
+
+theorem hensel_numerator_sequence_of_alpha_shape (x₀ : F) (R : F[X][X][Y]) (H : F[X][Y])
+    [_H_irreducible : Fact (Irreducible H)] [_H_natDegree_pos : Fact (0 < H.natDegree)]
+    (hHyp : Hypotheses x₀ R H) (αseq : ℕ → 𝕃 H) (βseq : ℕ → 𝒪 H)
+    (hα0 : αseq 0 = functionFieldT (H := H) / liftToFunctionField (H := H) H.leadingCoeff)
+    (hroot : evalRAtPowerSeries x₀ H R (gammaFromAlpha H αseq) = 0)
+    (hshape : HasNumeratorShape x₀ R H hHyp αseq βseq) :
+    IsHenselNumeratorSequence x₀ R H hHyp βseq := by
+  unfold IsHenselNumeratorSequence
+  constructor
+  · rw [hshape 0]
+    exact hα0
+  · rw [gammaOfNumerators_eq_gammaFromAlpha x₀ R H hHyp αseq βseq hshape]
+    exact hroot
+
+theorem mk_H_tilde_eq_W_pow_mul_eval2 (H : F[X][Y])
+    [_H_irreducible : Fact (Irreducible H)] [_H_natDegree_pos : Fact (0 < H.natDegree)] :
+    (Ideal.Quotient.mk (Ideal.span ({H_tilde H} : Set (Polynomial (RatFunc F)))) (H_tilde H) : 𝕃 H) =
+      liftToFunctionField (H := H) H.leadingCoeff ^ (H.natDegree - 1) *
+        Polynomial.eval₂ (liftToFunctionField (H := H))
+          (functionFieldT (H := H) / liftToFunctionField (H := H) H.leadingCoeff) H := by
+  unfold liftToFunctionField functionFieldT coeffAsRatFunc
+  unfold H_tilde
+  simp only [Polynomial.coeff_natDegree, ToRatFunc.bivPolyHom, Polynomial.coe_mapRingHom,
+    Polynomial.map_C, RingHom.comp_apply]
+  let Wp : Polynomial (RatFunc F) := Polynomial.C (univPolyHom (F := F) H.leadingCoeff)
+  let I : Ideal (Polynomial (RatFunc F)) := Ideal.span ({Wp ^ (H.natDegree - 1) * Polynomial.eval₂ (RingHom.comp Polynomial.C (univPolyHom (F := F))) (Polynomial.X / Wp) H} : Set (Polynomial (RatFunc F)))
+  let q : Polynomial (RatFunc F) →+* 𝕃 H := Ideal.Quotient.mk I
+  have hW_ne : univPolyHom (F := F) H.leadingCoeff ≠ 0 := by
+    intro h
+    exact (Polynomial.leadingCoeff_ne_zero.mpr (Polynomial.ne_zero_of_natDegree_gt _H_natDegree_pos.out))
+      (univPolyHom_injective (F := F) (by simpa using h))
+  have hdiv : q (Polynomial.X / Wp) = q Polynomial.X / q Wp := by
+    dsimp [Wp]
+    rw [Polynomial.div_C]
+    rw [map_mul]
+    rw [div_eq_mul_inv]
+    congr 1
+    have hmul : q (Polynomial.C (univPolyHom (F := F) H.leadingCoeff)) *
+        q (Polynomial.C ((univPolyHom (F := F) H.leadingCoeff)⁻¹)) = 1 := by
+      rw [← map_mul, ← Polynomial.C_mul]
+      rw [mul_inv_cancel₀ hW_ne]
+      exact map_one q
+    exact (inv_eq_of_mul_eq_one_right hmul).symm
+  change q (Wp ^ (H.natDegree - 1) * Polynomial.eval₂ (RingHom.comp Polynomial.C (univPolyHom (F := F))) (Polynomial.X / Wp) H) = q Wp ^ (H.natDegree - 1) * Polynomial.eval₂ (q.comp ((Polynomial.mapRingHom (univPolyHom (F := F))).comp Polynomial.C)) (q Polynomial.X / q Wp) H
+  rw [map_mul, map_pow]
+  rw [← hdiv]
+  rw [Polynomial.hom_eval₂]
+  have hhom : q.comp (RingHom.comp Polynomial.C (univPolyHom (F := F)) : F[X] →+* Polynomial (RatFunc F)) =
+      q.comp ((Polynomial.mapRingHom (univPolyHom (F := F))).comp Polynomial.C) := by
+    ext p <;> simp only [RingHom.comp_apply, Polynomial.coe_mapRingHom, Polynomial.map_C]
+  rw [hhom]
+
+theorem H_eval2_T_div_W_eq_zero (H : F[X][Y])
+    [_H_irreducible : Fact (Irreducible H)] [_H_natDegree_pos : Fact (0 < H.natDegree)] :
+    Polynomial.eval₂ (liftToFunctionField (H := H))
+      (functionFieldT (H := H) / liftToFunctionField (H := H) H.leadingCoeff) H = 0 := by
+  have hzero : (Ideal.Quotient.mk (Ideal.span ({H_tilde H} : Set (Polynomial (RatFunc F)))) (H_tilde H) : 𝕃 H) = 0 := by
+    rw [Ideal.Quotient.eq_zero_iff_mem]
+    exact Ideal.subset_span rfl
+  rw [mk_H_tilde_eq_W_pow_mul_eval2] at hzero
+  have hW : liftToFunctionField (H := H) H.leadingCoeff ^ (H.natDegree - 1) ≠ 0 := by
+    exact pow_ne_zero _ (liftToFunctionField_leadingCoeff_ne_zero (H := H))
+  exact (mul_eq_zero.mp hzero).resolve_left hW
+
+theorem initial_root_at_x0 (x₀ : F) (R : F[X][X][Y]) (H : F[X][Y])
+    [_H_irreducible : Fact (Irreducible H)] [_H_natDegree_pos : Fact (0 < H.natDegree)]
+    (hHyp : Hypotheses x₀ R H) :
+    Polynomial.eval₂ (liftToFunctionField (H := H))
+      (functionFieldT (H := H) / liftToFunctionField (H := H) H.leadingCoeff)
+      (Bivariate.evalX (Polynomial.C x₀) R) = 0 := by
+  classical
+  rcases hHyp.dvd_evalX with ⟨Q, hQ⟩
+  rw [hQ, Polynomial.eval₂_mul]
+  rw [H_eval2_T_div_W_eq_zero H, zero_mul]
+
+theorem zeta_ne_zero_of_Hypotheses (x₀ : F) (R : F[X][X][Y]) (H : F[X][Y])
+    [_H_irreducible : Fact (Irreducible H)] [_H_natDegree_pos : Fact (0 < H.natDegree)]
+    (hHyp : Hypotheses x₀ R H) :
+    ζ R x₀ H ≠ 0 := by
+  let P : F[X][Y] := Bivariate.evalX (Polynomial.C x₀) R
+  let t : 𝕃 H := functionFieldT (H := H) / liftToFunctionField (H := H) H.leadingCoeff
+  have hroot : Polynomial.eval₂ (liftToFunctionField (H := H)) t P = 0 := by
+    simpa [P, t] using initial_root_at_x0 x₀ R H hHyp
+  have hderiv_evalX : Bivariate.evalX (Polynomial.C x₀) R.derivative = P.derivative := by
+    ext i
+    simp [P, derivative_evalX_coeff, Polynomial.coeff_derivative, Nat.cast_add, Nat.cast_one]
+  have hne : Polynomial.eval₂ (liftToFunctionField (H := H)) t P.derivative ≠ 0 := by
+    exact hHyp.separable_evalX.eval₂_derivative_ne_zero (liftToFunctionField (H := H)) hroot
+  simpa [ζ, P, t, hderiv_evalX] using hne
+
+theorem exists_hensel_alpha_sequence (x₀ : F) (R : F[X][X][Y]) (H : F[X][Y])
+    [_H_irreducible : Fact (Irreducible H)] [_H_natDegree_pos : Fact (0 < H.natDegree)]
+    (hHyp : Hypotheses x₀ R H) :
+    ∃ αseq : ℕ → 𝕃 H,
+      αseq 0 = functionFieldT (H := H) / liftToFunctionField (H := H) H.leadingCoeff ∧
+      evalRAtPowerSeries x₀ H R (gammaFromAlpha H αseq) = 0 := by
+  exact formalHenselAlphaSequence x₀ R H (initial_root_at_x0 x₀ R H hHyp) (zeta_ne_zero_of_Hypotheses x₀ R H hHyp)
+
+theorem henselCoeffResidual_regular_after_clearing (x₀ : F) (R : F[X][X][Y]) (H : F[X][Y])
+    [_H_irreducible : Fact (Irreducible H)] [_H_natDegree_pos : Fact (0 < H.natDegree)]
+    (hHyp : Hypotheses x₀ R H) (αseq : ℕ → 𝕃 H)
+    (hα0 : αseq 0 = functionFieldT (H := H) /
+      liftToFunctionField (H := H) H.leadingCoeff)
+    (hroot : evalRAtPowerSeries x₀ H R (gammaFromAlpha H αseq) = 0)
+    (hzeta : ζ R x₀ H ≠ 0)
+    (t : ℕ) (βprev : Fin (t + 1) → 𝒪 H)
+    (hprev : ∀ i : Fin (t + 1),
+      embeddingOf𝒪Into𝕃 H (βprev i) /
+        (liftToFunctionField (H := H) H.leadingCoeff ^ (i.val + 1) *
+          (embeddingOf𝒪Into𝕃 H (ξ x₀ R H hHyp)) ^ henselDenominatorExponent i.val) =
+        αseq i.val) :
+    let W : 𝕃 H := liftToFunctionField (H := H) H.leadingCoeff
+    let eta : 𝕃 H := embeddingOf𝒪Into𝕃 H (ξ x₀ R H hHyp)
+    let E : ℕ := henselDenominatorExponent (t + 1)
+    let Ddiv : 𝕃 H := W ^ (t + 1 + 1) * eta ^ (E - 1) * W ^ (R.natDegree - 2)
+    henselCoeffResidual x₀ R H αseq t * Ddiv ∈ regularElementsSet H := by
+  -- Residual-regularity (paper A.4): expand `coeff (t+1) (evalRAtPowerSeries x₀ H R (mk α))`
+  -- as the partition sum `∑_{i₁, λ ∈ P(t+1-i₁)} A_{i₁,λ} ∏ αₗ^{λₗ}`. Subtracting the unique
+  -- linear term `ζ * α (t+1)` (the `λ = λ⁽ᵗ⁺¹⁾` summand) leaves only terms using `αᵢ, i ≤ t`.
+  -- Replace those via `hprev`, then multiply by the clearing denominator `Ddiv`; conclude
+  -- regularity from closure of `regularElementsSet` under +, -, *, powers and finite sums
+  -- (`regularElementsSet_{add,neg,mul,pow,sum,liftBivariate,liftToFunctionField}`),
+  -- `embeddingOf𝒪Into𝕃_ξ`, and `liftToFunctionField_leadingCoeff_ne_zero`.
+  sorry
+
+theorem numerator_shape_weight_succ_le_strong (x₀ : F) (R : F[X][X][Y]) (H : F[X][Y])
+    [_H_irreducible : Fact (Irreducible H)] [_H_natDegree_pos : Fact (0 < H.natDegree)]
+    (hHyp : Hypotheses x₀ R H) (hH : 0 < H.natDegree) {D : ℕ}
+    (hD_H : Bivariate.totalDegree H ≤ D)
+    (hD_R : ∀ i ∈ R.support, Bivariate.totalDegree (R.coeff i) + i ≤ D)
+    (hD_Rx0 : D ≥ Bivariate.totalDegree (Bivariate.evalX (Polynomial.C x₀) R))
+    (αseq : ℕ → 𝕃 H) (βseq : ℕ → 𝒪 H)
+    (hα0 : αseq 0 = functionFieldT (H := H) /
+      liftToFunctionField (H := H) H.leadingCoeff)
+    (hroot : evalRAtPowerSeries x₀ H R (gammaFromAlpha H αseq) = 0)
+    (hshape : HasNumeratorShape x₀ R H hHyp αseq βseq)
+    (t : ℕ)
+    (ihAll : ∀ s ≤ t,
+      weight_Λ_over_𝒪 hH (βseq s) D ≤
+        (WithBot.some ((2 * s + 1) * Bivariate.natDegreeY R * D) : WithBot ℕ)) :
+    weight_Λ_over_𝒪 hH (βseq (t + 1)) D ≤
+      (WithBot.some ((2 * (t + 1) + 1) * Bivariate.natDegreeY R * D) : WithBot ℕ) := by
+  -- Strong successor step for the weight induction (paper A.4 bound on `Λ(βₜ)`).
+  -- From the explicit partition formula for `β (t+1)` (same expansion as the residual
+  -- lemma), bound finite sums with `weight_Λ_sum_le`, products with
+  -- `weight_Λ_C_mul_X_pow_mul_le` / `weight_Λ_add_le` / `weight_Λ_over_𝒪_mk_le`, and the
+  -- `ξ` factor with `ξ_weight_le` (high-degree case) using `hD_Rx0`; handle
+  -- `Bivariate.natDegreeY R < 2` separately. Use `ihAll` for every previous `β s, s ≤ t`,
+  -- then weaken the sharp paper bound to `(2*(t+1)+1) * natDegreeY R * D` by arithmetic.
+  sorry
+
+theorem numerator_shape_weight_bound (x₀ : F) (R : F[X][X][Y]) (H : F[X][Y])
+    [_H_irreducible : Fact (Irreducible H)] [_H_natDegree_pos : Fact (0 < H.natDegree)]
+    (hHyp : Hypotheses x₀ R H) (hH : 0 < H.natDegree)
+    {D : ℕ} (hD_H : Bivariate.totalDegree H ≤ D)
+    (hD_R : ∀ i ∈ R.support, Bivariate.totalDegree (R.coeff i) + i ≤ D)
+    (αseq : ℕ → 𝕃 H) (βseq : ℕ → 𝒪 H)
+    (hα0 : αseq 0 = functionFieldT (H := H) / liftToFunctionField (H := H) H.leadingCoeff)
+    (hroot : evalRAtPowerSeries x₀ H R (gammaFromAlpha H αseq) = 0)
+    (hshape : HasNumeratorShape x₀ R H hHyp αseq βseq) :
+    ∀ t : ℕ,
+      weight_Λ_over_𝒪 hH (βseq t) D ≤
+        (WithBot.some ((2 * t + 1) * Bivariate.natDegreeY R * D) : WithBot ℕ) := by
+  intro t
+  exact Nat.strong_induction_on t (fun t ih => by
+    cases t with
+    | zero =>
+        have hβ0 := beta_zero_eq_X_of_shape x₀ R H hHyp hH hD_H hD_R αseq βseq hα0 hroot hshape
+        rw [hβ0]
+        refine (weight_Λ_over_𝒪_mk_le (H := H) (D := D) hD_H hH (Polynomial.X : F[X][Y])).trans ?_
+        have hX : weight_Λ (Polynomial.X : F[X][Y]) H D ≤
+            (WithBot.some (D + 1 - Bivariate.natDegreeY H) : WithBot ℕ) := by
+          simpa only [pow_one, one_mul] using (weight_Λ_X_pow_le (H := H) (D := D) (k := 1))
+        refine hX.trans ?_
+        rw [WithBot.coe_le_coe]
+        rw [show 2 * 0 + 1 = 1 by norm_num, one_mul]
+        have hYpos : 0 < Bivariate.natDegreeY H := by
+          exact hH
+        have hH_le_R : Bivariate.natDegreeY H ≤ Bivariate.natDegreeY R := by
+          exact H_natDegree_le_R_natDegree_of_Hypotheses hHyp
+        have hR_pos : 0 < Bivariate.natDegreeY R := lt_of_lt_of_le hYpos hH_le_R
+        have hDsub : D + 1 - Bivariate.natDegreeY H ≤ D := by
+          omega
+        exact le_trans hDsub (Nat.le_mul_of_pos_left D hR_pos)
+    | succ t =>
+        have hD_Rx0 : D ≥ Bivariate.totalDegree (Bivariate.evalX (Polynomial.C x₀) R) := by
+          exact evalX_totalDegree_le_of_coeff_bound x₀ R hD_R
+        exact numerator_shape_weight_succ_le_strong x₀ R H hHyp hH hD_H hD_R hD_Rx0 αseq βseq hα0 hroot hshape t (by
+          intro s hs
+          exact ih s (Nat.lt_succ_of_le hs)))
+
+theorem regular_numerator_shape_succ (x₀ : F) (R : F[X][X][Y]) (H : F[X][Y])
+    [_H_irreducible : Fact (Irreducible H)] [_H_natDegree_pos : Fact (0 < H.natDegree)]
+    (hHyp : Hypotheses x₀ R H) (αseq : ℕ → 𝕃 H)
+    (hα0 : αseq 0 = functionFieldT (H := H) /
+      liftToFunctionField (H := H) H.leadingCoeff)
+    (hroot : evalRAtPowerSeries x₀ H R (gammaFromAlpha H αseq) = 0)
+    (hzeta : ζ R x₀ H ≠ 0)
+    (t : ℕ) (βprev : Fin (t + 1) → 𝒪 H)
+    (hprev : ∀ i : Fin (t + 1),
+      embeddingOf𝒪Into𝕃 H (βprev i) /
+        (liftToFunctionField (H := H) H.leadingCoeff ^ (i.val + 1) *
+          (embeddingOf𝒪Into𝕃 H (ξ x₀ R H hHyp)) ^ henselDenominatorExponent i.val) =
+        αseq i.val) :
+    ∃ βnext : 𝒪 H,
+      embeddingOf𝒪Into𝕃 H βnext /
+        (liftToFunctionField (H := H) H.leadingCoeff ^ (t + 1 + 1) *
+          (embeddingOf𝒪Into𝕃 H (ξ x₀ R H hHyp)) ^ henselDenominatorExponent (t + 1)) =
+        αseq (t + 1) := by
+  classical
+  let W : 𝕃 H := liftToFunctionField (H := H) H.leadingCoeff
+  let eta : 𝕃 H := embeddingOf𝒪Into𝕃 H (ξ x₀ R H hHyp)
+  let E : ℕ := henselDenominatorExponent (t + 1)
+  let D : 𝕃 H := W ^ (t + 1 + 1) * eta ^ E
+  let Ddiv : 𝕃 H := W ^ (t + 1 + 1) * eta ^ (E - 1) * W ^ (R.natDegree - 2)
+  let S : 𝕃 H :=
+    PowerSeries.coeff (t + 1) (evalRAtPowerSeries x₀ H R (gammaFromAlpha H αseq)) -
+      ζ R x₀ H * αseq (t + 1)
+  have hSreg : S * Ddiv ∈ regularElementsSet H := by
+    exact henselCoeffResidual_regular_after_clearing x₀ R H hHyp αseq hα0 hroot hzeta t βprev hprev
+  have hW : W ≠ 0 := by
+    simpa [W] using (liftToFunctionField_leadingCoeff_ne_zero (H := H))
+  have heta : eta ≠ 0 := by
+    have hξeq := embeddingOf𝒪Into𝕃_ξ x₀ R H hHyp
+    simpa [eta, W, hξeq] using mul_ne_zero (pow_ne_zero (R.natDegree - 2) hW) hzeta
+  have hD : D ≠ 0 := by
+    simp only [D]
+    exact mul_ne_zero (pow_ne_zero _ hW) (pow_ne_zero _ heta)
+  have hcoeff : PowerSeries.coeff (t + 1) (evalRAtPowerSeries x₀ H R (gammaFromAlpha H αseq)) = 0 := by
+    simpa using congrArg (fun p : PowerSeries (𝕃 H) => PowerSeries.coeff (t + 1) p) hroot
+  have hS : S = - ζ R x₀ H * αseq (t + 1) := by
+    simp only [S, hcoeff, zero_sub]
+    ring
+  have hEpos : 0 < E := by
+    dsimp [E]
+    rw [henselDenominatorExponent_succ]
+    omega
+  have hE : E = (E - 1) + 1 := by omega
+  have hpeta : eta ^ E = eta ^ (E - 1) * eta := by
+    conv_lhs => rw [hE, pow_succ]
+  have hD_eq : D = ζ R x₀ H * Ddiv := by
+    have heta_eq : eta = W ^ (R.natDegree - 2) * ζ R x₀ H := by
+      simpa [eta, W] using embeddingOf𝒪Into𝕃_ξ x₀ R H hHyp
+    calc
+      D = W ^ (t + 1 + 1) * eta ^ E := rfl
+      _ = W ^ (t + 1 + 1) * (eta ^ (E - 1) * eta) := by
+        rw [hpeta]
+      _ = W ^ (t + 1 + 1) * (eta ^ (E - 1) * (W ^ (R.natDegree - 2) * ζ R x₀ H)) := by
+        exact congrArg (fun x => W ^ (t + 1 + 1) * (eta ^ (E - 1) * x)) heta_eq
+      _ = ζ R x₀ H * (W ^ (t + 1 + 1) * eta ^ (E - 1) * W ^ (R.natDegree - 2)) := by
+        ring
+      _ = ζ R x₀ H * Ddiv := rfl
+  have hprod_eq : αseq (t + 1) * D = -(S * Ddiv) := by
+    rw [hD_eq, hS]
+    ring
+  have hregProd : αseq (t + 1) * D ∈ regularElementsSet H := by
+    rw [hprod_eq]
+    exact regularElementsSet_neg hSreg
+  rcases hregProd with ⟨βnext, hβnext⟩
+  refine ⟨βnext, ?_⟩
+  have hβnext' : (embeddingOf𝒪Into𝕃 H) βnext = αseq (t + 1) * D := hβnext.symm
+  rw [hβnext']
+  change (αseq (t + 1) * D) / D = αseq (t + 1)
+  exact mul_div_cancel_right₀ (αseq (t + 1)) hD
+
+theorem exists_regular_numerator_shape (x₀ : F) (R : F[X][X][Y]) (H : F[X][Y])
+    [_H_irreducible : Fact (Irreducible H)] [_H_natDegree_pos : Fact (0 < H.natDegree)]
+    (hHyp : Hypotheses x₀ R H) (αseq : ℕ → 𝕃 H)
+    (hα0 : αseq 0 = functionFieldT (H := H) / liftToFunctionField (H := H) H.leadingCoeff)
+    (hroot : evalRAtPowerSeries x₀ H R (gammaFromAlpha H αseq) = 0) :
+    ∃ βseq : ℕ → 𝒪 H,
+      HasNumeratorShape x₀ R H hHyp αseq βseq := by
+  classical
+  let W : 𝕃 H := liftToFunctionField (H := H) H.leadingCoeff
+  let Xi : 𝕃 H := embeddingOf𝒪Into𝕃 H (ξ x₀ R H hHyp)
+  let shapeAt : ℕ → 𝒪 H → Prop := fun t β =>
+    embeddingOf𝒪Into𝕃 H β / (W ^ (t + 1) * Xi ^ henselDenominatorExponent t) = αseq t
+  have hprefix : ∀ n : ℕ, ∃ βpref : Fin (n + 1) → 𝒪 H, ∀ i : Fin (n + 1), shapeAt i.val (βpref i) := by
+    intro n
+    induction n with
+    | zero =>
+        let β0 : 𝒪 H := (Ideal.Quotient.mk (Ideal.span {H_tilde' H}) (Polynomial.X : F[X][Y]) : 𝒪 H)
+        refine ⟨fun _ => β0, ?_⟩
+        intro i
+        have hi : i.val = 0 := by omega
+        rw [hi]
+        unfold shapeAt
+        rw [hα0]
+        simp [β0, W, Xi, div_eq_mul_inv]
+    | succ n ih =>
+        rcases ih with ⟨βpref, hβpref⟩
+        have hnext : ∃ βnext : 𝒪 H, shapeAt (n + 1) βnext := by
+          unfold shapeAt
+          exact regular_numerator_shape_succ x₀ R H hHyp αseq hα0 hroot
+            (zeta_ne_zero_of_Hypotheses x₀ R H hHyp) n βpref (by
+              intro i
+              exact hβpref i)
+        rcases hnext with ⟨βnext, hβnext⟩
+        refine ⟨fun i => if hlt : i.val < n + 1 then βpref ⟨i.val, hlt⟩ else βnext, ?_⟩
+        intro i
+        by_cases hlt : i.val < n + 1
+        · simp [hlt]
+          exact hβpref ⟨i.val, hlt⟩
+        · have hval : i.val = n + 1 := by
+            have hi_lt : i.val < n + 1 + 1 := i.isLt
+            omega
+          simp [hlt, hval]
+          exact hβnext
+  let βseq : ℕ → 𝒪 H := fun t => (Classical.choose (hprefix t)) ⟨t, Nat.lt_succ_self t⟩
+  refine ⟨βseq, ?_⟩
+  intro t
+  unfold HasNumeratorShape at *
+  unfold alphaOfNumerators
+  change shapeAt t (βseq t)
+  unfold βseq
+  exact (Classical.choose_spec (hprefix t)) ⟨t, Nat.lt_succ_self t⟩
 
 /-- There is a sequence of regular numerators `β_t` with the Hensel-lift semantics and the
 weight bound stated in Claim A.2 of Appendix A.4 of [BCIKS20]. -/
@@ -2671,7 +3098,11 @@ lemma exists_hensel_numerator_sequence (x₀ : F) (R : F[X][X][Y]) (H : F[X][Y])
       ∀ t : ℕ,
         weight_Λ_over_𝒪 hH (βseq t) D ≤
           (WithBot.some ((2 * t + 1) * Bivariate.natDegreeY R * D) : WithBot ℕ) := by
-  sorry
+  rcases exists_hensel_alpha_sequence x₀ R H hHyp with ⟨αseq, hα0, hroot⟩
+  rcases exists_regular_numerator_shape x₀ R H hHyp αseq hα0 hroot with ⟨βseq, hshape⟩
+  refine ⟨βseq, ?_, ?_⟩
+  · exact hensel_numerator_sequence_of_alpha_shape x₀ R H hHyp αseq βseq hα0 hroot hshape
+  · exact numerator_shape_weight_bound x₀ R H hHyp hH hD_H hD_R αseq βseq hα0 hroot hshape
 
 /-- The chosen regular numerator sequence supplied by `exists_hensel_numerator_sequence`. -/
 noncomputable def βSeq (x₀ : F) (R : F[X][X][Y]) (H : F[X][Y])
