@@ -31,7 +31,7 @@ We define the notions of Appendix A of [BCIKS20].
 
 -/
 
-set_option linter.style.longFile 4200
+set_option linter.style.longFile 4600
 
 open Polynomial Polynomial.Bivariate ToRatFunc Ideal
 
