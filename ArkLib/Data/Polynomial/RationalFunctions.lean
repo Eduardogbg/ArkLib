@@ -3775,6 +3775,72 @@ lemma RWL_coeff_liftCoeff {D : ℕ} (hD : Bivariate.totalDegree H ≤ D) (hH : 0
   · omega
   · rw [h0]; simp
 
+/-- Sharp `Λ`-weight bound on the leading-coefficient lift `W`: `Λ(W) ≤ D - dH`.
+This is the per-`W`-factor budget used in the sharp telescoping of [BCIKS20] A.4 (pp. 52–53);
+the looser `Λ(W) ≤ D` of `RWL_W` is not enough for the constant term to telescope. -/
+lemma RWL_W_sharp {D : ℕ} (hD : Bivariate.totalDegree H ≤ D) (hH : 0 < H.natDegree) :
+    RegularWeightLe hH (liftToFunctionField (H := H) H.leadingCoeff) D
+      (D - H.natDegree) := by
+  refine (RWL_lift hD hH H.leadingCoeff).mono ?_
+  by_cases hHz : H = 0
+  · simp [hHz]
+  · have hH_in : H.natDegree ∈ H.support :=
+      Polynomial.mem_support_iff.mpr (Polynomial.leadingCoeff_ne_zero.mpr hHz)
+    have h1 : (H.coeff H.natDegree).natDegree + H.natDegree ≤ Bivariate.totalDegree H :=
+      Bivariate.coeff_totalDegree_le H hH_in
+    rw [Polynomial.leadingCoeff]; omega
+
+/-- The sharp per-step `Λ`-weight budget of [BCIKS20] A.4 (the bound on `Λ(βₜ)`):
+`sharp t = 1 + (t+1)·(D - dH) + eₜ·((dY-1)·(D - dH + 1))`, where `dH = natDegreeY H`,
+`dY = natDegreeY R`, and `eₜ = henselDenominatorExponent t`.  The `1` is the constant from the
+leading-coefficient divisibility, `(t+1)·(D-dH)` is the `W`-power contribution, and the last term
+is the `ξ`-power contribution.  This bound telescopes linearly in `t`, unlike the loose
+multiplicative `(2t+1)·dY·D`. -/
+def numeratorShapeSharp (R : F[X][X][Y]) (H : F[X][Y]) (D t : ℕ) : ℕ :=
+  1 + (t + 1) * (D - Bivariate.natDegreeY H) +
+    henselDenominatorExponent t *
+      ((Bivariate.natDegreeY R - 1) * (D - Bivariate.natDegreeY H + 1))
+
+/-- The sharp bound weakens to the loose paper bound consumed by the final assembly:
+`sharp t ≤ (2t+1)·dY·D`.  Pure arithmetic, using `dH ≥ 1`, `dH ≤ dY`, `dH ≤ D`, and
+`eₜ ≤ 2t`. -/
+lemma numeratorShapeSharp_le_loose (x₀ : F) (R : F[X][X][Y]) (H : F[X][Y])
+    (hHyp : Hypotheses x₀ R H) (hH : 0 < H.natDegree) {D : ℕ}
+    (hD_H : Bivariate.totalDegree H ≤ D) (t : ℕ) :
+    numeratorShapeSharp R H D t ≤ (2 * t + 1) * Bivariate.natDegreeY R * D := by
+  -- Translate the degree facts into the bare numeric hypotheses needed by the arithmetic.
+  have hdH_dY : Bivariate.natDegreeY H ≤ Bivariate.natDegreeY R :=
+    H_natDegree_le_R_natDegree_of_Hypotheses hHyp
+  have hdH_pos : 1 ≤ Bivariate.natDegreeY H := hH
+  have hdH_D : Bivariate.natDegreeY H ≤ D := by
+    have hH_in : H.natDegree ∈ H.support :=
+      Polynomial.mem_support_iff.mpr (Polynomial.leadingCoeff_ne_zero.mpr
+        (by rintro rfl; simp at hH))
+    have h1 : (H.coeff H.natDegree).natDegree + H.natDegree ≤ Bivariate.totalDegree H :=
+      Bivariate.coeff_totalDegree_le H hH_in
+    rw [show Bivariate.natDegreeY H = H.natDegree from rfl]; omega
+  have het : henselDenominatorExponent t ≤ 2 * t := by
+    unfold henselDenominatorExponent; split <;> omega
+  unfold numeratorShapeSharp
+  set D' := D
+  set dH := Bivariate.natDegreeY H with hdHdef
+  set dY := Bivariate.natDegreeY R with hdYdef
+  set et := henselDenominatorExponent t with hetdef
+  clear_value D' dH dY et
+  obtain ⟨a, rfl⟩ : ∃ a, D' = dH + a := ⟨D' - dH, by omega⟩
+  obtain ⟨b, rfl⟩ : ∃ b, dY = dH + b := ⟨dY - dH, by omega⟩
+  obtain ⟨c, rfl⟩ : ∃ c, dH = c + 1 := ⟨dH - 1, by omega⟩
+  simp only [Nat.add_sub_cancel_left] at *
+  rw [show c + 1 + b - 1 = c + b by omega]
+  have hA : et * ((c + b) * (a + 1)) ≤ 2 * t * ((c + b) * (a + 1)) :=
+    Nat.mul_le_mul_right _ (by omega)
+  have hRHS : (2 * t + 1) * ((c + b) + 1) * (a + 1) ≤
+      (2 * t + 1) * (c + 1 + b) * (c + 1 + a) := by
+    apply Nat.mul_le_mul
+    · rw [show c + 1 + b = (c + b) + 1 by ring]
+    · omega
+  nlinarith [hA, hRHS]
+
 theorem numerator_shape_weight_succ_le_strong (x₀ : F) (R : F[X][X][Y]) (H : F[X][Y])
     [_H_irreducible : Fact (Irreducible H)] [_H_natDegree_pos : Fact (0 < H.natDegree)]
     (hHyp : Hypotheses x₀ R H) (hH : 0 < H.natDegree) {D : ℕ}
