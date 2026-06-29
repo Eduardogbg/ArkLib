@@ -38,13 +38,12 @@ round-by-round knowledge soundness (L6.8,
 `protocol62_rbrKnowledgeSound`) are **fully proven** here. Plain
 knowledge soundness (L6.6, `protocol62_knowledgeSound`) is **fully
 proven** in the sibling file `Spec/KnowledgeSoundness.lean`, with the
-**corrected** convex-combination error
-`(1-δ)^t + (ε_mca(C,δ) + |Λ(C^{≡2},δ)|/|F|)·(1 - (1-δ)^t)`: the paper's
-claimed `max` of the two terms is **false as stated** (its proof swaps
-conditional for unconditional probabilities; there is a concrete
-counterexample). (The looser sum
-`(ε_mca + |Λ|/|F|) + (1-δ)^t`, the L6.8 round-error sum, is the documented
-relaxation.) The per-round game bounds proven in this file
+convex-combination error
+`(1-δ)^t + (ε_mca(C,δ) + |Λ(C^{≡2},δ)|/|F|)·(1 - (1-δ)^t)`, which is `≤` the
+sum `(ε_mca + |Λ|/|F|) + (1-δ)^t` stated in [ABF26] Lemma 6.6 (current `.tex`,
+~line 2215) and so is at least as strong. (An earlier draft printed the unsound
+`max` of the two terms; it was author-confirmed and corrected to the sum.) The
+per-round game bounds proven in this file
 (`gamma_round_game_bound`, `spotcheck_round_game_bound`) are shared by
 both the L6.8 and L6.6 proofs.
 
@@ -500,8 +499,8 @@ lemma verifierBody_simulateQ_eq_pure
             let f₀ : A ← liftM (queryF (ι := ι) (A := A) 0 (xs j))
             let f₁ : A ← liftM (queryF (ι := ι) (A := A) 1 (xs j))
             (fun _ ↦ ForInStep.yield PUnit.unit) <$>
-              guard (encode g (xs j) = f₀ + γ • f₁)
-        : OptionT (OracleComp (emptySpec.{0, 0} + ([OracleStatement ι A]ₒ +
+              guard (encode g (xs j) = f₀ + γ • f₁) :
+        OptionT (OracleComp (emptySpec.{0, 0} + ([OracleStatement ι A]ₒ +
             [(pSpec (ι := ι) (F := F) k t).Message]ₒ))) Unit)
       = pure (some ()) := by
   -- Bridge each OptionT-lifted query helper to `OptionT.lift` of its OracleComp lift.
@@ -560,8 +559,8 @@ lemma verifierBody_simulateQ_eq_pure
           (OptionT.lift (liftM (queryF (ι := ι) (A := A) 0 (xs j))) >>= fun f₀ ↦
             OptionT.lift (liftM (queryF (ι := ι) (A := A) 1 (xs j))) >>= fun f₁ ↦
               guard (encode (msgs ⟨1, rfl⟩) (xs j) = f₀ + γ • f₁) >>=
-                pure ∘ fun _ ↦ ForInStep.yield PUnit.unit)
-            : OptionT (OracleComp (emptySpec.{0, 0} + ([OracleStatement ι A]ₒ +
+                pure ∘ fun _ ↦ ForInStep.yield PUnit.unit) :
+            OptionT (OracleComp (emptySpec.{0, 0} + ([OracleStatement ι A]ₒ +
                 [(pSpec (ι := ι) (F := F) k t).Message]ₒ))) PUnit))
       = (pure (some PUnit.unit) : OracleComp (emptySpec.{0, 0}) (Option PUnit)) := by
     apply simulateQ_optionT_forIn_yield_pure_some
@@ -631,8 +630,8 @@ lemma verifierBody_simulateQ_eq_pure
           (OptionT.lift (liftM (queryF (ι := ι) (A := A) 0 (xs j))) >>= fun f₀ ↦
             OptionT.lift (liftM (queryF (ι := ι) (A := A) 1 (xs j))) >>= fun f₁ ↦
               guard (encode (msgs ⟨1, rfl⟩) (xs j) = f₀ + γ • f₁) >>=
-                pure ∘ fun _ ↦ ForInStep.yield PUnit.unit)
-            : OptionT (OracleComp (emptySpec.{0, 0} + ([OracleStatement ι A]ₒ +
+                pure ∘ fun _ ↦ ForInStep.yield PUnit.unit) :
+            OptionT (OracleComp (emptySpec.{0, 0} + ([OracleStatement ι A]ₒ +
                 [(pSpec (ι := ι) (F := F) k t).Message]ₒ))) PUnit))
   rw [hForIn]
   -- After collapsing the loop the goal is `(pure (some ()) : OracleComp []ₒ _) >>= …`; the bind
@@ -675,8 +674,8 @@ lemma verifierBody_simulateQ_eq_pure_ite
             let f₀ : A ← liftM (queryF (ι := ι) (A := A) 0 (xs j))
             let f₁ : A ← liftM (queryF (ι := ι) (A := A) 1 (xs j))
             (fun _ ↦ ForInStep.yield PUnit.unit) <$>
-              guard (encode g (xs j) = f₀ + γ • f₁)
-        : OptionT (OracleComp (emptySpec.{0, 0} + ([OracleStatement ι A]ₒ +
+              guard (encode g (xs j) = f₀ + γ • f₁) :
+        OptionT (OracleComp (emptySpec.{0, 0} + ([OracleStatement ι A]ₒ +
             [(pSpec (ι := ι) (F := F) k t).Message]ₒ))) Unit)
       = pure (if (∑ j, (msgs ⟨1, rfl⟩) j * stmt1 j = mu1 + γ * mu2) ∧
             (∀ j : Fin t, encode (msgs ⟨1, rfl⟩) (xs j)
@@ -746,8 +745,8 @@ lemma verifierBody_simulateQ_eq_pure_ite
               (OptionT.lift (liftM (queryF (ι := ι) (A := A) 0 (xs j))) >>= fun f₀ ↦
                 OptionT.lift (liftM (queryF (ι := ι) (A := A) 1 (xs j))) >>= fun f₁ ↦
                   guard (encode (msgs ⟨1, rfl⟩) (xs j) = f₀ + γ • f₁) >>=
-                    pure ∘ fun _ ↦ ForInStep.yield PUnit.unit)
-                : OptionT (OracleComp (emptySpec.{0, 0} + ([OracleStatement ι A]ₒ +
+                    pure ∘ fun _ ↦ ForInStep.yield PUnit.unit) :
+                OptionT (OracleComp (emptySpec.{0, 0} + ([OracleStatement ι A]ₒ +
                     [(pSpec (ι := ι) (F := F) k t).Message]ₒ))) PUnit))
           = (pure none : OracleComp (emptySpec.{0, 0}) (Option PUnit)) := by
         refine simulateQ_optionT_forIn_yield_pure_none _ _ _ _
@@ -825,8 +824,8 @@ lemma verifierBody_simulateQ_eq_pure_ite
               (OptionT.lift (liftM (queryF (ι := ι) (A := A) 0 (xs j))) >>= fun f₀ ↦
                 OptionT.lift (liftM (queryF (ι := ι) (A := A) 1 (xs j))) >>= fun f₁ ↦
                   guard (encode (msgs ⟨1, rfl⟩) (xs j) = f₀ + γ • f₁) >>=
-                    pure ∘ fun _ ↦ ForInStep.yield PUnit.unit)
-                : OptionT (OracleComp (emptySpec.{0, 0} + ([OracleStatement ι A]ₒ +
+                    pure ∘ fun _ ↦ ForInStep.yield PUnit.unit) :
+                OptionT (OracleComp (emptySpec.{0, 0} + ([OracleStatement ι A]ₒ +
                     [(pSpec (ι := ι) (F := F) k t).Message]ₒ))) PUnit))
       rw [hForIn]
       rw [show (pure none : OracleComp (emptySpec.{0, 0}) (Option PUnit))

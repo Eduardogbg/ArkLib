@@ -80,7 +80,8 @@ itself improve the δ-swept provable frontier (for `s ≤ 2^4` the paper proves
 axis** the toy `bestProvableError` (a fixed-`t` δ-sweep) does not capture:
 
 * **larger folding closes the gap** — at `s = 2^12` the provable side reaches
-  `2^(-118.14)` (`r = 108`), a `≈ 10`-bit gap to the `≈ 2^(-128)` attack; and
+  `2^(-118.13)` (`r = 108`, honest round-down of `2^(-118.1376)`), a `≈ 10`-bit
+  gap to the `≈ 2^(-128)` attack; and
 * **argument-size at enforced 128-bit security** — the `s = 2^5` row reaches
   full `2^(-128.03)` provable soundness at repetition `t = 563`, `r = 8` with
   argument size `417.9 KiB` (`tab:subspace-design-128bit-security`), the metric

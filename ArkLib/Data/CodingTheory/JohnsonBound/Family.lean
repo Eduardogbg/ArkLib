@@ -16,9 +16,8 @@ Agreement*, 2026).
 
 The existing `JohnsonBound.J q δ : ℝ` matches the paper's `J_q(δ)`. This file adds:
 
-- `JohnsonBound.Jqℓ q ℓ δ` — paper's `J_{q,ℓ}(δ)`, with the additional `(ℓ-1)/ℓ` factor
-  (NB: deviates from the `.tex`, which prints a wrong-direction `ℓ/(ℓ-1)` — see `Jqℓ`)
-  inside the square root.
+- `JohnsonBound.Jqℓ q ℓ δ` — paper's `J_{q,ℓ}(δ)`, with the `(ℓ-1)/ℓ` factor inside
+  the square root (matching the `.tex`, ~line 1347).
 - `JohnsonBound.Jcap δ` — paper's asymptotic Johnson bound `J(δ) := 1 - √(1 - δ)`.
 
 The three are related by `J_{q,ℓ}(δ) →_{ℓ → ∞} J_q(δ) →_{q → ∞} J(δ)`; we state the
@@ -52,20 +51,15 @@ namespace JohnsonBound
 
 open Real
 
-/-- **ABF26 Definition 3.1, `J_{q,ℓ}` (with a corrected list factor).** The q-ary
-ℓ-radius Johnson function:
+/-- **ABF26 Definition 3.1, `J_{q,ℓ}`.** The q-ary ℓ-radius Johnson function:
 
   `J_{q,ℓ}(δ) := (1 - 1/q) · (1 - √(1 - q/(q-1) · (ℓ-1)/ℓ · δ))`
 
-**Deviation from the canonical `.tex` (typo there, flagged upstream 2026-06-10).**
-The `.tex` (~line 1347) prints the list factor as `ℓ/(ℓ-1)`. That direction is
-wrong: a *smaller* list budget `ℓ` must give a *smaller* radius, but `ℓ/(ℓ-1)`
-is decreasing in `ℓ`, and with it Theorem 3.2 is falsified by a concrete
-counterexample — `C = (Fin 2)^(Fin 8)` (all of `𝔽₂⁸`, `δ_min = 1/8`), `ℓ = 2`:
-the printed radius is `≈ 0.146`, i.e. Hamming radius 1, where `Λ = 9 > 2`.
-The classical list-`ℓ` Johnson factor is `(ℓ-1)/ℓ` (= `1 - 1/ℓ`, cf. [GRS25]);
-both factors tend to `1`, so the paper's `J_q = lim_{ℓ→∞} J_{q,ℓ}` is
-unaffected.
+The `(ℓ-1)/ℓ` list factor matches the canonical `.tex` (~line 1347). It is the
+classical list-`ℓ` Johnson factor (= `1 - 1/ℓ`, cf. [GRS12]), increasing in `ℓ`,
+so a *smaller* list budget `ℓ` gives a *smaller* radius. Both `(ℓ-1)/ℓ` and the
+limiting factor `1` agree as `ℓ → ∞`, so the paper's `J_q = lim_{ℓ→∞} J_{q,ℓ}`
+is unaffected.
 
 For `ℓ = 2` this is the binary Johnson radius; as `ℓ → ∞`, `Jqℓ q ℓ δ → J q δ`
 (the existing `JohnsonBound.J`). The `ℓ` parameter is the target list size. -/
@@ -138,9 +132,9 @@ theorem johnson_bound_lambda_le_ell
     let q : ℚ := Fintype.card α
     let δ_min : ℚ := Code.minDist C / Fintype.card ι
     Lambda C (Jqℓ q ℓ δ_min) ≤ (ℓ : ℕ∞) := by
-  sorry -- ABF26-T3.2; external admit (stated with the corrected `(ℓ-1)/ℓ` list
-        -- factor — the `.tex`'s `ℓ/(ℓ-1)` is a wrong-direction typo, see `Jqℓ`).
-        -- With the corrected factor the in-tree `johnson_bound`'s denominator
+  sorry -- ABF26-T3.2; external admit (stated with the `(ℓ-1)/ℓ` list factor,
+        -- matching the `.tex` ~line 1347, see `Jqℓ`).
+        -- With this factor the in-tree `johnson_bound`'s denominator
         -- `Denom = (1 - frac·e/n)² - (1 - frac·d/n)` at `e/n = Jqℓ q ℓ δ_min`
         -- simplifies to `frac·δ_min·(1 - (ℓ-1)/ℓ) = frac·δ_min/ℓ > 0`, so a direct
         -- port may now be possible (the printed factor made it negative); kept as

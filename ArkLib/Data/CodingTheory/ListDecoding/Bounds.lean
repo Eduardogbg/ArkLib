@@ -320,7 +320,7 @@ theorem large_alphabet_barrier_bdg24_agl23
             (Module.finrank F C : ℝ) ≥ ρ * Fintype.card ι →
             Lambda ((C : Set (ι → F))) ((ℓ : ℝ) / (ℓ + 1) * (1 - ρ - η)) ≤ (ℓ : ℕ∞) →
             (Fintype.card F : ℝ) ≥ (2 : ℝ) ^ (α / η) := by
-  sorry -- ABF26-T3.10; external admit [BDG24, AGL23].
+  sorry -- ABF26-T3.10; external admit [BrakensiekDG24, AlrabiahGR23] (tex L1460).
 
 end LargeAlphabetBarrier
 

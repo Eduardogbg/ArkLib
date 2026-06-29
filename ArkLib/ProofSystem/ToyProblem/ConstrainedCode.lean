@@ -208,13 +208,17 @@ def mcaEventConstrained {k : ℕ} (enc : (Fin k → F) →ₗ[F] (ι → F)) (v 
       (∀ i : Fin 2, ∀ j ∈ S, ![f₁, f₂] i j = enc (M i) j)
 
 set_option linter.unusedFintypeInType false in
-/-- **Per-instance EQUALITY (headline).** Under `hNoWit` (the instance admits no
-relaxed-relation witness), the toy γ-event and the constraint-pinned MCA event of
-the constrained code coincide for every `γ`.
+/-- **Per-instance equivalence (constraint-pinned).** Under `hNoWit` (the instance
+admits no relaxed-relation witness), the toy γ-event is equivalent, for every `γ`,
+to `mcaEventConstrained` — the toy event augmented with the (under `hNoWit`
+automatically-satisfied) clause that no constrained-codeword *pair* agrees on `S`.
 
-This is the faithful form of "toy-protocol soundness *is* the MCA experiment of the
-constrained code": an exact equivalence, not just the upper bound of
-`gamma_transition_prob_le_constrained`.
+This is a per-instance restatement, **not** a reduction to the library MCA
+experiment of `constrainedCode`: `mcaEventConstrained` is a bespoke event phrased
+directly in terms of `enc`/`v`, not via `constrainedCode` or `epsMCA`, and the
+added `¬`-clause is redundant under `hNoWit`. The genuine reduction to the
+constrained code's MCA bad event is the upper bound
+`gamma_transition_prob_le_constrained` above; that is the headline result.
 
 Forward (`mp`, uses `hNoWit`): the toy event's witness set `S` satisfies the
 `¬`-clause because a local witness on `S` would be a global witness. Backward

@@ -12,29 +12,28 @@ import ArkLib.ProofSystem.ToyProblem.Spec.General
 Plain (straightline) knowledge soundness of Construction 6.2
 (`protocol62_knowledgeSound`), against the relaxed relation `R̃²_{C,δ}`.
 
-## The error term deviates from the paper — deliberately
+## The error term: the paper's sum, tightened to a convex combination
 
-[ABF26] Lemma 6.6 claims knowledge error
-`max{ε_mca(C,δ) + |Λ(C^{≡2},δ)|/|F|, (1−δ)^t}`. That bound is **false as
-stated**: the paper's proof (tex 2224–2499) twice replaces conditional
-probabilities by unconditional ones (`Pr[E | Δ≤δ] ⤳ Pr[E]`, and the
-conditioning is silently dropped from the collision term), and there is a
-concrete counterexample — take `f₁, f₂` to be exact codewords whose linear
-targets are off by one; at the single `γ*` solving the folded linear
-constraint the prover achieves acceptance probability `1` while no relaxed
-witness exists (so the bad event has probability `≥ 1/|F|`, which the `max`
-bound undershoots once `ε₀, (1−δ)^t < 1/|F|`). Both the proof-gap reading and
-the counterexample were independently adversarially verified, and the
-correction (`max` → union bound) is confirmed by a paper author.
+[ABF26] Lemma 6.6 (current `.tex`, the `lem:toysoudness` statement at ~line
+2215) states the knowledge error as the **sum**
 
-What the paper's own pointwise arguments *do* prove — and what this file
-formalizes — is the **sum form**
+  `ε_mca(C,δ) + |Λ(C^{≡2},δ)|/|F| + (1−δ)^t`.
 
-  `(ε_mca(C,δ) + |Λ(C^{≡2},δ)|/|F|) + (1−δ)^t`,
+Writing `ε₀ := ε_mca(C,δ) + |Λ(C^{≡2},δ)|/|F|`, this file proves the slightly
+tighter **convex/union combination**
 
-which coincides with the sum of the L6.8 round-by-round errors (so the
-generic rbr→plain implication would give the same bound; the max-form's
-apparent advantage was illusory).
+  `(1−δ)^t + ε₀·(1 − (1−δ)^t)`,
+
+which is `≤` the paper's sum (smaller by `ε₀·(1−δ)^t`), so it is at least as
+strong as Lemma 6.6 and matches what the generic round-by-round → plain
+implication yields from the L6.8 round errors `(ε₀, (1−δ)^t)`.
+
+Historical note: an earlier draft instead printed `max{ε₀, (1−δ)^t}`, which is
+unsound — its proof drops the conditioning on `Δ ≤ δ`, and exact codewords with
+off-by-one linear targets give a bad event of probability `≥ 1/|F|` that the
+`max` undershoots once `ε₀, (1−δ)^t < 1/|F|`. This was independently verified,
+author-confirmed, and corrected to the sum above; we record it so the deviation
+from older copies of the paper is not mistaken for a formalization gap.
 
 ## Proof structure
 
@@ -231,12 +230,11 @@ the toy-problem IOR has knowledge soundness against the relaxed relation
 
   `(1 − δ)^t + ε₀ · (1 − (1 − δ)^t)`,    where `ε₀ := ε_mca(C, δ) + |Λ(C^{≡2}, δ)| / |F|`.
 
-**This corrects the paper.** [ABF26] Lemma 6.6 claims `max{ε₀, (1 − δ)^t}`,
-which is **false as stated** — its proof replaces conditional probabilities
-by unconditional ones, and a concrete counterexample (exact codewords with
-off-by-one linear targets) beats the claimed bound. The correction (`max` →
-union bound) is author-confirmed; see this file's module docstring for the
-full analysis.
+This is `≤` the sum `ε₀ + (1 − δ)^t` stated in [ABF26] Lemma 6.6 (current
+`.tex`, ~line 2215), so it is at least as strong as the paper's bound. (An
+earlier draft printed the unsound `max{ε₀, (1 − δ)^t}`; it was author-confirmed
+and corrected to the sum. See this file's module docstring for the full
+analysis.)
 
 **Why the convex form, and how it relates to the natural sum.** The honest
 total-probability accounting over the combination randomness `γ` is

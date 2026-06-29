@@ -184,12 +184,24 @@ the *folded* code (a codeword symbol is a length-`s` tuple `Fin s → F`), the
 domain `|L| = 2^16`, message `k = 2^20`, rate `ρ = 1/2` (ABF26 §6.3.2, the
 paper's worked example).
 
+**Where the pieces live (the split).** ArkLib holds the immutable, axiom-clean
+side: the parameter point `koalaFRS`, the folded encoder and distance lemmas, and
+the **attack/upper** anchor `frsUpperBound` (which owes nothing). The
+**provable/lower** anchor `frsLowerBound` and the `securityGap_koalaFRS` readoff
+are **not in ArkLib** — their proofs reduce to the owed τ-subspace-design `ε_mca`
+bound, which is the ABF26 §1 **Grand MCA Challenge** (the explicit prize), so they
+live as the open contest entries in the external
+[`proximity-prize`](../../../proximity-prize) repository (which depends on ArkLib).
+ArkLib carries only finished/winning proofs. (Mirrors `Impl/FRS.lean` lines 36–42.)
+
 | Anchor | `bits` | Basis |
 |---|---|---|
-| `frsLowerBound : SecurityLowerBound koalaFRS` | **29.10** | §6.3.2 τ-subspace-design analysis, `tab:subspace-design-security-analysis`, `s = 2^5`, `r = 8` (`τ(r) = s·ρ/(s−r+1)`), at `δ = 7/48`. Now a **full reduction**: spot-check `(41/48)^128 ≤ 2^(−29)·(116/125)` (`koalaFRS_spotcheck`, integer fact `41^128·2^29·125 ≤ 116·48^128`) + the L6.10 bridge to `ε_mca + |Λ|/|F|` (one owed external admit), summed `≤ 2^(−29)·(933/1000) ≤ 2^(−29.10)` (`koalaFRS_combine`, integer fact `2·933^10 ≤ 10^30`). |
-| `frsUpperBound : SecurityUpperBound koalaFRS` | **128.01** | δ-sweep floor from the spot-check term alone: `⨅_δ (1−δ)^128 ≥ (1−δ_min)^128 ≈ 2^(−128.006)`, with the folded **MDS** relative distance `δ_min = 32769/65536 ≈ 0.50002`; rounds up to `128.01`. Now a **full reduction** via `le_bestProvableError` (drop the nonnegative `winningSetSoundness` term, floor `(1−δ)^128 ≥ (32767/65536)^128 ≥ 2^(−128.01)` by `koalaFRS_spotcheck_lb`, integer fact `256^100 ≤ 2·255^100`); it consumes the now-`sorry`-free folded distance `koalaFRS_minRelDist` (Track B: proven via `minDist_frsCode` modulo the shared `koalaFRSγ_exists`). (Stronger and *less owed* than the paper's per-`δ*` Elias point reading `2^(−127.63) = (1−0.499)^128` — that is not the sweep floor; no list-size bound enters.) |
+| *open prize entry (external `proximity-prize` repo, **not** an ArkLib `SecurityLowerBound`)* — folded lower anchor, target value `29.10` | **29.10** | §6.3.2 τ-subspace-design analysis, `tab:subspace-design-security-analysis`, `s = 2^5`, `r = 8` (`τ(r) = s·ρ/(s−r+1)`), at `δ = 7/48`. Structured as a **full reduction**: spot-check `(41/48)^128 ≤ 2^(−29)·(116/125)` (integer fact `41^128·2^29·125 ≤ 116·48^128`) + the L6.10 bridge to `ε_mca + |Λ|/|F|` (one owed external admit), summed `≤ 2^(−29)·(933/1000) ≤ 2^(−29.10)` (integer fact `2·933^10 ≤ 10^30`). The single remaining owed external is the τ-subspace-design `ε_mca` term (the Grand MCA Challenge). |
+| `frsUpperBound : SecurityUpperBound koalaFRS` (in ArkLib) | **128.01** | δ-sweep floor from the spot-check term alone: `⨅_δ (1−δ)^128 ≥ (1−δ_min)^128 ≈ 2^(−128.006)`, with the folded **MDS** relative distance `δ_min = 32769/65536 ≈ 0.50002`; rounds up to `128.01`. A **full reduction** via `le_bestProvableError` (drop the nonnegative `winningSetSoundness` term, floor `(1−δ)^128 ≥ (32767/65536)^128 ≥ 2^(−128.01)` by `koalaFRS_spotcheck_lb`, integer fact `256^100 ≤ 2·255^100`); it consumes the now-`sorry`-free folded distance `koalaFRS_minRelDist` (Track B: proven via `minDist_frsCode` modulo the shared `koalaFRSγ_exists`). (Stronger and *less owed* than the paper's per-`δ*` Elias point reading `2^(−127.63) = (1−0.499)^128` — that is not the sweep floor; no list-size bound enters.) |
 
-so `securityGap_koalaFRS = 128.01 − 29.10 = 98.91`.
+The corresponding security gap, computed over in the external repo, is
+`securityGap_koalaFRS = 128.01 − 29.10 = 98.91` (the upper anchor is ArkLib's;
+the lower anchor and the gap readoff are the open prize entry).
 
 > **Round-down correction (`29.11 → 29.10`).** The spot-check term at the `r = 8`
 > operating point is `(τ(9)+3/(2·8))^128 = (41/48)^128 = 2^(−29.1085)` *exactly*,
@@ -236,9 +248,10 @@ so `securityGap_koalaFRS = 128.01 − 29.10 = 98.91`.
   `#print axioms = [propext, Classical.choice, Quot.sound]` (zero `sorryAx`; the
   whole **attack/Y side owes nothing**). The spot-check integer leaves stay
   sorry-free. The **only** remaining owed external is the τ-subspace-design `ε_mca`
-  term in the *lower* anchor (`frsLowerBound`, `≈ 2^(−166.8)` actual, capped
+  term in the *lower* anchor (`≈ 2^(−166.8)` actual, capped
   `≤ 2^(−29)·(1/200)`) — the by-design coding-theory admit, the FRS counterpart of
-  the `koalaIRS` owed `ε_mca`.
+  the `koalaIRS` owed `ε_mca`. That lower anchor is the open prize entry in the
+  external `proximity-prize` repo, not an ArkLib `SecurityLowerBound`.
 - **Protocol-reduction status (DONE).** The `koalaFRS` leaderboard entry only
   needs the alphabet-generic soundness layer, but the protocol *reduction* layer
   is now generalized to folded codewords too (Stage 1, 2026-06-22): `Spec/General.lean`,
@@ -261,13 +274,21 @@ gap-closing demonstration: the §6.3.2 construction fixes `|F| = q^6 ≈ 2^186`,
 argument-size column: `R·(256·log|L| + 62·s)` gives the table's `3.91 MiB` only
 with `|L| = 2^9`). The folded MDS distance is `δ_min = (512 − 255)/512 = 257/512`.
 
+As with the `s = 32` row, ArkLib holds the axiom-clean side — the parameter point
+`koalaFRS12`, the folded encoder and distance lemmas, and the upper anchor
+`frsUpperBound12`. The lower anchor and the `securityGap_koalaFRS12` readoff are
+the open prize entries in the external `proximity-prize` repo (they reduce to the
+same owed τ-subspace-design `ε_mca` admit family, here at `r = 108`).
+
 | Anchor | `bits` | Basis |
 |---|---|---|
-| `frsLowerBound12 : SecurityLowerBound koalaFRS12` | **118.13** | `tab:subspace-design-security-analysis`, `s = 2^12`, minimizing `r = 108`, at `δ = 33923/71784` (`1−δ = τ(109)+3/(2·108) = 512/997 + 1/72 = 37861/71784 ≈ 0.5274`, **near capacity** `ρ = 1/2`). Full reduction: spot-check `(37861/71784)^128 ≤ 2^(−118)·(91/100)` (`koalaFRS12_spotcheck`, integer fact `37861^128·2^118·100 ≤ 91·71784^128`) + the L6.10 bridge to `ε_mca + |Λ|/|F|` (the **same** τ-subspace-design admit family as `frsLowerBound`, here at `r = 108`; actual figure `≈ 2^(−142.7)`, capped `≤ 2^(−118)·(3/1000)`), summed `≤ 2^(−118)·(913/1000) ≤ 2^(−118.13)` (`koalaFRS12_combine`, integer fact `913^100·2^13 ≤ 1000^100`). Round-down `118.14 → 118.13` (`(37861/71784)^128 = 2^(−118.1376)`). |
-| `frsUpperBound12 : SecurityUpperBound koalaFRS12` | **128.75** | δ-sweep floor: `⨅_δ (1−δ)^128 ≥ (1−δ_min)^128 = (255/512)^128 ≈ 2^(−128.723)`, with folded MDS `δ_min = 257/512`. Full reduction via `le_bestProvableError`; the floor leaf `koalaFRS12_spotcheck_lb` proves `2^(−128.75) ≤ (255/512)^128` by sandwiching through `3/5` (`2^(−0.75) ≤ 3/5` via `(3/5)^4 = 81/625 ≥ 1/8`, and `3/5 ≤ (255/256)^128` via `3·256^128 ≤ 5·255^128`) — Bernoulli is too weak at the coarse `1/256` step, and a tighter `128.73` would force an intractable `≥ 1234`-digit power. Consumes the now-`sorry`-free `koalaFRS12_minRelDist` (Track B: `minDist_frsCode` modulo the shared `koalaFRSγ_exists`). |
+| *open prize entry (external `proximity-prize` repo, **not** an ArkLib `SecurityLowerBound`)* — folded lower anchor, target value `118.13` | **118.13** | `tab:subspace-design-security-analysis`, `s = 2^12`, minimizing `r = 108`, at `δ = 33923/71784` (`1−δ = τ(109)+3/(2·108) = 512/997 + 1/72 = 37861/71784 ≈ 0.5274`, **near capacity** `ρ = 1/2`). Structured as a full reduction: spot-check `(37861/71784)^128 ≤ 2^(−118)·(91/100)` (integer fact `37861^128·2^118·100 ≤ 91·71784^128`) + the L6.10 bridge to `ε_mca + |Λ|/|F|` (the **same** τ-subspace-design admit family as the `s = 32` lower anchor, here at `r = 108`; actual figure `≈ 2^(−142.7)`, capped `≤ 2^(−118)·(3/1000)`), summed `≤ 2^(−118)·(913/1000) ≤ 2^(−118.13)` (integer fact `913^100·2^13 ≤ 1000^100`). Round-down `118.14 → 118.13` (`(37861/71784)^128 = 2^(−118.1376)`). |
+| `frsUpperBound12 : SecurityUpperBound koalaFRS12` (in ArkLib) | **128.75** | δ-sweep floor: `⨅_δ (1−δ)^128 ≥ (1−δ_min)^128 = (255/512)^128 ≈ 2^(−128.723)`, with folded MDS `δ_min = 257/512`. Full reduction via `le_bestProvableError`; the floor leaf `koalaFRS12_spotcheck_lb` proves `2^(−128.75) ≤ (255/512)^128` by sandwiching through `3/5` (`2^(−0.75) ≤ 3/5` via `(3/5)^4 = 81/625 ≥ 1/8`, and `3/5 ≤ (255/256)^128` via `3·256^128 ≤ 5·255^128`) — Bernoulli is too weak at the coarse `1/256` step, and a tighter `128.73` would force an intractable `≥ 1234`-digit power. Consumes the now-`sorry`-free `koalaFRS12_minRelDist` (Track B: `minDist_frsCode` modulo the shared `koalaFRSγ_exists`). |
 
-so `securityGap_koalaFRS12 = 128.75 − 118.13 = 10.62` — versus **`98.91` at
-`s = 32`**, an `≈ 88`-bit collapse.
+The corresponding gap, computed in the external repo, is
+`securityGap_koalaFRS12 = 128.75 − 118.13 = 10.62` — versus **`98.91` at
+`s = 32`**, an `≈ 88`-bit collapse (the upper anchor is ArkLib's; the lower anchor
+and the gap readoff are the open prize entry).
 
 - **Why folding closes the gap (mechanism).** Not a different (sharper) citation:
   the `ε_mca` admit is the **same** τ-subspace-design family as `s = 32`. The gap
@@ -288,8 +309,9 @@ so `securityGap_koalaFRS12 = 128.75 − 118.13 = 10.62` — versus **`98.91` at
   `orderOf γ ≥ s·|L| = 2^21`). Both rows share the now-**proven** `koalaFRSγ_exists`,
   so `koalaFRS12Enc_injective`, `koalaFRS12_minRelDist`, and `frsUpperBound12`
   are fully axiom-clean (no `sorryAx`). The three integer leaves stay sorry-free; the
-  lower anchor's only remaining by-design admit is the τ-subspace-design `ε_mca`
-  (here at `r = 108`, the same admit family as `frsLowerBound`).
+  lower anchor (the open prize entry in the external `proximity-prize` repo, not an
+  ArkLib `SecurityLowerBound`) reduces to the τ-subspace-design `ε_mca` admit
+  (here at `r = 108`, the same admit family as the `s = 32` lower anchor).
 
 ## Connection to the grand challenges (Phase 1)
 

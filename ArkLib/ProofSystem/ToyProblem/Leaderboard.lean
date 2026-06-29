@@ -33,8 +33,8 @@ analysis is therefore
 
   `bestProvableError p = ⨅ δ ∈ (0, δ_min), (1-δ)^t + winningSetSoundness p.enc δ · (1 - (1-δ)^t)`
 
-(the **convex/union combination** of the two round errors — the corrected L6.6
-bound; the paper's printed `max` is false, see `protocol62_knowledgeSound`),
+(the **convex/union combination** of the two round errors — the L6.6 bound,
+`≤` the paper's printed sum, see `protocol62_knowledgeSound`),
 and that single scalar is what the two leaderboard sides bound (the paper's
 "Knowledge soundness upperbound" / "Soundness lowerbound" parheads, `.tex`
 2798–2825 and 2898–2943). Crucially, the two sides may certify their bounds
@@ -279,10 +279,10 @@ combination-randomness error `ε_mca(C,δ) + |Λ(C^{≡2},δ)| / |F|`. The bridg
 **convex combination** `(1-δ)^t + ε₀·(1 - (1-δ)^t)` of the spot-check error
 `(1-δ)^t` and the combination-randomness error
 `ε₀ = ε_mca(C,δ) + |Λ(C^{≡2},δ)| / |F|`. This is the *exact* error term of
-`protocol62_knowledgeSound`. (The paper's printed `max ε₀ ((1-δ)^t)` is **false**
-— see `protocol62_knowledgeSound`; the honest round-by-round bound is this union
-combination, author-confirmed. It dominates the `max` by `ε₀·(1-δ)^t`, negligible
-in regime.) The `(Lambda …).toNat` is faithful: `ListDecodable.Lambda_ne_top`. It
+`protocol62_knowledgeSound`. (This convex combination is `≤` the sum
+`ε₀ + (1-δ)^t` printed in [ABF26] Lemma 6.6, current `.tex` ~line 2215 — see
+`protocol62_knowledgeSound`; tighter than the paper's sum by `ε₀·(1-δ)^t`,
+negligible in regime.) The `(Lambda …).toNat` is faithful: `ListDecodable.Lambda_ne_top`. It
 is the X-side proof vehicle: an analysis picks an admissible δ and bounds
 `bestProvableError` through it (via `winningSetSoundness_le_toySoundnessError`
 and `bestProvableError_le`). -/
@@ -475,8 +475,8 @@ Reading: an analysis must pick an admissible `δ ∈ (0, δ_min(C))` (the
 L6.8/L6.10 range); round 1's true error at that δ is `winningSetSoundness enc δ`
 (Definition 6.11, "exactly" per the paper), round 2's is the spot-check
 `(1-δ)^t`; the analysis's combined error is their **convex/union combination**
-`(1-δ)^t + winningSetSoundness·(1 - (1-δ)^t)` (the corrected L6.6 bound — the
-paper's printed `max` is false, see `protocol62_knowledgeSound`), and the best
+`(1-δ)^t + winningSetSoundness·(1 - (1-δ)^t)` (the L6.6 bound, `≤` the paper's
+printed sum, see `protocol62_knowledgeSound`), and the best
 analysis takes the infimum over δ. The protocol's *true* security may exceed
 this quantity (an analysis that is not a δ-relaxation round-by-round argument is
 out of scope) — the leaderboard narrows **this** quantity, per §6.3.
@@ -500,9 +500,10 @@ review):
    exact per-δ round-2 error is `sup_{Δ > δ} (1-Δ)^t`, marginally smaller
    (one grid step `1/n`; ≈`2^(-14)` bits at `n = 2^21`). Only the round-1
    term carries Definition 6.11's "exactly".
-3. The two round errors combine by the **convex/union bound** (corrected L6.6),
-   not the paper's printed `max`; the two differ by `winningSetSoundness·(1-δ)^t`
-   (≤ `(1-δ)^t`), negligible in regime, so the anchors are unaffected. -/
+3. The two round errors combine by the **convex/union bound** (L6.6), which is
+   `≤` the paper's printed sum; it exceeds the (unsound) `max` only by
+   `winningSetSoundness·(1-δ)^t` (≤ `(1-δ)^t`), negligible in regime, so the
+   anchors are unaffected. -/
 noncomputable def bestProvableError (p : ToyParams) : ℝ≥0∞ :=
   ⨅ δ ∈ Set.Ioo (0 : ℝ≥0) ((minRelHammingDistCode p.code : ℝ≥0)),
     (((1 - δ) ^ p.t + winningSetSoundness p.enc δ * (1 - (1 - δ) ^ p.t) : ℝ≥0) : ℝ≥0∞)

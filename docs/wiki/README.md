@@ -23,7 +23,7 @@ For reusable cross-cutting workflows that are not tied to one repo area, see
     status labels, Lean references, and a follow-up roadmap.
 - [`proximity-prize-leaderboard.md`](proximity-prize-leaderboard.md) - the machine-checked
   "bits of security" leaderboard for the ABF26 §6 toy protocol: how to submit a provable
-  lower/upper bound, how `securityGap` is computed, and the current 64/116 anchors.
+  lower/upper bound, how `securityGap` is computed, and the current 63.99/117 anchors.
 
 ## Maintenance Contract
 

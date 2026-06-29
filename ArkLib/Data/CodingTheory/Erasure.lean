@@ -29,7 +29,7 @@ oracles consumes the same shape.
 
 The predicate is paper-tagged to ABF26 D6.4 (Arnon-Boneh-Fenzi 2026, §6.2);
 the "every additive code can be erasure decoded in polynomial time" lemma is
-L6.5 in the same paper (citing GRS25 = Guruswami-Rudra-Sudan, *Essential
+L6.5 in the same paper (citing GRS12 = Guruswami-Rudra-Sudan, *Essential
 Coding Theory*).
 -/
 
