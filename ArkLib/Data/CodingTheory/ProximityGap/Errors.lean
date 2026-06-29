@@ -179,7 +179,14 @@ noncomputable def epsCA_affineSpaces
       δᵣ(y.1, C) ≤ δ_fld]
 
 /-- The pair `(u₀, u₁)` jointly agrees with two codewords of `C` on every position in `S`.
-Equivalent in spirit to `Δ_S((u₀, u₁), C^≡2) = 0` from the paper. -/
+Equivalent in spirit to `Δ_S((u₀, u₁), C^≡2) = 0` from the paper.
+
+This is the `Fin 2`, fixed-`S`, `F`-module-alphabet analogue of
+`InterleavedCode.jointAgreement` (which is `κ`-indexed, existentially quantifies `S` with a size
+bound, and is stated over an `F`-valued alphabet). The two are deliberately kept separate because
+`jointAgreement` is not yet generalized to an `F`-module alphabet `A`; generalizing it — after
+which `pairJointAgreesOn` becomes its `κ := Fin 2` instance — is left to a future interleaved-code
+consolidation. -/
 def pairJointAgreesOn (C : Set (ι → A)) (S : Finset ι) (u₀ u₁ : ι → A) : Prop :=
   ∃ v₀ ∈ C, ∃ v₁ ∈ C, ∀ i ∈ S, v₀ i = u₀ i ∧ v₁ i = u₁ i
 
