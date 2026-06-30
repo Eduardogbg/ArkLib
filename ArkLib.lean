@@ -188,11 +188,17 @@ import ArkLib.OracleReduction.ProtocolSpec.Cast
 import ArkLib.OracleReduction.ProtocolSpec.SeqCompose
 import ArkLib.OracleReduction.Salt
 import ArkLib.OracleReduction.Security.Basic
+import ArkLib.OracleReduction.Security.CoordinateWiseSpecialSoundness
+import ArkLib.OracleReduction.Security.CoordinateWiseSpecialSoundness.Basic
+import ArkLib.OracleReduction.Security.CoordinateWiseSpecialSoundness.Composition
 import ArkLib.OracleReduction.Security.Implications
 import ArkLib.OracleReduction.Security.Rewinding
 import ArkLib.OracleReduction.Security.RoundByRound
 import ArkLib.OracleReduction.Security.SpecialSoundness
 import ArkLib.OracleReduction.Security.StateRestoration
+import ArkLib.OracleReduction.Security.TranscriptTree
+import ArkLib.OracleReduction.Security.TranscriptTree.Basic
+import ArkLib.OracleReduction.Security.TranscriptTree.Composition
 import ArkLib.OracleReduction.VectorIOR
 import ArkLib.ProofSystem.BatchedFri.Security
 import ArkLib.ProofSystem.BatchedFri.Spec.General
