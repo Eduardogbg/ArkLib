@@ -259,15 +259,11 @@ We denote this by `c|[T]`.
 Definition 3.7 [BCGM25]. -/
 def projectedWord [Fintype ι] (c : ι → F) (T : Finset ι) : T → F := Set.restrict T c
 
--- notation:60 c "|[" T "]" => projectedWord c T
-
 /-- Let `C` be a code of length `ι`. For every finite `ι`-subset `T`, we define the projected code
 `C|[T]` as the set of projected codewords `c|[T]`, for `c ∈ C`.
 Definition 3.7 [BCGM25]. -/
 def projectedCode [Fintype ι] (C : Set (ι → F)) (T : Finset ι) : Set (T → F) :=
   {w | ∃ c ∈ C, w = projectedWord c T}
-
--- notation:60 C "|[" T "]" => projectedCode C T
 
 open Submodule
 
@@ -306,20 +302,6 @@ def projectedCode_submod
     ext i
     simp [hx.2]
 }
-
-/-- Let `T` be a finite subset of `ι`. If every word in a collection lies in the projected code
-`C|[T]`, then so do all `F`-linear combinations of these. -/
-lemma projectedCode_linearCombination [Field F] (LC : LinearCode ι F) (T : Finset ι) {α : Type}
-    [Fintype α] (U : α → (ι → F)) (c : α → F)
-    (hU : ∀ j, projectedWord (U j) T ∈ projectedCode LC.carrier T) :
-    projectedWord (fun k => ∑ j, c j * U j k) T ∈ projectedCode LC.carrier T := by
-  obtain ⟨w, hw⟩ : ∃ w ∈ LC, ∀ t ∈ T, w t = ∑ j, c j * U j t := by
-    choose w hw using hU
-    use ∑ j, c j • w j
-    exact ⟨Submodule.sum_mem _ fun j _ => Submodule.smul_mem _ _ (hw j |>.1),
-      fun t ht => by simp [show ∀ j, U j t = w j t from
-        fun j => congr_fun (hw j |>.2) ⟨t, ht⟩]⟩
-  exact ⟨w, hw.1, funext fun t => by simpa using Eq.symm (hw.2 t t.2)⟩
 
 /-- Let `T` be a finite subset of `ι`. If every word in a collection lies in the projected code
 `C|[T]`, then so do all `F`-linear combinations of these. -/

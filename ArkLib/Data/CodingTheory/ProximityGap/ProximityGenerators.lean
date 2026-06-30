@@ -46,7 +46,6 @@ open scoped ProbabilityTheory
 
 variable {ι : Type} [Fintype ι]
          {F : Type} [Field F]
-         {F : Type} [Field F]
          {ℓ : Type} [Fintype ℓ]
 
 /-- The type of generators, where a generator `G` over a field `F` with output size `ℓ` is a
@@ -58,9 +57,7 @@ abbrev Generator (S ℓ F : Type) : Type := S → (ℓ → F)
 a zero output from a non-zero vector is bounded above by `ε_ze`.
 Definition 3.11 [BCGM25]. -/
 def IsZeroEvadingGenerator {S : Type} [Nonempty S] [Fintype S] (G : Generator S ℓ F) (ε_ze : I) :
-def IsZeroEvadingGenerator {S : Type} [Nonempty S] [Fintype S] (G : Generator S ℓ F) (ε_ze : I) :
-  Prop :=
-  (sSup {y | ∃ v : ℓ → F, v ≠ 0 ∧ y = Pr_{let x ←$ᵖ S}[dotProduct (G x) v = 0]})
+    Prop :=
   (sSup {y | ∃ v : ℓ → F, v ≠ 0 ∧ y = Pr_{let x ←$ᵖ S}[dotProduct (G x) v = 0]})
     ≤ ENNReal.ofReal ε_ze
 
@@ -79,19 +76,14 @@ def IsPolynomialGeneratorOf {s : ℕ} (S : Fin s → Set F) (G : Generator (∀ 
 /-- A matrix whose rows are the outputs of the generator function.
 Defined inside Definition 3.12 [BCGM25]. -/
 def M_G {S : Type} [Nonempty S] [Fintype S] (G : Generator S ℓ F) : Matrix S ℓ F :=
-def M_G {S : Type} [Nonempty S] [Fintype S] (G : Generator S ℓ F) : Matrix S ℓ F :=
   Matrix.of G
 
-noncomputable example {S : Type} [Nonempty S] [Fintype S] [DecidableEq F] (G : Generator S ℓ F) :
-  LinearCode S F := LinearCode.fromColGenMat (M_G G)
 noncomputable example {S : Type} [Nonempty S] [Fintype S] [DecidableEq F] (G : Generator S ℓ F) :
   LinearCode S F := LinearCode.fromColGenMat (M_G G)
 
 /-- A generator `G` is MDS if the matrix `M_G` whose rows are the outputs of the generator
 function is a generator matrix for an MDS code.
 Definition 3.12 [BCGM25]. -/
-def IsMDSGenerator {S : Type} [Nonempty S] [Fintype S] [DecidableEq F] (G : Generator S ℓ F) :
-  Prop := LinearCode.IsMDS (LinearCode.fromColGenMat (M_G G))
 def IsMDSGenerator {S : Type} [Nonempty S] [Fintype S] [DecidableEq F] (G : Generator S ℓ F) :
   Prop := LinearCode.IsMDS (LinearCode.fromColGenMat (M_G G))
 
@@ -165,6 +157,7 @@ namespace PolynomialGenerator
 open NNReal ENNReal unitInterval MvPolynomial LinearCombination CoreDefinitions
 open scoped ProbabilityTheory ENNReal NNReal BigOperators
 
+/-- Auxiliary lemma to prove that an error is in the unit interval. -/
 lemma error_in_unit_interval (d : ℕ) (m : ℕ) (hm_pos : 0 < m) (hdm : d ≤ m) : (d / m : ℝ) ∈ I := by
   constructor
   · exact div_nonneg (Nat.cast_nonneg d) (le_of_lt (Nat.cast_pos.mpr hm_pos))
@@ -186,13 +179,16 @@ lemma minSeedCard_pos {F : Type} {s : ℕ} (S : Fin s → Set F)
     [∀ i, Fintype ↥(S i)] [∀ i, Nonempty ↥(S i)] :
     0 < minSeedCard S := by
   unfold minSeedCard
-  split_ifs <;> simp_all
+  have hne : ∀ i, (S i).Nonempty := fun i => Set.nonempty_coe_sort.mp inferInstance
+  split_ifs with h
+  · rw [Finset.lt_inf'_iff]
+    intro i _
+    exact Fintype.card_pos_iff.mpr (Set.nonempty_coe_sort.2 (hne i))
+  · norm_num
+
 
 /-- The minimum of the cardinality of a family of nonempty sets is smaller than the cardinality of
 each set in the family. -/
-lemma minSeedCard_le {F : Type} {s : ℕ} (S : Fin s → Set F)
-    [∀ i, Fintype ↥(S i)] (hs : 0 < s) (i : Fin s) :
-    minSeedCard S ≤ (S i).toFinset.card := by
 lemma minSeedCard_le {F : Type} {s : ℕ} (S : Fin s → Set F)
     [∀ i, Fintype ↥(S i)] (hs : 0 < s) (i : Fin s) :
     minSeedCard S ≤ (S i).toFinset.card := by
@@ -217,18 +213,14 @@ theorem poly_gen_is_zero_evading
   {P : ℓ → MvPolynomial (Fin s) F}
   {G : Generator (∀ i, ↥(S i)) ℓ F} (hG : IsPolynomialGeneratorOf S G P)
   (hdm : MvPolynomial.maxTotalDegree P ≤ minSeedCard S)
-  (hdm : MvPolynomial.maxTotalDegree P ≤ minSeedCard S)
   : IsZeroEvadingGenerator G ⟨(maxTotalDegree P : ℝ) / minSeedCard S,
     error_in_unit_interval (maxTotalDegree P) (minSeedCard S) (minSeedCard_pos S) hdm⟩ := by
   classical
-  unfold IsZeroEvadingGenerator
   unfold IsZeroEvadingGenerator
   simp only [ne_eq, bind_pure_comp, sSup_le_iff, Set.mem_setOf_eq, forall_exists_index,
     and_imp]
   intros b x hx hb
   rw [hb]
-  convert prob_eval_zero_le_div (∑ j, x j • P j) _ (maxTotalDegree P) (minSeedCard S) _ _ _ using 1
-  any_goals intro i; exact minSeedCard_le S (Fin.pos_iff_nonempty.mpr ⟨i⟩) i
   convert prob_eval_zero_le_div (∑ j, x j • P j) _ (maxTotalDegree P) (minSeedCard S) _ _ _ using 1
   any_goals intro i; exact minSeedCard_le S (Fin.pos_iff_nonempty.mpr ⟨i⟩) i
   any_goals assumption

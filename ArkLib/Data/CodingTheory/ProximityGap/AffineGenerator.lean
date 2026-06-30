@@ -8,6 +8,7 @@ import ArkLib.Data.CodingTheory.ProximityGap.ProximityGenerators
 import ArkLib.Data.CodingTheory.ProximityGap.MCAGenerator
 import Mathlib
 import ArkLib.Data.CodingTheory.ProximityGap.AffineGenHelperLemmas
+import ArkLib.Data.Probability.Notation
 import ArkLib.Data.Probability.Instances
 
 
@@ -23,8 +24,8 @@ MCA for the affine space generator.
 with Mutual Correlated Agreement*][BCGM25]. Full paper : https://eprint.iacr.org/2025/2051}
 -/
 
-open unitInterval NNReal ENNReal CoreDefinitions LinearTransformations
-open scoped ProbabilityTheory NNReal ENNReal
+open unitInterval NNReal ENNReal CoreDefinitions LinearTransformations LinearCode
+open scoped ProbabilityTheory NNReal ENNReal BigOperators
 
 
 variable {ι : Type} [Fintype ι]
@@ -37,17 +38,15 @@ the affine space generator `Fˡ → Fˡ⁺¹`, `x ↦ (1, x)`, has MCA for `LC` 
 `(1 - 1/|F|)⁻¹ • ε_mca`. -/
 theorem AffineLine_MCA_AffineSpaceMCA {ℓ : ℕ} (hℓ : ℓ ≥ 2) (ε_mca : I → ℝ) (LC : LinearCode ι F)
     (hGMCA : IsMCAGenerator (AffineLineGenerator F) ε_mca LC) :
-    let a := (1 - 1 / Fintype.card F : ℝ)
-    let ε_mca' := a⁻¹ • ε_mca
+    letI a := (1 - 1 / Fintype.card F : ℝ)
+    letI ε_mca' := a⁻¹ • ε_mca
     IsMCAGenerator (AffineSpaceGenerator F ℓ) ε_mca' LC := by
   classical
-  change IsMCAGenerator (AffineSpaceGenerator F ℓ)
-        ((1 - 1 / (Fintype.card F : ℝ))⁻¹ • ε_mca) LC
   intro U γ
-  set a : ℝ := (1 - 1 / (Fintype.card F : ℝ)) with ha_def
+  set a : ℝ := (1 - 1 / (Fintype.card F : ℝ))
   have ha : 0 < a := by
     have hq1 : (1 : ℝ) < (Fintype.card F : ℝ) := by exact_mod_cast Fintype.one_lt_card
-    rw [ha_def, sub_pos, div_lt_one (by linarith)]
+    rw [sub_pos, div_lt_one (by linarith)]
     linarith
   have hs : 1 ≤ ℓ := by omega
   rw [prob_uniform_eq_ofReal]
@@ -57,7 +56,6 @@ theorem AffineLine_MCA_AffineSpaceMCA {ℓ : ℕ} (hℓ : ℓ ≥ 2) (ε_mca : I
   rw [hcard]
   simp only [Pi.smul_apply, smul_eq_mul]
   obtain ⟨W, hW⟩ := AffineMCA.exists_line_bound hs LC U γ
-  rw [← ha_def] at hW
   have hline := hGMCA W γ
   rw [prob_uniform_eq_ofReal] at hline
   set sp : ℝ :=
@@ -80,7 +78,7 @@ theorem AffineLine_MCA_AffineSpaceMCA {ℓ : ℕ} (hℓ : ℓ ≥ 2) (ε_mca : I
     have h0 : ENNReal.ofReal (ε_mca γ) = 0 := ENNReal.ofReal_of_nonpos (le_of_lt hε)
     rw [h0] at hline
     have hln_le : ln / (Fintype.card F : ℝ) ≤ 0 :=
-      ENNReal.ofReal_eq_zero.mp (le_antisymm hline (zero_le _))
+      ENNReal.ofReal_eq_zero.mp (le_antisymm hline zero_le)
     have hln_eq : ln / (Fintype.card F : ℝ) = 0 := le_antisymm hln_le hln0
     have hchain : a * (sp / (Fintype.card F : ℝ) ^ ℓ) ≤ 0 := by
       rw [← hln_eq]; exact hW
