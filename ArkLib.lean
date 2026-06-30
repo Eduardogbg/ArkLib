@@ -7,6 +7,7 @@ import ArkLib.Commitments.Functional.Hachi.InnerOuter.Arithmetic
 import ArkLib.Commitments.Functional.Hachi.InnerOuter.Correctness
 import ArkLib.Commitments.Functional.Hachi.InnerOuter.Scheme
 import ArkLib.Commitments.Functional.Hachi.InnerOuter.Security
+import ArkLib.Commitments.Functional.Hachi.PolynomialEvalSplit
 import ArkLib.Commitments.Functional.KZG.Algebra
 import ArkLib.Commitments.Functional.KZG.Basic
 import ArkLib.Commitments.Functional.KZG.Binding
