@@ -185,11 +185,30 @@ This is a fixed-`S`, pair building block; `InterleavedCode.jointAgreement` is th
 `κ`-indexed *event* (it bundles `∃ S` with the size bound `S.card ≥ (1-δ)·n`). `jointAgreement` is
 already alphabet-generic — `{F : Type*} [DecidableEq F]`, invoked with `(F := A)` elsewhere — so the
 two differ only structurally, and `pairJointAgreesOn` deliberately avoids the `DecidableEq`
-requirement by phrasing agreement as `∀ i ∈ S, … = …` rather than `S ⊆ Finset.filter …`. Bridging
-them (`(∃ S, S.card ≥ (1-δ)·|ι| ∧ pairJointAgreesOn C S u₀ u₁) ↔ jointAgreement C δ ![u₀, u₁]`) to
-retire the duplication is left to a future interleaved-code consolidation. -/
+requirement by phrasing agreement as `∀ i ∈ S, … = …` rather than `S ⊆ Finset.filter …`. The
+two are tied together by `exists_pairJointAgreesOn_iff_jointAgreement` below, so they cannot
+drift apart. -/
 def pairJointAgreesOn (C : Set (ι → A)) (S : Finset ι) (u₀ u₁ : ι → A) : Prop :=
   ∃ v₀ ∈ C, ∃ v₁ ∈ C, ∀ i ∈ S, v₀ i = u₀ i ∧ v₁ i = u₁ i
+
+/-- **Bridge: the fixed-`S` pair predicate ↔ the `κ`-indexed event.** Quantifying
+`pairJointAgreesOn` over a large-enough set `S` is exactly `InterleavedCode.jointAgreement`
+for the two-word stack `![u₀, u₁]`. This pins the fixed-`S` pair building block to the general
+event so the two notions never drift apart. -/
+lemma exists_pairJointAgreesOn_iff_jointAgreement (C : Set (ι → A)) (δ : ℝ≥0) (u₀ u₁ : ι → A) :
+    (∃ S : Finset ι, S.card ≥ (1 - δ) * (Fintype.card ι) ∧ pairJointAgreesOn C S u₀ u₁) ↔
+      jointAgreement (F := A) (κ := Fin 2) (C := C) (δ := δ) (W := ![u₀, u₁]) := by
+  simp only [pairJointAgreesOn, jointAgreement, Finset.subset_iff, Finset.mem_filter,
+    Finset.mem_univ, true_and]
+  refine exists_congr fun S => and_congr_right fun _ => ⟨?_, ?_⟩
+  · rintro ⟨v₀, hv₀, v₁, hv₁, hagree⟩
+    refine ⟨![v₀, v₁], fun i => ?_⟩
+    fin_cases i
+    · exact ⟨hv₀, fun a ha => by simpa using (hagree a ha).1⟩
+    · exact ⟨hv₁, fun a ha => by simpa using (hagree a ha).2⟩
+  · rintro ⟨v, hv⟩
+    exact ⟨v 0, (hv 0).1, v 1, (hv 1).1,
+      fun j hj => ⟨by simpa using (hv 0).2 hj, by simpa using (hv 1).2 hj⟩⟩
 
 /-- The "bad" event in ABF26 Definition 4.3: there is a witness set `S` of size at least
 `(1-δ)·n` on which the line `u₀ + γ • u₁` exactly equals some codeword of `C`, but no
