@@ -181,12 +181,13 @@ noncomputable def epsCA_affineSpaces
 /-- The pair `(u₀, u₁)` jointly agrees with two codewords of `C` on every position in `S`.
 Equivalent in spirit to `Δ_S((u₀, u₁), C^≡2) = 0` from the paper.
 
-This is the `Fin 2`, fixed-`S`, `F`-module-alphabet analogue of
-`InterleavedCode.jointAgreement` (which is `κ`-indexed, existentially quantifies `S` with a size
-bound, and is stated over an `F`-valued alphabet). The two are deliberately kept separate because
-`jointAgreement` is not yet generalized to an `F`-module alphabet `A`; generalizing it — after
-which `pairJointAgreesOn` becomes its `κ := Fin 2` instance — is left to a future interleaved-code
-consolidation. -/
+This is a fixed-`S`, pair building block; `InterleavedCode.jointAgreement` is the corresponding
+`κ`-indexed *event* (it bundles `∃ S` with the size bound `S.card ≥ (1-δ)·n`). `jointAgreement` is
+already alphabet-generic — `{F : Type*} [DecidableEq F]`, invoked with `(F := A)` elsewhere — so the
+two differ only structurally, and `pairJointAgreesOn` deliberately avoids the `DecidableEq`
+requirement by phrasing agreement as `∀ i ∈ S, … = …` rather than `S ⊆ Finset.filter …`. Bridging
+them (`(∃ S, S.card ≥ (1-δ)·|ι| ∧ pairJointAgreesOn C S u₀ u₁) ↔ jointAgreement C δ ![u₀, u₁]`) to
+retire the duplication is left to a future interleaved-code consolidation. -/
 def pairJointAgreesOn (C : Set (ι → A)) (S : Finset ι) (u₀ u₁ : ι → A) : Prop :=
   ∃ v₀ ∈ C, ∃ v₁ ∈ C, ∀ i ∈ S, v₀ i = u₀ i ∧ v₁ i = u₁ i
 
