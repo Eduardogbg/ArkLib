@@ -75,9 +75,9 @@ abbrev projectedQuotient [Fintype ι] (LC : LinearCode ι F) (T : Finset ι) : T
   (T → F) ⧸ LC.projectedCode_submod T
 
 open Classical in
-/-- If some direction codeword `w i` does not project into the code on `T`, then the set of coefficient
-vectors `l` whose combination `∑ i, l i • w i` projects into the code has cardinality at most
-`|F| ^ (s-1)`. -/
+/-- If some direction codeword `w i` does not project into the code on `T`, then the set of
+coefficient vectors `l` whose combination `∑ i, l i • w i` projects into the code has cardinality
+at most `|F| ^ (s-1)`. -/
 lemma proj_lincomb_ker_card_le [Fintype F] [Fintype ι] {s : ℕ}
     (LC : LinearCode ι F) (T : Finset ι) (w : Fin s → (ι → F))
     (hne : ∃ i, projectedWord (w i) T ∉ projectedCode_submod LC T) :
