@@ -31,7 +31,6 @@ def multilinearWeight {ϑ : ℕ} (r : Fin ϑ → F) (i : Fin (2 ^ ϑ)) : F :=
                       `|⋮|`
                       `|u_{2^ϑ-1}|`
 = `∑_{i=0}^{2^ϑ-1} (multilinearWeight r i) • u_i` -/
-
 def multilinearCombine {ϑ : ℕ} {ι : Type*}
     (u : (Fin (2 ^ ϑ)) → ι → A) (r : Fin ϑ → F) : (ι → A) :=
   fun colIdx => ∑ rowIdx : Fin (2^ϑ), ((multilinearWeight r rowIdx) : F) • ((u rowIdx colIdx) : A)
