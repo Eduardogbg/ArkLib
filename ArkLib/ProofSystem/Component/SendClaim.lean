@@ -1,240 +1,157 @@
 /-
 Copyright (c) 2024-2025 ArkLib Contributors. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Quang Dao
+Authors: Quang Dao, Tobias Rothmann
 -/
 import ArkLib.OracleReduction.Security.RoundByRound
+import ArkLib.OracleReduction.Security.CoordinateWiseSpecialSoundness.SeqCompose
 
 /-!
   # Simple Oracle Reduction - SendClaim
 
-  The prover sends a claim to the verifier.
+  The prover sends a **claim** (a single oracle message) to the verifier, computed from the input
+  (combined) statement by a function `f`. This is the "prover-computed message" building block, e.g.
+  the Hachi/Greyhound first message `v := D ŵ` or the Sumcheck round polynomial `q`.
 
-    - There is no witness (e.g. `Witness = Unit`), and there is a single `OStatement`.
-   - The prover sends a message of the same type as `OStatement` to the verifier.
-   - The verifier performs the check for `rel`, which can be expressed as an oracle computation.
-   - The output data has no `Statement`, only two `OStatement`s: one from the beginning data,
-     and the other is the message from the prover.
-   - The output relation checks whether the two `OStatement`s are the same.
+  - There is no witness (`Witness = Unit`).
+  - The prover sends a message of type `Message` (with an `OracleInterface`), namely `f stmt oStmt`.
+  - The **verifier is a pure pass-through** (`verify := fun stmt _ => pure stmt`): per §1.2 of the
+    Hachi CWSS plan, the claim is *not* checked by a runtime `guard`; the check lives in the output
+    relation `toORelOut` (the predicate `P` over statement / oracle statements / message).
+  - The output oracle statements are the input oracle statements together with the sent message,
+    `OStatement ⊕ᵥ (fun _ : Fin 1 => Message)`.
 
-   TODO: Generalize
+  ## Security
+
+  The verifier is pure and has no challenge rounds, hence **coordinate-wise special sound**
+  (`oracleVerifier_coordinateWiseSpecialSound`) for any `CWSSStructure`, via the no-challenge bridge
+  `OracleVerifier.coordinateWiseSpecialSound_of_isEmpty_challengeIdx`. The extractor is trivial
+  (`e := fun _ _ => ()`, there is no witness) and the output relation `toORelOut relIn P` refines
+  the input relation by the claim predicate `P`, so accepting into its language forces the input
+  into `relIn`. These results are `sorryAx`-free. This mirrors `SendSingleWitness` (the special
+  case `Message := Witness`) on the verifier side.
+
+  Perfect completeness — that an honest prover's claim `f stmt oStmt` lands in `toORelOut` whenever
+  the input is in `relIn` and `f` respects `P` — is deferred: it needs the same all-pure
+  oracle-reduction completeness reasoning as `SendSingleWitness.oracleReduction_completeness`, and
+  is orthogonal to the CWSS target here. This design supersedes the previous effectful-verifier one
+  (whose completeness proof no longer applies).
 -/
 
-open OracleSpec OracleComp OracleQuery OracleInterface ProtocolSpec
+open OracleSpec OracleComp OracleQuery OracleInterface ProtocolSpec Function Equiv
 
 namespace SendClaim
 
 variable {ι : Type} (oSpec : OracleSpec ι) (Statement : Type)
-  {ιₛᵢ : Type} [Unique ιₛᵢ] (OStatement : ιₛᵢ → Type) [inst : ∀ i, OracleInterface (OStatement i)]
+  {ιₛᵢ : Type} (OStatement : ιₛᵢ → Type) [∀ i, OracleInterface (OStatement i)]
+  (Message : Type) [OracleInterface Message]
 
-@[reducible]
-def pSpec : ProtocolSpec 1 := ⟨!v[.P_to_V], !v[OStatement default]⟩
+/-- One prover→verifier message carrying the claim of type `Message`. -/
+@[reducible, simp]
+def pSpec : ProtocolSpec 1 := ⟨!v[.P_to_V], !v[Message]⟩
 
-/--
-The prover takes in the old oracle statement as input, and sends it as the protocol message.
--/
+/-- `SendClaim` is a single `P_to_V` message, so it has no challenge rounds. This makes its
+coordinate-wise special soundness reduce to the no-challenge bridge. -/
+instance instIsEmptyChallengeIdx : IsEmpty (pSpec Message).ChallengeIdx :=
+  ⟨fun ⟨0, h⟩ => nomatch h⟩
+
+variable (f : Statement → (∀ i, OStatement i) → Message)
+
+/-- The oracle prover for `SendClaim`: it computes the claim `f stmt oStmt` and sends it as the only
+oracle message, exposing it (together with the input oracle statements) as the output oracles. -/
+@[inline, specialize]
 def oracleProver : OracleProver oSpec
     Statement OStatement Unit
-    Unit (OStatement ⊕ᵥ OStatement) Unit
-    (pSpec OStatement) where
-  PrvState := fun _ => OStatement default
-
-  input := fun ⟨⟨_, oStmt⟩, _⟩ => oStmt default
-
-  sendMessage | ⟨0, _⟩ => fun st => pure (st, st)
-
+    Statement (OStatement ⊕ᵥ (fun _ : Fin 1 => Message)) Unit
+    (pSpec Message) where
+  PrvState := fun _ => Statement × (∀ i, OStatement i)
+  input := Prod.fst
+  sendMessage | ⟨0, _⟩ => fun ⟨stmt, oStmt⟩ => pure (f stmt oStmt, ⟨stmt, oStmt⟩)
   receiveChallenge | ⟨0, h⟩ => nomatch h
+  output := fun ⟨stmt, oStmt⟩ => pure (⟨stmt, Sum.rec oStmt (fun _ => f stmt oStmt)⟩, ())
 
-  output := fun st => pure
-    (⟨(), fun x => match x with
-      | .inl _ => by simpa [Unique.uniq] using st
-      | .inr default => by simpa [Unique.uniq] using st⟩,
-     ())
-
-variable (relIn : Set ((Statement × (∀ i, OStatement i)) × Unit))
-  (relComp : Statement → OracleComp [OStatement]ₒ Unit)
-  -- (rel_eq : ∀ stmt oStmt, rel stmt oStmt ↔
-  --   (OracleInterface.simOracle []ₒ (OracleInterface.oracle oStmt)).run = oStmt)
-
-/--
-The verifier checks that the relationship `rel oldStmt newStmt` holds.
-It has access to the original and new `OStatement` via their oracle indices.
--/
-def oracleVerifier : OracleVerifier oSpec Statement OStatement Unit (OStatement ⊕ᵥ OStatement)
-    (pSpec OStatement) where
-
-  verify := fun stmt _ => relComp stmt
-
-  embed := {
-    toFun := fun
-      | .inl i => .inl i
-      | .inr _ => .inr ⟨0, by simp⟩
-    inj' := by
-      intro a b h
-      match a, b with
-      | .inl _, .inl _ => simpa using h
-      | .inl _, .inr _ => simp at h
-      | .inr _, .inl _ => simp at h
-      | .inr _, .inr _ => congr 1; exact Subsingleton.elim _ _
-  }
-
+/-- The oracle verifier for `SendClaim` is a **pure pass-through**: it returns the statement and
+exposes the input oracle statements together with the prover's message as the output oracles. The
+claim predicate is enforced in `toORelOut`, not at runtime, keeping the verifier `IsPure`. -/
+@[inline, specialize]
+def oracleVerifier : OracleVerifier oSpec
+    Statement OStatement Statement (OStatement ⊕ᵥ (fun _ : Fin 1 => Message))
+    (pSpec Message) where
+  verify := fun stmt _ => pure stmt
+  embed := .sumMap (.refl _)
+    <| Equiv.toEmbedding
+    <| .symm (subtypeUnivEquiv (by aesop))
   hEq := by
-    intro i
-    match i with
-    | .inl _ => rfl
-    | .inr j => simp [ProtocolSpec.Message]; exact congrArg OStatement (Unique.uniq _ j)
+    intro i; rcases i with j | j
+    · rfl
+    · fin_cases j; rfl
 
-/--
-Combine the prover and verifier into an oracle reduction.
-The input has no statement or witness, but one `OStatement`.
-The output is also no statement or witness, but two `OStatement`s.
--/
+/-- The oracle reduction for `SendClaim`. -/
+@[inline, specialize]
 def oracleReduction : OracleReduction oSpec
-      Statement OStatement Unit
-      Unit (OStatement ⊕ᵥ OStatement) Unit (pSpec OStatement) where
-  prover := oracleProver oSpec Statement OStatement
-  verifier := oracleVerifier oSpec Statement OStatement relComp
+    Statement OStatement Unit
+    Statement (OStatement ⊕ᵥ (fun _ : Fin 1 => Message)) Unit
+    (pSpec Message) where
+  prover := oracleProver oSpec Statement OStatement Message f
+  verifier := oracleVerifier oSpec Statement OStatement Message
 
-def relOut : Set ((Unit × (∀ i, (Sum.elim OStatement OStatement) i)) × Unit) :=
-  setOf (fun ⟨⟨(), oracles⟩, _⟩ => oracles (.inl default) = oracles (.inr default))
+variable {Statement} {OStatement} {Message}
 
-variable {σ : Type} {init : ProbComp σ} {impl : QueryImpl oSpec (StateT σ ProbComp)}
+/-- The pure pass-through oracle verifier's underlying non-oracle verifier returns the statement
+together with the output oracle statements (input oracles at `inl`, the message at `inr 0`). -/
+theorem oracleVerifier_toVerifier_run {stmt : Statement} {oStmt : ∀ i, OStatement i}
+    {tr : (pSpec Message).FullTranscript} :
+    (oracleVerifier oSpec Statement OStatement Message).toVerifier.run ⟨stmt, oStmt⟩ tr =
+      pure ⟨stmt, Sum.rec oStmt (fun i => match i with | 0 => tr 0)⟩ := by
+  simp only [Verifier.run, OracleVerifier.toVerifier, oracleVerifier]
+  rw [show simulateQ (OracleInterface.simOracle2 oSpec oStmt tr.messages)
+        (pure stmt : OptionT (OracleComp _) Statement)
+      = (pure stmt : OptionT (OracleComp oSpec) Statement) from rfl, pure_bind]
+  congr 1
+  congr 1
+  funext idx
+  rcases idx with j | j
+  · rfl
+  · fin_cases j; rfl
 
-/--
-Proof of perfect completeness: if `rel old new` holds in the real setting,
-it also holds in the ideal setting, etc.
--/
-instance : ProverOnly (pSpec OStatement) where
-  prover_first' := by simp
+/-- The `SendClaim` oracle verifier is pure, discharging the deterministic-left hypothesis of the
+CWSS binary append. -/
+instance instIsPure :
+    (oracleVerifier oSpec Statement OStatement Message).toVerifier.IsPure :=
+  ⟨fun p tr => ⟨p.1, Sum.rec p.2 (fun i => match i with | 0 => tr 0)⟩,
+   fun ⟨_, _⟩ _ => oracleVerifier_toVerifier_run (oSpec := oSpec)⟩
 
-theorem completeness [Nonempty σ] :
-    (oracleReduction oSpec Statement OStatement relComp).perfectCompleteness
-    init impl relIn (relOut OStatement) := by
-  simp only [OracleReduction.perfectCompleteness, oracleReduction, relOut]
-  simp only [Reduction.perfectCompleteness_eq_prob_one]
-  -- `relIn` membership is unused: SendClaim is a deterministic forwarding component
-  -- whose computation succeeds unconditionally, independent of the input relation.
-  intro ⟨stmt, oStmt⟩ wit _
-  -- 1. Unfold (run_of_prover_first absorbs Verifier.run for P_to_V)
-  simp only [OracleReduction.toReduction, Reduction.run_of_prover_first,
-    oracleProver, oracleVerifier, OracleVerifier.toVerifier]
-  -- 2. Bridge OptionT.pure → OracleComp.pure (some x) so simulateQ_pure fires
-  simp_rw [show (pure : _ → OptionT (OracleComp _) _) = fun x => (pure (some x) :
-    OracleComp _ _) from rfl]
-  -- 3. Peel prover binds (all pure — erw matches through definitional eq)
-  erw [simulateQ_bind]; erw [simulateQ_pure]; simp only [pure_bind]
-  erw [simulateQ_bind]; erw [simulateQ_pure]; simp only [pure_bind]
-  -- 4. Peel verifier bind
-  erw [simulateQ_bind]
-  -- 5. Probability decomposition via probEvent_eq_one_iff
-  rw [probEvent_eq_one_iff]
-  simp only [OptionT.probFailure_eq, OptionT.mem_support_iff, OptionT.run_mk]
-  simp only [support_bind, Set.mem_iUnion]
-  exact ⟨by {
-    simp only [probFailure_eq_zero, zero_add, probOutput_eq_zero_iff]
-    intro h
-    rw [mem_support_bind_iff] at h
-    obtain ⟨s, -, hs⟩ := h
-    simp only [StateT.run'_eq, support_map, Set.mem_image] at hs
-    obtain ⟨⟨_, s'⟩, hs, rfl⟩ := hs
-    simp only [StateT.run_bind] at hs
-    rw [mem_support_bind_iff] at hs
-    obtain ⟨⟨x, s''⟩, hx, hs⟩ := hs
-    -- Unfold SubSpec liftM + OptionT in hx
-    simp only [MonadLift.monadLift, liftM, monadLift, MonadLiftT.monadLift,
-      OptionT.run_mk, OptionT.run_bind, OptionT.run_lift] at hx
-    -- simulateQ_map rewrites simulateQ impl (some <$> _) → some <$> simulateQ impl _
-    erw [simulateQ_map] at hx
-    -- Peel outer simulateQ layer (OptionT.mk is definitionally transparent)
-    erw [simulateQ_map] at hx
-    -- Bridge: StateT.run_map converts (some <$> m : StateT).run s to map at ProbComp level
-    rw [StateT.run_map] at hx
-    simp only [support_map, Set.mem_image] at hx
-    obtain ⟨⟨val, s₀⟩, hval, heq⟩ := hx
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj heq
-    -- x = some val, s'' = s₀; hs depends on val : Option (...)
-    dsimp only [] at hs
-    rcases val with _ | ⟨a⟩
-    · exfalso
-      simp only [bind_pure_comp] at hval
-      erw [simulateQ_map] at hval
-      erw [simulateQ_map] at hval
-      erw [simulateQ_map] at hval
-      erw [Option.elimM_map] at hval
-      simp only [Option.elim_some] at hval
-      dsimp only [OptionT.run] at hval
-      simp only [bind_pure_comp] at hval
-      rw [simulateQ_map, simulateQ_map] at hval
-      rw [StateT.run_map] at hval
-      simp only [support_map, Set.mem_image] at hval
-      obtain ⟨⟨_, _⟩, _, h⟩ := hval
-      simp [Prod.mk.injEq] at h
-    · simp only [Option.getM, pure_bind] at hs
-      erw [simulateQ_pure] at hs
-      simp only [StateT.run_pure, support_pure, Set.mem_singleton_iff] at hs
-      exact absurd (congr_arg Prod.fst hs) (by simp)
-  }, by {
-    -- Part 2: ∀ x ∈ support computation, event x
-    intro x hx
-    obtain ⟨s, -, hx⟩ := hx
-    simp only [StateT.run'_eq, support_map, Set.mem_image] at hx
-    obtain ⟨⟨xval, s'⟩, hx, rfl⟩ := hx
-    simp only [StateT.run_bind] at hx
-    rw [mem_support_bind_iff] at hx
-    obtain ⟨⟨y, s''⟩, hy, hx⟩ := hx
-    -- Unfold SubSpec liftM + OptionT in hy
-    simp only [MonadLift.monadLift, liftM, monadLift, MonadLiftT.monadLift,
-      OptionT.run_mk, OptionT.run_bind, OptionT.run_lift] at hy
-    -- simulateQ_map: y is always some _
-    erw [simulateQ_map] at hy
-    -- Peel outer simulateQ layer
-    erw [simulateQ_map] at hy
-    -- Bridge: StateT.run_map converts to ProbComp level map
-    rw [StateT.run_map] at hy
-    simp only [support_map, Set.mem_image] at hy
-    obtain ⟨⟨val, s₀⟩, hval, heq⟩ := hy
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj heq
-    -- y = some val; hx depends on val : Option (...)
-    dsimp only [] at hx
-    rcases val with _ | ⟨a⟩
-    · exfalso
-      simp only [bind_pure_comp] at hval
-      erw [simulateQ_map] at hval
-      erw [simulateQ_map] at hval
-      erw [simulateQ_map] at hval
-      erw [Option.elimM_map] at hval
-      simp only [Option.elim_some] at hval
-      dsimp only [OptionT.run] at hval
-      simp only [bind_pure_comp] at hval
-      rw [simulateQ_map, simulateQ_map] at hval
-      rw [StateT.run_map] at hval
-      simp only [support_map, Set.mem_image] at hval
-      obtain ⟨⟨_, _⟩, _, h⟩ := hval
-      simp [Prod.mk.injEq] at h
-    · simp only [Option.getM, pure_bind] at hx
-      erw [simulateQ_pure] at hx
-      simp only [StateT.run_pure, support_pure, Set.mem_singleton_iff, Prod.mk.injEq,
-        Option.some.injEq] at hx
-      obtain ⟨rfl, -⟩ := hx
-      simp only [bind_pure_comp] at hval
-      erw [simulateQ_map] at hval
-      erw [simulateQ_map] at hval
-      erw [simulateQ_map] at hval
-      erw [Option.elimM_map] at hval
-      simp only [Option.elim_some] at hval
-      dsimp only [OptionT.run] at hval
-      simp only [bind_pure_comp] at hval
-      rw [simulateQ_map, simulateQ_map] at hval
-      rw [StateT.run_map] at hval
-      simp only [support_map, Set.mem_image, Prod.mk.injEq, Option.some.injEq] at hval
-      obtain ⟨⟨_, _⟩, _, rfl, rfl⟩ := hval
-      simp only [Set.mem_setOf_eq]
-      refine ⟨trivial, Prod.ext (Subsingleton.elim _ _) ?_⟩
-      funext i
-      rcases i with j | j <;> {
-        have hj : j = default := Unique.uniq _ j
-        subst hj; rfl
-      }
-  }⟩
+variable {σ : Type} (init : ProbComp σ) (impl : QueryImpl oSpec (StateT σ ProbComp))
+  (relIn : Set ((Statement × ∀ i, OStatement i) × Unit))
+  (P : Statement → (∀ i, OStatement i) → Message → Prop)
+
+/-- The output relation of `SendClaim`: the input relation (read off the pass-through oracles at
+`inl`) together with the claim predicate `P` applied to the statement, the input oracles, and the
+sent message (the oracle at `inr 0`). Because the verifier is a pure pass-through, "acceptance" is
+membership in `toORelOut.language`; the `P` check is enforced here rather than at runtime. -/
+@[reducible, simp]
+def toORelOut :
+    Set ((Statement × (∀ i, (Sum.elim OStatement fun _ : Fin 1 => Message) i)) × Unit) :=
+  setOf (fun ⟨⟨stmt, oStmtAndMsg⟩, _⟩ =>
+    (⟨⟨stmt, fun i => oStmtAndMsg (Sum.inl i)⟩, ()⟩ ∈ relIn) ∧
+      P stmt (fun i => oStmtAndMsg (Sum.inl i)) (oStmtAndMsg (Sum.inr 0)))
+
+/-- **Coordinate-wise special soundness of `SendClaim`.** The verifier is a pure pass-through with
+no challenge rounds, so CWSS collapses (via the oracle no-challenge bridge) to a transcript-level
+obligation. The extractor is trivial (`e := fun _ _ => ()`, there is no witness); since the output
+oracle statements at `inl` are the input oracles unchanged and `toORelOut relIn P` refines `relIn`,
+accepting into `toORelOut.language` forces the input into `relIn`. Holds for any `D`. -/
+theorem oracleVerifier_coordinateWiseSpecialSound (D : CWSSStructure (pSpec Message)) :
+    (oracleVerifier oSpec Statement OStatement Message).coordinateWiseSpecialSound init impl D
+      relIn (toORelOut relIn P) := by
+  refine OracleVerifier.coordinateWiseSpecialSound_of_isEmpty_challengeIdx init impl D
+    (oracleVerifier oSpec Statement OStatement Message) relIn (toORelOut relIn P)
+    (fun _ _ => ()) ?_
+  rintro ⟨stmt, oStmt⟩ tr hAcc
+  have hmem := Verifier.mem_of_pure_accepting init impl
+    (oracleVerifier oSpec Statement OStatement Message).toVerifier ⟨stmt, oStmt⟩ tr
+    (toORelOut relIn P).language _ (oracleVerifier_toVerifier_run (oSpec := oSpec)) hAcc
+  obtain ⟨_, hu⟩ := (Set.mem_language_iff _ _).1 hmem
+  exact hu.1
 
 end SendClaim
