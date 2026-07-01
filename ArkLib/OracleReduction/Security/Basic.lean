@@ -394,7 +394,6 @@ def adaptiveNARGSoundnessExp {ι : Type} {oSpec : OracleSpec ι} {σ StmtIn Proo
     (init : ProbComp σ) (impl : QueryImpl oSpec (StateT σ ProbComp))
     (verifier : NonInteractiveVerifier Proof oSpec StmtIn StmtOut)
     (P : OracleComp oSpec (StmtIn × Proof)) :
-    -- TODO: maybe consider return type ProbComp (StmtIn x Option StmtOut)?
     ProbComp (Option (StmtIn × StmtOut)) := do
   (simulateQ impl (do
     let ⟨x, π⟩ ← P
@@ -402,8 +401,9 @@ def adaptiveNARGSoundnessExp {ι : Type} {oSpec : OracleSpec ι} {σ StmtIn Proo
     return (x, stmtOut) : OptionT (OracleComp oSpec) (StmtIn × StmtOut))).run' (← init)
 
 /-- **CO25 Def 3.5 false-acceptance event** on the NARG soundness experiment output
-`Option (StmtIn × StmtOut)`: the prover output a false statement (`x ∉ langIn`) the verifier accepted
-into `stmtOut ∈ langOut`.  A *named* event (not an inline `match`) so the same term is shared between
+`Option (StmtIn × StmtOut)`: the prover output a false statement (`x ∉ langIn`) the verifier
+accepted into `stmtOut ∈ langOut`.  A *named* event (not an inline `match`) so the same term is
+shared between
 `adaptiveNARGSoundness` and downstream game-match lemmas (e.g. DSFS
 `dsfsNargSoundnessExp_eq_dsfsGame`) — inline `match` lambdas compile to distinct per-declaration
 aux-defs that block `rw`/`exact`. -/
@@ -453,7 +453,8 @@ def adaptiveNARGKnowledgeSoundnessExp
   let ⟨x, π, witOut, tr, stmtOut?, tr_V⟩ ←
     (simulateQ impl (do
       let ⟨⟨x, π, witOut⟩, tr⟩ ← (simulateQ loggingOracle P).run
-      let ⟨stmtOut?, tr_V⟩ ← (simulateQ loggingOracle (verifier.verify x (Fin.cons π (fun i => i.elim0))).run).run
+      let ⟨stmtOut?, tr_V⟩ ←
+        (simulateQ loggingOracle (verifier.verify x (Fin.cons π (fun i => i.elim0))).run).run
       pure (x, π, witOut, tr, stmtOut?, tr_V))).run' (← init)
   let witIn? ← simulateQ auxImplE (extractor x π tr tr_V).run
   pure (x, witIn?, stmtOut?, witOut)
@@ -521,7 +522,9 @@ def adaptiveNARGSoundnessExpWithCoins
   (simulateQ ((impl.addLift auxImpl) : QueryImpl (oSpec + auxSpec) (StateT σ ProbComp))
     ((do
       let ⟨x, π⟩ ← P
-      let stmtOut ← OptionT.mk (liftComp (verifier.verify x (Fin.cons π (fun i => i.elim0))).run (oSpec + auxSpec))
+      let stmtOut ←
+        OptionT.mk (liftComp (verifier.verify x
+          (Fin.cons π (fun i => i.elim0))).run (oSpec + auxSpec))
       return (x, stmtOut)) :
     OptionT (OracleComp (oSpec + auxSpec)) (StmtIn × StmtOut))).run' (← init)
 
@@ -573,7 +576,9 @@ def adaptiveNARGKnowledgeSoundnessExpWithCoins
     (simulateQ ((impl.addLift auxImpl) : QueryImpl (oSpec + auxSpec) (StateT σ ProbComp)) (do
       let ⟨⟨x, π, witOut⟩, tr⟩ ← (simulateQ loggingOracle P).run
       let ⟨stmtOut?, tr_V⟩ ←
-        liftComp (simulateQ loggingOracle (verifier.verify x (Fin.cons π (fun i => i.elim0))).run).run (oSpec + auxSpec)
+        liftComp
+          (simulateQ loggingOracle (verifier.verify x (Fin.cons π (fun i => i.elim0))).run).run
+          (oSpec + auxSpec)
       pure (x, π, witOut, tr, stmtOut?, tr_V))).run' (← init)
   let witIn? ← simulateQ auxImplE (extractor x witOut π tr.fst tr_V).run
   pure (x, witIn?, stmtOut?, witOut)

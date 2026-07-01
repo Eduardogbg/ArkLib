@@ -48,10 +48,12 @@ def StateRestoration.KnowledgeSoundness (oSpec : OracleSpec ι) (StmtIn WitOut :
 /-- **Coin-bearing** state-restoration soundness prover.
 
 `Prover.StateRestoration.Soundness` is deterministic given its oracle answers. A *compiled* prover —
-e.g. DSFS's `D2SAlgo^f`, which samples during lookahead/backtrack — needs **private coins**. We model
+e.g. DSFS's `D2SAlgo^f`, which samples during lookahead/backtrack — needs **private coins**. We
+model
 those by appending an extra oracle `auxSpec` after the SR interface `oSpec + chal`, giving the
 **Option A** order `(oSpec + srChallengeOracle …) + auxSpec`.  This is exactly the natural ambient
-of a compiled prover `D2SAlgo^f` (`oSpec`, then the challenge oracle, then its sampled coins), so the
+of a compiled prover `D2SAlgo^f` (`oSpec`, then the challenge oracle, then its sampled
+coins), so the
 coins are answered at game time by a sampler `auxImpl` appended to the standard SR handler (see
 `coinSRExperimentProb`); the verifier never sees `auxSpec`.  Taking `auxSpec := []ₒ` recovers
 `Soundness` up to `+ []ₒ`. -/
@@ -259,11 +261,7 @@ def coinKSExperimentProb {κ : Type} {auxSpec : OracleSpec κ}
     (verifier : Verifier oSpec StmtIn StmtOut pSpec)
     (srProver : Prover.StateRestoration.KnowledgeSoundnessWithCoins oSpec StmtIn WitOut pSpec
       auxSpec) : ENNReal :=
-  Pr[ fun | (stmtIn, some witIn, some stmtOut, witOut) =>
-            (stmtOut, witOut) ∈ relOut ∧ (stmtIn, witIn) ∉ relIn
-          | (_, none, some stmtOut, witOut) =>
-            (stmtOut, witOut) ∈ relOut
-          | _ => False
+  Pr[ nargKSFailEvent relIn relOut
     | do (simulateQ (((impl.addLift srChallengeQueryImpl' :
               QueryImpl (oSpec + srChallengeOracle StmtIn pSpec)
                 (StateT (QueryImpl (srChallengeOracle StmtIn pSpec) Id) ProbComp)).addLift auxImpl)
