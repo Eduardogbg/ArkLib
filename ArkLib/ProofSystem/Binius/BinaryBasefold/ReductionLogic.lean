@@ -4,7 +4,6 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Chung Thai Nguyen, Quang Dao
 -/
 import ArkLib.ProofSystem.Binius.BinaryBasefold.Spec
-import ArkLib.ToVCVio.Oracle
 import ArkLib.ToVCVio.Simulation
 import ArkLib.OracleReduction.Completeness
 import ArkLib.Data.Misc.Basic
@@ -325,7 +324,9 @@ lemma foldStep_is_logic_complete (i : Fin ℓ) :
   have hStmtOut_eq : proverStmtOut = verifierStmtOut := by
     -- Fact 3: Prover and verifier statements agree
     change (step.proverOut stmtIn witIn oStmtIn transcript).1.1 = step.verifierOut stmtIn transcript
-    simp only [step, foldStepLogic]; simp only [Fin.mk_one, Fin.isValue, Fin.zero_eta, Fin.val_succ]
+    simp only [step, foldStepLogic, foldVerifierStmtOut, ProtocolSpec.FullTranscript.messages,
+      ProtocolSpec.FullTranscript.challenges]
+    simp only [Fin.mk_one, Fin.isValue, Fin.zero_eta, Fin.val_succ]
   have hOStmtOut_eq : proverOStmtOut = verifierOStmtOut := by
     change (step.proverOut stmtIn witIn oStmtIn transcript).1.2
       = OracleVerifier.mkVerifierOStmtOut step.embed step.hEq oStmtIn transcript
@@ -386,7 +387,7 @@ lemma foldStep_is_logic_complete (i : Fin ℓ) :
           rfl
         · conv_lhs =>
             rw [h_f_In]
-            rw [←getMidCodewords_succ]
+            erw [←getMidCodewords_succ]
           rfl
       · -- Component 2: strictOracleFoldingConsistencyProp
         have h_oracleIdx_eq : (OracleFrontierIndex.mkFromStmtIdx i.castSucc).val
@@ -564,7 +565,7 @@ lemma snoc_oracle_eq_mkVerifierOStmtOut_commitStep
     have h_msg0: transcript.messages ⟨0, rfl⟩ = transcript 0 := by rfl
     rw [h_msg0]
     -- ⊢ transcript 0 (cast ⋯ x) = cast ⋯ (transcript 0) x
-    rw [cast_fun_eq_fun_cast_arg]
+    erw [cast_fun_eq_fun_cast_arg]
     have h_j_eq : j.val = toOutCodewordsCount ℓ ϑ i.castSucc := by
       have h_lt := j.isLt
       conv_rhs at h_lt => rw [h_count_succ]
@@ -744,7 +745,7 @@ lemma strictOracleFoldingConsistency_commitStep
       (f := f₀) (r_challenges := stmtIn.challenges)
     dsimp only [f₀, P₀] at h_cast_elim
     unfold polyToOracleFunc at h_cast_elim
-    simp only [←h_cast_elim]
+    erw [← h_cast_elim x]
     unfold getFoldingChallenges
     -- simp only [Fin.val_succ, zero_add, Fin.take_apply, Fin.castLE_refl]
     rw [←h_challenges_eq]
@@ -770,7 +771,8 @@ lemma strictOracleFoldingConsistency_commitStep
         simp only [zero_add, Fin.val_succ]; rw [h_domain_idx_eq.symm]; exact cIdx.isLt⟩) := by
       funext cId
       simp only [Fin.val_succ, zero_add]
-    rw [h_challenges_eq_take]
+    erw [h_challenges_eq_take]
+    rfl
 
 /-! Commit step logic is strongly complete.
 The key insight is that the commit step just extends the oracle without changing the statement,
@@ -1154,7 +1156,7 @@ lemma iterated_fold_to_const_strict
           zero_add])
       (h_destIdx_le := by simp only [Fin.val_last, le_refl])
       (f := f₀) (r_challenges := stmtIn.challenges)
-    rw [←h_cast_elim4]
+    erw [←h_cast_elim4]
     set f_ℓ := iterated_fold 𝔽q β 0 ℓ (destIdx := ⟨Fin.last ℓ, by omega⟩)
       (h_destIdx := by simp only [Fin.val_last, Fin.coe_ofNat_eq_mod, Nat.zero_mod, zero_add])
       (h_destIdx_le := by simp only [Fin.val_last, le_refl]) (f := f₀)
@@ -1322,7 +1324,7 @@ lemma finalSumcheckStep_is_logic_complete :
         (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (stmtIn := stmtIn) (witIn := witIn)
         (oStmtIn := oStmtIn) (challenges := challenges)
         (h_strictOracleWitConsistency_In := h_strictOracleWitConsistency_In)
-      rw [res]; rfl
+      erw [res]; rfl
   -- Prove the four required facts
   refine ⟨?_, ?_, ?_, ?_⟩
   · exact h_VCheck_passed

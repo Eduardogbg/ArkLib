@@ -10,6 +10,7 @@ This directory contains various utility scripts for the ArkLib project.
 - **`build_timing_report.sh`** - CI timing/report helper for clean builds, warm rebuilds, and the validation wrapper
 - **`update-lib.sh`** - Update ArkLib.lean with all imports from source files
 - **`check-imports.sh`** - Check if ArkLib.lean is up to date with all imports
+- **`check-warning-log.py`** - Fail on scoped warning classes found in a captured build log
 - **`check-docs-integrity.py`** - Check docs links and the `CLAUDE.md` symlink
 - **`lint-style.py`** - Python-based style linting
 - **`lint-style.lean`** - Lean-based style linting
@@ -20,6 +21,14 @@ This directory contains various utility scripts for the ArkLib project.
   - Interactive exploration of dependencies
   - Visual representations (PNG, SVG)
   - See `dependency_analysis/README.md` for detailed usage
+
+### Knowledge Base
+- **`kb/`** - Scripts for syncing and inspecting the repository knowledge base
+  - Export bibliography metadata
+  - Extract citation usage from `ArkLib/**/*.lean`
+  - Scaffold paper pages and lint KB structure
+  - Resolve review context from cited keys or changed Lean files
+  - See `kb/README.md` for usage
 
 ## Quick Start
 
@@ -70,6 +79,15 @@ bash scripts/build_timing_report.sh --help
 python3 ./scripts/check-docs-integrity.py
 ```
 
+### Knowledge Base Indexes
+```bash
+python3 ./scripts/kb/sync_from_bib.py
+python3 ./scripts/kb/extract_lean_citations.py
+python3 ./scripts/kb/check_generated.py
+python3 ./scripts/kb/lint.py
+python3 ./scripts/kb/review_context.py --files ArkLib/ProofSystem/Fri/Spec/SingleRound.lean
+```
+
 ### `build_timing_report.sh`
 
 Helper used by CI to measure and render build timings for clean builds, warm
@@ -92,4 +110,5 @@ baseline without rerunning that baseline in the same job. This supports
 - Some scripts may require specific Lean toolchain versions
 - `validate.sh` is the recommended local wrapper; use the lower-level scripts directly when you
   want to run or debug one piece in isolation
+- `validate.sh` currently enforces a zero non-`sorry` warning budget under `ArkLib/Data/**`
 - New `ArkLib/**/*.lean` files must be staged before `update-lib.sh` or `check-imports.sh`

@@ -463,8 +463,7 @@ lemma Matrix.det_fromBlocks_of_squareSubblocks_commute {n : ℕ} {R : Type*} [Co
       unfold D_poly
       congr
       · -- ⊢ D' = -(-D).map ⇑Polynomial.C
-        rw [Matrix.map_neg (M := D) (f := Polynomial.C)]
-        simp only [neg_neg]; rfl
+        erw [Matrix.map_neg (M := D) (f := Polynomial.C), neg_neg]
       · rw [Matrix.smul_one_eq_diagonal]
     -- 2. Substitute and apply the standard theorem
     rw [h_eq]

@@ -17,8 +17,11 @@ Usage: ./scripts/validate.sh [--lint] [--docs] [--site]
 
 Default checks:
   - lake build
+  - fail on non-`sorry` warnings under ArkLib/Data/
   - ./scripts/check-imports.sh
   - python3 ./scripts/check-docs-integrity.py
+  - python3 ./scripts/kb/check_generated.py
+  - python3 ./scripts/kb/lint.py --strict-cited-pages
 
 Optional checks:
   --lint   Run ./scripts/lint-style.sh
@@ -51,8 +54,21 @@ for arg in "$@"; do
   esac
 done
 
+build_log="$(mktemp "${TMPDIR:-/tmp}/arklib-validate-build.XXXXXX")"
+cleanup() {
+  rm -f "$build_log"
+}
+trap cleanup EXIT
+
 echo "# Building project"
-lake build
+lake build 2>&1 | tee "$build_log"
+
+echo ""
+echo "# Checking Data warning budget"
+python3 ./scripts/check-warning-log.py "$build_log" \
+  --path-prefix ArkLib/Data/ \
+  --exclude-substring 'declaration uses `sorry`' \
+  --label 'ArkLib/Data non-sorry warnings'
 
 echo ""
 echo "# Checking umbrella imports"
@@ -61,6 +77,11 @@ echo "# Checking umbrella imports"
 echo ""
 echo "# Checking docs integrity"
 python3 ./scripts/check-docs-integrity.py
+
+echo ""
+echo "# Checking knowledge base"
+python3 ./scripts/kb/check_generated.py
+python3 ./scripts/kb/lint.py --strict-cited-pages
 
 if (( run_lint )); then
   echo ""

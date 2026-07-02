@@ -70,16 +70,16 @@ lemma fold_agreement_of_fiber_agreement (i : Fin ℓ) (steps : ℕ)
   unfold localized_fold_matrix_form single_point_localized_fold_matrix_form
   simp only
   congr 2
-  let left := fiberEvaluations 𝔽q β (i := ⟨i, by omega⟩) (steps := steps) (h_destIdx := h_destIdx) (h_destIdx_le := h_destIdx_le) f y
-  let right := fiberEvaluations 𝔽q β (i := ⟨i, by omega⟩) (steps := steps) (h_destIdx := h_destIdx) (h_destIdx_le := h_destIdx_le) g y
-  have h_fiber_eval_eq : left = right := by
-    unfold left right fiberEvaluations
+  let lhsVal := fiberEvaluations 𝔽q β (i := ⟨i, by omega⟩) (steps := steps) (h_destIdx := h_destIdx) (h_destIdx_le := h_destIdx_le) f y
+  let rhsVal := fiberEvaluations 𝔽q β (i := ⟨i, by omega⟩) (steps := steps) (h_destIdx := h_destIdx) (h_destIdx_le := h_destIdx_le) g y
+  have h_fiber_eval_eq : lhsVal = rhsVal := by
+    unfold lhsVal rhsVal fiberEvaluations
     ext idx
     let x := qMap_total_fiber 𝔽q β (i := ⟨i, by omega⟩) (steps := steps) (h_destIdx := h_destIdx) (h_destIdx_le := h_destIdx_le) y idx
     have h_x_folds_to_y := generates_quotient_point_if_is_fiber_of_y 𝔽q β (i := ⟨i, by omega⟩) (steps := steps)
           (h_destIdx := h_destIdx) (h_destIdx_le := h_destIdx_le) (x := x) (y := y) (hx_is_fiber := by use idx)
     exact h_fiber_agree x h_x_folds_to_y.symm
-  unfold left right at h_fiber_eval_eq
+  unfold lhsVal rhsVal at h_fiber_eval_eq
   rw [h_fiber_eval_eq]
 
 omit [CharP L 2] [DecidableEq 𝔽q] hF₂ in

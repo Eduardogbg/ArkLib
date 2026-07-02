@@ -206,7 +206,7 @@ theorem commitOracleReduction_perfectCompleteness (hInit : NeverFail init) (i : 
     simp only [probOutput_eq_zero_iff]
     rw [OptionT.support_run_eq]
     simp only [←probOutput_eq_zero_iff]
-    simp_all only
+    erw [_root_.simulateQ_pure]
     change Pr[= none | OptionT.run (m := (OracleComp []ₒ)) (x := (OptionT.bind _ _)) ] = 0
     rw [OptionT.probOutput_none_bind_eq_zero_iff]
     conv =>
@@ -234,9 +234,6 @@ theorem commitOracleReduction_perfectCompleteness (hInit : NeverFail init) (i : 
         toPFunctor_emptySpec, Function.comp_apply, OptionT.simulateQ_pure, Set.mem_iUnion,
         exists_prop]
       simp only [OptionT.simulateQ_failure]
-      erw [_root_.simulateQ_pure]
-      simp only [show OptionT.pure (m := (OracleComp ([]ₒ +
-        ([OracleStatement 𝔽q β ϑ i.castSucc]ₒ + [pSpecFold.Message]ₒ)))) = pure by rfl]
       simp only [support_pure, Set.mem_singleton_iff]
     simp only [show OptionT.pure (m := (OracleComp ([]ₒ))) = pure by rfl]
     rw [h_vStmtOut_mem_support]
@@ -266,6 +263,7 @@ theorem commitOracleReduction_perfectCompleteness (hInit : NeverFail init) (i : 
       Challenge, Fin.reduceLast, liftComp_eq_liftM] at hx_mem_support
     obtain ⟨newOracleFn, lastPrvState, h_prvFinalState_eq,
       ⟨h_prvOut_mem_support, h_verOut_mem_support⟩⟩ := hx_mem_support
+    obtain ⟨lastStmt, lastOStmt, lastWit⟩ := lastPrvState
     conv at h_prvFinalState_eq =>
       dsimp only [getCommitProverFinalOutput, commitOracleProver]
       rw [Prod.mk.injEq]
@@ -273,21 +271,16 @@ theorem commitOracleReduction_perfectCompleteness (hInit : NeverFail init) (i : 
       dsimp only [commitOracleProver, commitOracleVerifier, OracleVerifier.toVerifier,
         FullTranscript.mk1]
       dsimp only [liftM, monadLift, MonadLift.monadLift]
-      rw [liftComp_id]
-      rw [support_liftComp]
+      erw [support_liftComp]
       simp only [h_prvFinalState_eq, Fin.val_succ, support_pure, Set.mem_singleton_iff,
         Prod.mk.injEq]
     conv at h_verOut_mem_support =>
       dsimp only [commitOracleVerifier, OracleVerifier.toVerifier, FullTranscript.mk1]
       erw [_root_.simulateQ_pure]
-      simp only [show OptionT.pure (m := (OracleComp ([]ₒ +
-        ([OracleStatement 𝔽q β ϑ i.castSucc]ₒ + [pSpecFold.Message]ₒ)))) = pure by rfl]
-      simp only [support_pure, Set.mem_singleton_iff]
-      dsimp only [liftM, monadLift, MonadLift.monadLift]
-      rw [support_liftComp]
-      dsimp only [Functor.map]
+      erw [support_liftM_optionT]
       erw [support_bind]
-      simp only [support_pure, Set.mem_singleton_iff, Function.comp_apply,
+      erw [support_pure]
+      simp only [Set.mem_singleton_iff, Function.comp_apply,
         Set.iUnion_iUnion_eq_left, OptionT.support_OptionT_pure_run, Option.some.injEq,
         Prod.mk.injEq]
       erw [support_pure]
@@ -305,22 +298,22 @@ theorem commitOracleReduction_perfectCompleteness (hInit : NeverFail init) (i : 
     obtain ⟨newOracleFn_eq, lastPrvState_eq⟩ := h_prvFinalState_eq
     obtain ⟨⟨prvStmtOut_eq, prvOStmtOut_eq⟩, prvWitOut_eq⟩ := h_prvOut_mem_support
     obtain ⟨verStmtOut_eq, verOStmtOut_eq⟩ := h_verOut_mem_support
+    injection lastPrvState_eq with lastStmt_eq lastRest_eq
+    injection lastRest_eq with lastOStmt_eq lastWit_eq
+    subst newOracleFn_eq lastStmt_eq lastOStmt_eq lastWit_eq
     -- Step 2f: Simplify the verifier check
     -- simp only [commitStepLogic] at h_V_check
     -- unfold FullTranscript.mk1 at h_V_check
     simp only [Fin.isValue] at h_V_check
     rw [
-      -- lastPrvState_eq,
       prvStmtOut_eq, prvOStmtOut_eq, prvWitOut_eq,
       verStmtOut_eq, verOStmtOut_eq,
     ]
     constructor
-    · rw [newOracleFn_eq]
-      exact h_rel
+    · exact h_rel
     · constructor
       · rfl -- or `exact h_agree.1`
-      · rw [newOracleFn_eq]
-        exact h_agree.2
+      · exact h_agree.2
 
 open scoped NNReal
 

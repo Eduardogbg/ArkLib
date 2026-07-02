@@ -8,7 +8,11 @@ import ArkLib.Data.CodingTheory.Prelims
 import ArkLib.Data.FieldTheory.AdditiveNTT.AdditiveNTT
 import ArkLib.Data.Fin.BigOperators
 import ArkLib.Data.MvPolynomial.Multilinear
+import ArkLib.Data.MvPolynomial.RestrictDegree
+import CompPoly.Data.Vector.Basic
 import ArkLib.ProofSystem.Sumcheck.Spec.SingleRound
+import ArkLib.ProofSystem.Sumcheck.Structured.SingleRound
+import Mathlib.RingTheory.Polynomial.DegreeLT
 
 /-!
 ## Binary Basefold Prelude
@@ -49,7 +53,7 @@ theorem hammingDist_le_of_outer_comp_injective {ι₁ ι₂ : Type*} [Fintype ι
   suffices (Finset.filter (fun i₁ => x (g i₁) ≠ y (g i₁)) Finset.univ).card ≤ D₂.card by
     unfold hammingDist; simp only [this, D₂]
   -- The cardinality of a preimage is at most the cardinalit
-    --  of the original set for an injective function.
+    -- of the original set for an injective function.
   -- ⊢ #{i₁ | x (g i₁) ≠ y (g i₁)} ≤ #D₂
    -- First, we state that the set on the left is the `preimage` of D₂ under g.
   have h_preimage : Finset.filter (fun i₁ => x (g i₁) ≠ y (g i₁)) Finset.univ
@@ -70,7 +74,7 @@ theorem hammingDist_le_of_outer_comp_injective {ι₁ ι₂ : Type*} [Fintype ι
       have res := Set.mapsTo_image (f := g) (s := D₁)
       convert res
       simp only [coe_image]
-      --  (D₁.image g : Set ι₂)
+      -- (D₁.image g : Set ι₂)
     · -- Goal 2 : Prove that `g` is injective on the set `D₁`.
       -- This is true because our main hypothesis `hg` states that `g` is injective everywhere.
       exact Function.Injective.injOn hg
@@ -78,7 +82,7 @@ theorem hammingDist_le_of_outer_comp_injective {ι₁ ι₂ : Type*} [Fintype ι
   have h_image_subset : D₁.image g ⊆ D₂ := by
     simp [D₁, Finset.image_preimage]
   -- Step 3 : By combining these two facts, we get our result.
-  -- |D₁| ≤ |image g(D₁)|  (from Step 1)
+  -- |D₁| ≤ |image g(D₁)| (from Step 1)
   -- and |image g(D₁)| ≤ |D₂| (since it's a subset)
   exact h_card_le_image.trans (Finset.card_le_card h_image_subset)
 
@@ -126,10 +130,12 @@ lemma challengeTensorExpansionMatrix_mulVec_F₂_eq_Fin_merge_PO2 [CommRing L] (
     let C_n_finmap := challengeTensorExpansion (n := n) (r := r)
     let C_n : Matrix (Fin (1)) (Fin (2 ^ n)) L :=
       Matrix.of (fun _rowIdx colIdx => C_n_finmap colIdx)
-    (mergeFinMap_PO2_left_right (L := L) (n := 0) (left := ((C_n *ᵥ v_top) : (Fin 1) → L))
-      (right := ((C_n *ᵥ v_bot) : (Fin 1) → L)) : (Fin 2) → L)
+    let lhs_top : (Fin 1) → L := C_n *ᵥ v_top
+    let lhs_bot : (Fin 1) → L := C_n *ᵥ v_bot
+    (mergeFinMap_PO2_left_right (L := L) (n := 0) («left» := lhs_top)
+      («right» := lhs_bot) : (Fin 2) → L)
     = (challengeTensorExpansionMatrix (n := n) (r := r)) *ᵥ
-      mergeFinMap_PO2_left_right (n := n) (left := v_top) (right := v_bot) := by
+      mergeFinMap_PO2_left_right (n := n) («left» := v_top) («right» := v_bot) := by
   dsimp only [challengeTensorExpansionMatrix]
   conv_rhs =>
     -- Move reindexing from Matrix to Vector
@@ -272,9 +278,15 @@ private lemma sumAlgEquiv_mem_restrictDegree {R : Type*} [CommSemiring R]
       exact Finset.sum_congr rfl fun _ _ => sumToIter_monomial_aux _ _
     contrapose! hs
     simp only [h_sum, SetLike.mem_coe, Finsupp.mem_support_iff, ne_eq, not_not]
-    rw [Finsupp.finset_sum_apply]
+    show MvPolynomial.coeff s (∑ m ∈ p.support,
+        (MvPolynomial.monomial (m.comapDomain Sum.inl Sum.inl_injective.injOn))
+          (MvPolynomial.monomial (m.comapDomain Sum.inr Sum.inr_injective.injOn)
+            (p.coeff m))) = 0
+    rw [MvPolynomial.coeff_sum]
     refine Finset.sum_eq_zero fun x hx => ?_
-    erw [AddMonoidAlgebra.lsingle_apply, AddMonoidAlgebra.lsingle_apply]; aesop
+    have hne : Finsupp.comapDomain Sum.inl x Sum.inl_injective.injOn ≠ s :=
+      fun h => hs x hx h.symm
+    exact Finsupp.single_eq_of_ne hne.symm
   aesop
 
 private lemma rename_equiv_mem_restrictDegree {R : Type*} [CommSemiring R]
@@ -395,6 +407,7 @@ noncomputable def getSumcheckRoundPoly (i : Fin ℓ) (h : ↥L⦃≤ 2⦄[X Fin 
     exact h_deg_le_2
   ⟩
 
+
 private lemma cube_eval_sum_cons (n : ℕ) (p : L[X Fin (n + 1)]) :
     ∑ y ∈ (univ.map 𝓑) ^ᶠ (n + 1), MvPolynomial.eval y p =
       ∑ a ∈ univ.map 𝓑, ∑ x ∈ (univ.map 𝓑) ^ᶠ n, MvPolynomial.eval (Fin.cons a x) p := by
@@ -444,7 +457,11 @@ lemma getSumcheckRoundPoly_eval_eq (i : Fin ℓ) (h_poly : ↥L⦃≤ 2⦄[X Fin
     have h_eval_append :
         MvPolynomial.eval (Fin.append (fun j : Fin 0 => j.elim0) x ∘
           Fin.cast (Nat.zero_add _).symm) = MvPolynomial.eval x := by
-      ext j <;> simp [Fin.elim0_append]
+      ext j
+      · simp only [RingHom.comp_apply, Fin.elim0_append, MvPolynomial.eval_C]
+      · simp only [RingHom.comp_apply, Fin.elim0_append, MvPolynomial.eval_X,
+          Function.comp_apply, Fin.cast_cast]
+        rfl
     rw [h_eval_append]
     simp only [Polynomial.eval_map]
     have h_cast_eq : cast (congrArg (fun k => L[X Fin k]) h_eq_nat) h_poly.val = h_val' := by
@@ -572,7 +589,7 @@ theorem multilinear_eval_eq_sum_bool_hypercube [DecidableEq L] [IsDomain L]
 
 end Preliminaries
 
-noncomputable section       -- expands with 𝔽q in front
+noncomputable section -- expands with 𝔽q in front
 variable {r : ℕ} [NeZero r]
 variable {L : Type} [Field L] [Fintype L] [DecidableEq L] [CharP L 2]
 variable (𝔽q : Type) [Field 𝔽q] [Fintype 𝔽q] [DecidableEq 𝔽q]
@@ -875,7 +892,7 @@ lemma qMap_total_fiber_one_level_eq (i : Fin r) {destIdx : Fin r}
       simp only [basis_repr_of_sDomain_lift, h, ↓reduceDIte]
   · have hj_ne_zero : j ≠ ⟨0, by omega⟩ := by omega
     have hj_val_ne_zero : j.val ≠ 0 := by
-      change j.val ≠ ((⟨0, by omega⟩ :  Fin (ℓ + 𝓡 - ↑i)).val)
+      change j.val ≠ ((⟨0, by omega⟩ : Fin (ℓ + 𝓡 - ↑i)).val)
       apply Fin.val_ne_of_ne
       exact hj_ne_zero
     simp only [hj_val_ne_zero, ↓reduceDIte, Finsupp.single, Fin.isValue, ite_eq_left_iff,
@@ -1222,7 +1239,7 @@ lemma fiberEvaluations_eq_merge_fiberEvaluations_of_one_step_fiber
         (i := i) (destIdx := midIdx) (h_destIdx := h_midIdx) (h_destIdx_le := by omega) (f := f) z₁
     (fiberEvaluations 𝔽q β (steps := steps + 1) (i := i)
       h_destIdx h_destIdx_le f y) =
-    mergeFinMap_PO2_left_right (left := fiber_eval_z₀) (right := fiber_eval_z₁) := by
+    mergeFinMap_PO2_left_right («left» := fiber_eval_z₀) («right» := fiber_eval_z₁) := by
   -- 1. Unfold definitions to expose `qMap_total_fiber`
   unfold fiberEvaluations mergeFinMap_PO2_left_right
   simp only
@@ -1450,9 +1467,9 @@ Proof similar to challengeTensorExpansionMatrix_mulVec_F₂_eq_Fin_merge_PO2.
 lemma blockDiagMatrix_mulVec_F₂_eq_Fin_merge_PO2 (n : ℕ)
     (A B : Matrix (Fin (2 ^ n)) (Fin (2 ^ n)) L)
     (v_top : Fin (2 ^ n) → L) (v_bot : Fin (2 ^ n) → L) :
-    mergeFinMap_PO2_left_right (left := A *ᵥ v_top) (right := B *ᵥ v_bot)
+    mergeFinMap_PO2_left_right («left» := A *ᵥ v_top) («right» := B *ᵥ v_bot)
     = blockDiagMatrix (r := r) (ℓ := ℓ) (𝓡 := 𝓡) (n := n) (Mz₀ := A) (Mz₁ := B)
-      *ᵥ mergeFinMap_PO2_left_right (left := v_top) (right := v_bot) := by
+      *ᵥ mergeFinMap_PO2_left_right («left» := v_top) («right» := v_bot) := by
   dsimp only [blockDiagMatrix]
   conv_rhs => -- Move reindexing from Matrix to Vector
     rw [Matrix.reindex_mulVec]
@@ -2829,10 +2846,9 @@ def extractMiddleFinMask (v : (sDomain 𝔽q β h_ℓ_add_R_rate) ⟨0, by exact
   let middleBits := Nat.getMiddleBits (offset := i.val) (len := steps) (n := vToFin.val)
   exact ⟨middleBits, Nat.getMiddleBits_lt_two_pow⟩
 
-/-- The equality polynomial eq̃(r, r') that evaluates to 1 when r = r' and 0 otherwise.
-This is used in the final sumcheck identity : s_ℓ = c · eq̃(r, r') -/
-def eqTilde {L : Type} [CommRing L] {ℓ : ℕ} (r r' : Fin ℓ → L) : L :=
-  MvPolynomial.eval r' (MvPolynomial.eqPolynomial r)
+-- `eqTilde` is now defined generically in `ArkLib.Data.MvPolynomial.Multilinear` as
+-- `MvPolynomial.eqTilde r r' := eval r' (eqPolynomial r)`, accessible here unqualified via the
+-- file-level `open MvPolynomial`.
 
 end Essentials
 

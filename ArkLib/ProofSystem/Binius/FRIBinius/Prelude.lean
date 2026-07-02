@@ -4,9 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Chung Thai Nguyen, Quang Dao
 -/
 
-import ArkLib.ProofSystem.Binius.RingSwitching.Prelude
+import ArkLib.ProofSystem.RingSwitching.Prelude
 import ArkLib.ProofSystem.Binius.BinaryBasefold.Spec
-import ArkLib.ProofSystem.Binius.RingSwitching.BBFSmallFieldIOPCS
+import ArkLib.ProofSystem.RingSwitching.BBFSmallFieldIOPCS
 
 /-!
 # FRI-Binius IOPCS Prelude
@@ -32,7 +32,6 @@ variable (β : Basis (Fin (2 ^ κ)) K L) [hβ_lin_indep : Fact (LinearIndependen
 variable (ℓ ℓ' 𝓡 ϑ γ_repetitions : ℕ) [NeZero ℓ] [NeZero ℓ'] [NeZero 𝓡] [NeZero ϑ]
 variable (h_ℓ_add_R_rate : ℓ' + 𝓡 < 2 ^ κ)
 variable (h_l : ℓ = ℓ' + κ)
-variable {𝓑 : Fin 2 ↪ L}
 variable [hdiv : Fact (ϑ ∣ ℓ')]
 
 omit [NeZero κ] in
@@ -53,5 +52,20 @@ instance linearIndependentBooleanHypercubeBasis : Fact (LinearIndependent K ⇑�
 def BinaryBasefoldAbstractOStmtIn : (RingSwitching.AbstractOStmtIn (L := L) (ℓ' := ℓ')) :=
   Binius.RingSwitching.BBFSmallFieldIOPCS.bbfAbstractOStmtIn (𝔽q := K) (β := β)
     (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (ϑ := ϑ)
+
+/-- The `BinaryBasefold.SumcheckMultiplierParam` corresponding to the Ring-Switching
+sumcheck multiplier parameter. `BinaryBasefold.SumcheckMultiplierParam` only carries the
+`multpoly` field, so we forget the extra `combinator`/`degCombinator` data of the structured
+`Sumcheck.Structured.SumcheckMultiplierParam`.
+
+The argument list mirrors `RingSwitching.RingSwitching_SumcheckMultParam` exactly so that call
+sites in FRI-Binius can swap the identifier without changing arguments. -/
+def RingSwitching_BBFSumcheckMultParam (κ : ℕ) [NeZero κ] (L : Type) [Field L] [Fintype L]
+    [DecidableEq L] [CharP L 2] (K : Type) [Field K] [Fintype K] [DecidableEq K] [Algebra K L]
+    (β : Basis (Fin κ → Fin 2) K L) (ℓ ℓ' : ℕ) [NeZero ℓ] [NeZero ℓ'] (h_l : ℓ = ℓ' + κ) :
+    Binius.BinaryBasefold.SumcheckMultiplierParam L ℓ'
+      (RingSwitching.RingSwitchingBaseContext κ L K ℓ) where
+  multpoly := (RingSwitching.RingSwitching_SumcheckMultParam κ L K
+    (β := β) ℓ ℓ' h_l).multpoly
 
 end Binius.FRIBinius

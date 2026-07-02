@@ -103,7 +103,7 @@ lemma BBF_CodeDistance_eq (i : Fin r) (h_i : i ≤ ℓ) :
     ⟨fun x => x.val, fun x y h => by exact Subtype.ext h⟩
   -- Create α : Fin m → L by composing with an equivalence
   let m := Fintype.card ((sDomain 𝔽q β h_ℓ_add_R_rate) i)
-  have h_dist_RS := ReedSolomonCode.dist_eq' (F := L) (ι := (sDomain 𝔽q β h_ℓ_add_R_rate)
+  have h_dist_RS := ReedSolomon.dist_eq' (F := L) (ι := (sDomain 𝔽q β h_ℓ_add_R_rate)
     (i := i)) (α := domain) (n := 2^(ℓ - i.val)) (h := by
       rw [sDomain_card 𝔽q β h_ℓ_add_R_rate (i := i) (h_i := Sdomain_bound (by omega))]
       rw [hF₂.out];
@@ -244,6 +244,7 @@ lemma pair_fiberwiseDistance_steps_zero_eq_hammingDist
   rw [pair_fiberwiseDistance, fiberwiseDisagreementSet_steps_zero_eq_disagreementSet 𝔽q β
     (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (i := i) (destIdx := i) (h_destIdx := by omega) (h_destIdx_le := by omega) f g]
   simp only [disagreementSet, cast_eq, ne_eq, card_filter, ite_not, hammingDist]
+  exact Finset.sum_congr rfl fun x _ => by split_ifs <;> simp_all
 
 omit [CharP L 2] [DecidableEq 𝔽q] hF₂ [NeZero 𝓡] in
 /-- When `steps = 0`, fiberwise closeness coincides with UDR closeness. -/
@@ -320,7 +321,8 @@ lemma constFunc_mem_BBFCode {i : Fin r} (h_i : i ≤ ℓ) (c : L) :
   constructor
   · rw [Polynomial.mem_degreeLT]
     apply lt_of_le_of_lt (Polynomial.degree_C_le)
-    norm_num
+    have : (0:ℕ) < 2 ^ (ℓ - ↑i) := pow_pos (by norm_num) _
+    exact_mod_cast this
   · ext x; simp only [Polynomial.eval_C]
 
 lemma constFunc_UDRClose {i : Fin r} (h_i : i ≤ ℓ) (c : L) :
@@ -351,7 +353,7 @@ lemma UDRClose_iff_within_UDR_radius (i : Fin r) (h_i : i ≤ ℓ)
   let card_Sᵢ := sDomain_card 𝔽q β h_ℓ_add_R_rate (i := i) (h_i := Sdomain_bound (by omega))
   conv_rhs =>
     unfold BBF_Code;
-    rw [ReedSolomonCode.uniqueDecodingRadius_RS_eq' (h := by
+    rw [ReedSolomon.uniqueDecodingRadius_RS_eq' (h := by
       rw [card_Sᵢ, hF₂.out]; apply Nat.pow_le_pow_right (hx := by omega); omega
     )];
   simp_rw [card_Sᵢ, hF₂.out,

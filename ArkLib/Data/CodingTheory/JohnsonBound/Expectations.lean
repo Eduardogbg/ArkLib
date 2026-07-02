@@ -1,12 +1,18 @@
-/- Copyright (c) 2024-2025 ArkLib Contributors. All rights reserved.
+/-
+Copyright (c) 2024-2025 ArkLib Contributors. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Ilia Vlasov, František Silváši
 -/
 import Mathlib.Analysis.Convex.Jensen
 import Mathlib.RingTheory.Binomial
 
-import ArkLib.Data.CodingTheory.Basic
+import ArkLib.Data.CodingTheory.Basic.DecodingRadius
+import ArkLib.Data.CodingTheory.Basic.Distance
+import ArkLib.Data.CodingTheory.Basic.LinearCode
+import ArkLib.Data.CodingTheory.Basic.RelativeDistance
 import ArkLib.Data.CodingTheory.JohnsonBound.Choose2
+/-! # Johnson Bound Expectations -/
+
 
 namespace JohnsonBound
 

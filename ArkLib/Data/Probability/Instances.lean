@@ -12,6 +12,8 @@ import Mathlib.Algebra.MvPolynomial.SchwartzZippel
 import CompPoly.Data.MvPolynomial.Notation
 import ArkLib.ToMathlib.MvPolynomial.Equiv
 import VCVio.EvalDist.Instances.OptionT
+
+/-! # Probability Instances -/
 open ProbabilityTheory Filter
 open NNReal Finset Function
 open scoped BigOperators ProbabilityTheory Polynomial MvPolynomial
@@ -118,14 +120,15 @@ theorem prob_uniform_eq_card_filter_div_card {F : Type} [Fintype F] [Nonempty F]
   rw [h_card_eq]
 
 lemma Fintype.card_fun_fin_one_eq {F : Type} [Fintype F] [Nonempty F] :
-  Fintype.card (Fin 1 → F) = Fintype.card F := by
+    Fintype.card (Fin 1 → F) = Fintype.card F := by
   rw [Fintype.card_fun]
   simp only [Fintype.card_unique, pow_one]
 
 theorem prob_uniform_singleton_finFun_eq {F : Type} [Fintype F] [Nonempty F]
-    (P : F → Prop) [DecidablePred P] :
+    (P : F → Prop) :
   Pr_{ let r ← $ᵖ (Fin 1 → F) }[
     P (r 0) ] = Pr_{ let r ←$ᵖ F }[ P r ] := by
+  classical
 -- 1. Unfold both sides using the definition of probability for uniform distributions
   rw [prob_uniform_eq_card_filter_div_card (F := F)]
   rw [prob_uniform_eq_card_filter_div_card (F := Fin 1 → F)]
@@ -156,13 +159,12 @@ theorem prob_split_uniform_sampling_of_prod {γ δ : Type}
     [Fintype γ] [Fintype δ] [Nonempty γ] [Nonempty δ]
     -- The predicate on the original (combined) type
     (P : γ × δ → Prop)
-    -- Decidability for the predicates
-    [DecidablePred P]
-    [DecidablePred (fun xy : γ × δ => P xy)] :
+    :
     -- LHS: Probability over the combined space
     Pr_{ let r ← $ᵖ (γ × δ) }[ P r ] =
     -- RHS: Probability over the sequential, split spaces
     Pr_{ let x ← $ᵖ γ; let y ← $ᵖ δ }[ P (x, y) ] := by
+  classical
   rw [prob_tsum_form_singleton]
   let D_rest := fun (x : γ) => (do
     let y ← $ᵖ δ
@@ -180,7 +182,7 @@ theorem prob_split_uniform_sampling_of_prod {γ δ : Type}
     mul_zero, Prod.mk.eta]
   by_cases hP : P xy
   · simp only [hP, ↓reduceIte]
-    rw [ENNReal.mul_inv_rev_ENNReal (ha := Fintype.card_ne_zero) (hb := Fintype.card_ne_zero)]
+    rw [ENNReal.mul_inv_rev_ENNReal (ha := Fintype.card_ne_zero)]
   · simp only [hP, ↓reduceIte]
 
 /--
@@ -206,7 +208,7 @@ theorem do_two_uniform_sampling_eq_uniform_prod {α β : Type} [Fintype α] [Fin
   rw [←ENNReal.tsum_prod]
   rw [ENNReal.tsum_mul_left]
   rw [←mul_assoc]
-  rw [ENNReal.mul_inv_rev_ENNReal (ha := Fintype.card_ne_zero) (hb := Fintype.card_ne_zero)]
+  rw [ENNReal.mul_inv_rev_ENNReal (ha := Fintype.card_ne_zero)]
   conv_rhs =>
     rw [←mul_one (a := ((Fintype.card α : ENNReal) *  (Fintype.card β : ENNReal) : ENNReal)⁻¹)]
   congr 1
@@ -240,14 +242,12 @@ theorem prob_split_uniform_sampling_of_equiv_prod {α γ δ : Type}
     -- The equivalence that splits α into γ × δ
     (e : α ≃ γ × δ)
     -- The predicate on the original (combined) type
-    (P : α → Prop)
-    -- Decidability for the predicates
-    [DecidablePred P]
-    [DecidablePred (fun xy : γ × δ => P (e.symm xy))] :
+    (P : α → Prop) :
     -- LHS: Probability over the combined space
     Pr_{ let r ← $ᵖ α }[ P r ] =
     -- RHS: Probability over the sequential, split spaces
     Pr_{ let x ← $ᵖ γ; let y ← $ᵖ δ }[ P (e.symm (x, y)) ] := by
+  classical
   -- 1. Unroll the LHS (a single `let`) using `prStx_unfold_final`
   -- LHS = ∑' r, Pr[r] * (if P r then 1 else 0)
   rw [prob_tsum_form_singleton]
@@ -290,7 +290,7 @@ theorem prob_split_uniform_sampling_of_equiv_prod {α γ δ : Type}
     by_cases hP : P i
     · simp only [hP, ↓reduceIte]
       rw [hcard_of_equiv]
-      rw [ENNReal.mul_inv_rev_ENNReal (ha := Fintype.card_ne_zero) (hb := Fintype.card_ne_zero)]
+      rw [ENNReal.mul_inv_rev_ENNReal (ha := Fintype.card_ne_zero)]
       rw [Fintype.card_prod]; rw [Nat.cast_mul]
     · simp only [hP, ↓reduceIte]
   )]
@@ -299,10 +299,10 @@ probability, sampling `r_last` *first*, then `r_init`.
 -/
 theorem prob_split_last_uniform_sampling_of_finFun {ϑ : ℕ} {F : Type} [Fintype F] [Nonempty F]
     (P : F → (Fin ϑ → F) → Prop)
-    [DecidablePred (fun r : Fin (ϑ + 1) → F => P (r (Fin.last ϑ)) (fun i => r i.castSucc))]
-    [∀ r_last, DecidablePred (fun r_init => P r_last r_init)] :
+    :
     Pr_{ let r ← $ᵖ (Fin (ϑ + 1) → F) }[ P (r (Fin.last ϑ)) (fun i ↦ r i.castSucc) ] =
     Pr_{ let r_last ← $ᵖ F; let r_init ← $ᵖ (Fin ϑ → F) }[ P r_last r_init ] := by
+  classical
   rw [prob_tsum_form_doubleton]
   let e : (Fin (ϑ + 1) → F) ≃ F × (Fin ϑ → F) := equivFinFunSplitLast
   conv_lhs =>
@@ -323,8 +323,9 @@ Helper lemma for probability marginalization.
 `Pr_{ (x, y) ← D₁ × D₂ }[ P x ] = Pr_{ x ← D₁ }[ P x ]`
 -/
 theorem prob_marginalization_first_of_prod {α β : Type} [Fintype α] [Fintype β]
-    [Nonempty α] [Nonempty β] (P : α → Prop) [DecidablePred P] :
+    [Nonempty α] [Nonempty β] (P : α → Prop) :
   Pr_{let r ← $ᵖ (α × β) }[ P r.1 ] = Pr_{ let x ← $ᵖ α }[ P x ] := by
+  classical
   rw [prob_split_uniform_sampling_of_prod]
   let D_rest := fun (x : α) => (do
     let y ← $ᵖ β
@@ -347,9 +348,10 @@ predicate `g`) for all outcomes `r`, then the probability of `A`
 is less than or equal to the probability of `B`.
 -/
 theorem Pr_le_Pr_of_implies {α : Type} (D : PMF α)
-    (f g : α → Prop) [DecidablePred f] [DecidablePred g]
+    (f g : α → Prop)
     (h_imp : ∀ r, f r → g r) :
     Pr_{ let r ← D }[ f r ] ≤ Pr_{ let r ← D }[ g r ] := by
+  classical
   -- 1. Unroll both probability statements into their sum forms
   rw [prob_tsum_form_singleton D f]
   rw [prob_tsum_form_singleton D g]
@@ -391,13 +393,14 @@ theorem Pr_or_le {α : Type} (D : PMF α)
 
 theorem Pr_multi_let_equiv_single_let {α β : Type}
     (D₁ : PMF α) (D₂ : PMF β) -- Assuming D₂ is independent for simplicity
-    (P : α → β → Prop) [∀ x, DecidablePred (P x)] :
+    (P : α → β → Prop) :
     -- LHS: Multi-let probability
     Pr_{ let x ← D₁; let y ← D₂ }[ P x y ]
     =
     -- RHS: Single-let probability over the combined distribution
     let D_combined : PMF (α × β) := do { let x ← D₁; let y ← D₂; pure (x, y) }
     Pr_{ let r ← D_combined }[ P r.1 r.2 ] := by
+  classical
   dsimp only [Lean.Elab.WF.paramLet] -- Expose LHS do block
   simp only [bind_pure_comp, _root_.map_bind, Functor.map_map]
 
@@ -410,12 +413,10 @@ summing the probabilities of two disjoint cases:
 Good to be used with `Pr_multi_let_equiv_single_let`
 -/
 theorem Pr_add_split_by_complement {α : Type} (D : PMF α)
-    (f g : α → Prop) [DecidablePred f] [DecidablePred g]
-    -- Need decidability for the combined predicates too
-    [DecidablePred (fun r => g r ∧ f r)]
-    [DecidablePred (fun r => ¬(g r) ∧ f r)] :
+    (f g : α → Prop) :
     Pr_{ let r ← D }[ f r ] =
     (D >>= (fun r => pure (g r ∧ f r))) True + Pr_{ let r ← D }[ ¬(g r) ∧ f r ] := by
+  classical
   -- 1. Unroll all three probability statements into their tsum forms
   rw [prob_tsum_form_singleton D f]
   rw [prob_tsum_form_singleton D (fun r => g r ∧ f r)]
@@ -454,8 +455,9 @@ example : -- Pr_split_two_complements
 -/
 theorem prob_const_and_prop_eq_ite {α : Type} (D : PMF α)
     (P_out : Prop) [Decidable P_out]
-    (P : α → Prop) [DecidablePred P] :
+    (P : α → Prop) :
     Pr_{ let r ← D }[ P_out ∧ P r ] = if P_out then Pr_{ let r ← D }[ P r ] else 0 := by
+  classical
   by_cases h_P_out : P_out
   · -- Case 1: P_out is True
     simp only [h_P_out, if_true, true_and]
@@ -505,7 +507,7 @@ theorem prob_pow_of_forall_finFun
       _ = Pr_{ let a ← $ᵖ A; let f_init ← $ᵖ (Fin n → A) }[ P a ∧ ∀ (i : Fin n), P (f_init i) ] := by
         have h := prob_split_last_uniform_sampling_of_finFun (ϑ := n)
           (P := fun a (f_init : Fin n → A) => P a ∧ ∀ (i : Fin n), P (f_init i))
-        simpa using h
+        exact h
       _ = Pr_{ let a ← $ᵖ A }[ P a ] * Pr_{ let f_init ← $ᵖ (Fin n → A) }[ ∀ (i : Fin n), P (f_init i) ] := by
         -- Convert sequential bind to single uniform over product
         have h_prod : Pr_{ let a ← $ᵖ A; let f_init ← $ᵖ (Fin n → A) }[ P a ∧ ∀ (i : Fin n), P (f_init i) ] =
@@ -531,8 +533,7 @@ theorem prob_pow_of_forall_finFun
           Nat.cast_mul, Nat.cast_pow, ENNReal.coe_mul, ENNReal.coe_natCast, ENNReal.coe_pow]
         -- (↑(card A))^n = ↑((card A)^n) so lemma pattern (↑a * ↑b)⁻¹ matches
         rw [← Nat.cast_pow]
-        rw [← ENNReal.mul_inv_rev_ENNReal (ha := Fintype.card_ne_zero)
-            (hb := ne_of_gt (Nat.pow_pos Fintype.card_pos))]
+        rw [← ENNReal.mul_inv_rev_ENNReal (ha := Fintype.card_ne_zero)]
         have h_eq : (Finset.filter (fun a => P a) Finset.univ) = Finset.filter P Finset.univ :=
           Finset.filter_congr (fun a _ => by rfl)
         rw [← h_eq]
@@ -566,10 +567,11 @@ end ProbabilitySplitting
 For a non-zero multivariate polynomial `P` of total degree at most `d` over a finite field `L`,
 the probability that `P(r)` evaluates to 0 for a uniformly random `r` is at most `d / |L|`. -/
 lemma prob_schwartz_zippel_mv_polynomial {R : Type} [CommRing R] [IsDomain R] [Fintype R]
-    [DecidableEq R] {n : ℕ}
+    {n : ℕ}
     (P : MvPolynomial (Fin n) R) (h_nonzero : P ≠ 0) (h_deg : P.totalDegree ≤ n) :
     Pr_{ let r ←$ᵖ (Fin n → R) }[ MvPolynomial.eval r P = 0 ] ≤
       (n : ℝ≥0) / (Fintype.card R : ℝ≥0) := by
+  classical
   rw [prob_uniform_eq_card_filter_div_card]
   push_cast
   have sz_bound := MvPolynomial.schwartz_zippel_totalDegree (R := R) (n := n)
@@ -722,5 +724,65 @@ lemma prob_poly_agreement_degree_two {R : Type} [CommRing R] [IsDomain R] [Finty
       -- The lemma returns (P.totalDegree / card R), which is ≤ (2 / card R)
       have h := prob_schwartz_zippel_univariate_deg 2 P h_nz h_deg
       exact h
+
+/-- Pushforward of `PMF.uniformOfFintype α` under a map `f : α → β` whose fibers
+over the image all have the same cardinality `k > 0` is the uniform distribution
+on the image of `f`.
+
+Useful when `f` is an affine-linear surjection: every fiber is a translate of
+the kernel and hence has constant cardinality. The proximity-gap proofs use this
+to bridge the coefficient-parameterised sampling of an affine span to the
+uniform sampling of the affine-span finset. -/
+theorem PMF.map_uniformOfFintype_of_fiber_const
+    {α β : Type*} [Fintype α] [Nonempty α] [DecidableEq β]
+    (f : α → β) {k : ℕ} (hk : 0 < k)
+    (hfib : ∀ b ∈ Finset.univ.image f,
+      ((Finset.univ : Finset α).filter (f · = b)).card = k) :
+    (PMF.uniformOfFintype α).map f =
+      PMF.uniformOfFinset (Finset.univ.image f)
+        (Finset.image_nonempty.mpr Finset.univ_nonempty) := by
+  classical
+  -- Total count = k * |image|.
+  have h_card : Fintype.card α = k * (Finset.univ.image f).card := by
+    rw [show Fintype.card α = (Finset.univ : Finset α).card from rfl,
+        Finset.card_eq_sum_card_image f Finset.univ,
+        Finset.sum_const_nat hfib]
+    ring
+  have h_k_ne : (k : ENNReal) ≠ 0 := Nat.cast_ne_zero.mpr hk.ne'
+  have h_k_lt_top : (k : ENNReal) ≠ ⊤ := ENNReal.natCast_ne_top _
+  -- PMF extensionality.
+  ext b
+  rw [PMF.map_apply, PMF.uniformOfFinset_apply]
+  simp_rw [PMF.uniformOfFintype_apply]
+  -- LHS: ∑' a, if b = f a then (Fintype.card α)⁻¹ else 0
+  rw [tsum_fintype, Finset.sum_ite, Finset.sum_const_zero, add_zero,
+      Finset.sum_const, nsmul_eq_mul]
+  by_cases hb : b ∈ Finset.univ.image f
+  · -- b ∈ image: filter (b = f ·) has card k.
+    rw [if_pos hb]
+    have h_filter_card : (Finset.univ.filter (fun a => b = f a)).card = k := by
+      have h_swap :
+          Finset.univ.filter (fun a => b = f a) =
+          Finset.univ.filter (fun a => f a = b) := by
+        ext a
+        simp [eq_comm]
+      rw [h_swap]
+      exact hfib b hb
+    rw [h_filter_card, h_card]
+    -- Goal: ↑k * (↑(k * |image|))⁻¹ = (↑|image|)⁻¹
+    push_cast
+    rw [ENNReal.mul_inv (Or.inl h_k_ne) (Or.inl h_k_lt_top),
+        ← mul_assoc, ENNReal.mul_inv_cancel h_k_ne h_k_lt_top, one_mul]
+  · -- b ∉ image: filter is empty.
+    rw [if_neg hb]
+    have h_empty : Finset.univ.filter (fun a => b = f a) = ∅ := by
+      ext a
+      simp only [Finset.mem_filter, Finset.mem_univ, true_and, Finset.notMem_empty,
+        iff_false]
+      intro h
+      apply hb
+      exact h ▸ Finset.mem_image_of_mem f (Finset.mem_univ a)
+    rw [h_empty, Finset.card_empty]
+    simp
 
 end ProbabilityTools

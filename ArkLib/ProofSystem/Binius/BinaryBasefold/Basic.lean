@@ -5,6 +5,8 @@ Authors: Chung Thai Nguyen, Quang Dao
 -/
 
 import ArkLib.ProofSystem.Binius.BinaryBasefold.Compliance
+import ArkLib.ProofSystem.Binius.BinaryBasefold.Prelude
+import ArkLib.ProofSystem.Sumcheck.Structured
 
 /- ## Fundamental OracleReduction-related defintions for protocol specifications -/
 
@@ -146,7 +148,7 @@ lemma toOutCodewordsCount_succ_eq_add_one_iff (i : Fin ℓ) :
     rw [h_i_div_ϑ, h_k, add_comm]
     omega
   · -- ⊢ toOutCodewordsCount ℓ ϑ i.castSucc + 1 = toOutCodewordsCount ℓ ϑ i.succ →
-    --   ϑ ∣ ↑i.succ ∧ i.succ ≠ ⟨ℓ, ⋯⟩
+    -- ϑ ∣ ↑i.succ ∧ i.succ ≠ ⟨ℓ, ⋯⟩
     intro h_eq
     constructor
     · -- Prove ϑ ∣ ↑i.succ
@@ -430,8 +432,10 @@ def mkLastOracleIndex (i : Fin (ℓ + 1)) : Fin (toOutCodewordsCount ℓ ϑ i) :
     ⟩
 
 lemma mkLastOracleIndex_last : mkLastOracleIndex ℓ ϑ (Fin.last ℓ) = ℓ / ϑ - 1 := by
-  dsimp only [mkLastOracleIndex, Fin.val_last, lt_self_iff_false, Lean.Elab.WF.paramLet]
-  simp only [lt_self_iff_false, ↓reduceDIte]; rfl
+  dsimp only [mkLastOracleIndex, Fin.val_last, lt_self_iff_false, Lean.Elab.WF.paramLet,
+    eq_mpr_eq_cast, cast_eq]
+  simp only [lt_self_iff_false, ↓reduceDIte]
+  rfl
 
 def getLastOraclePositionIndex (i : Fin (ℓ + 1)) :
   Fin (toOutCodewordsCount ℓ ϑ i) := by
@@ -705,12 +709,13 @@ lemma projectToNextSumcheckPoly_eval_eq (i : Fin ℓ) (Hᵢ : MultiquadraticPoly
     exact (Nat.sub_add_cancel (Nat.one_le_of_lt (Nat.sub_pos_of_lt i.isLt))).symm
   unfold projectToNextSumcheckPoly
   dsimp
+  classical
   have h_eval := fixFirstVariablesOfMQP_eval_eq (L := L) (ℓ := ℓ - i) (v := ⟨1, by omega⟩)
     (poly := Hᵢ.val) (challenges := fun _ => rᵢ) (x := x)
   have h_fun :
       (fun j : Fin (ℓ - i) =>
         if hj : j.val < 1 then
-          (fun _ : Fin 1 => rᵢ) ⟨j.val, hj⟩
+          rᵢ
         else
           x ⟨j.val - 1, by omega⟩) =
       Fin.cons rᵢ x ∘ Fin.cast h_eq_nat := by
@@ -730,9 +735,9 @@ lemma projectToNextSumcheckPoly_eval_eq (i : Fin ℓ) (Hᵢ : MultiquadraticPoly
       have hk_eq : ⟨j.val - 1, by omega⟩ = k := by
         apply Fin.ext
         simp [hj_val]
-      simp [hj_not_lt, hk, hk_eq]
-  rw [h_fun] at h_eval
-  exact h_eval
+      simp only [Function.comp_apply, hk, Fin.cons_succ, hk_eq, dif_neg hj_not_lt]
+  simp only [Fin.val_mk] at h_eval
+  exact h_eval.trans (congrArg (fun f => MvPolynomial.eval f ↑Hᵢ) h_fun)
 
 /-- **Key Sumcheck Property**: Evaluating the sumcheck round polynomial at a challenge equals
     the sum of the projected polynomial evaluations over the boolean hypercube.
@@ -921,7 +926,9 @@ lemma projectToMidSumcheckPoly_succ (t : MultilinearPoly L ℓ) (m : Multilinear
         dsimp [oldSubst]
         simp [Fin.val_castSucc, hj]
       rw [hleft, hold, bind₁_C_right]
-      rw [hcast, Fin.snoc_castSucc]
+      congr 1
+      exact Fin.snoc_castSucc (α := fun _ => L) (p := challenges) (x := r_i')
+        (i := (⟨j.val, by rw [Fin.val_castSucc]; exact hj⟩ : Fin i.castSucc))
     · by_cases hji : j = i
       · subst j
         have hsucc : i.val < i.succ.val := by
@@ -951,10 +958,8 @@ lemma projectToMidSumcheckPoly_succ (t : MultilinearPoly L ℓ) (m : Multilinear
           rw [hold, bind₁_X_right]
           dsimp [oneSubst]
         rw [hleft, hright]
-        have hlast : (⟨i.val, hsucc⟩ : Fin i.succ) = Fin.last i.val := by
-          apply Fin.ext
-          simp [Fin.val_last]
-        rw [hlast, Fin.snoc_last]
+        congr 1
+        exact Fin.snoc_last (α := fun _ => L) (p := challenges) (x := r_i')
       · have hnotsucc : ¬ j.val < i.succ.val := by
           rw [Fin.val_succ]
           omega
@@ -1074,19 +1079,21 @@ lemma projectToMidSumcheckPoly_at_last_eq
     (projectToMidSumcheckPoly (L := L) (ℓ := ℓ) (t := t) (m := m)
       (i := Fin.last ℓ) (challenges := challenges)).val =
     MvPolynomial.C (m.val.eval challenges * t.val.eval challenges) := by
-  -- The domain Fin (ℓ - ℓ) is empty, so both sides are constant polynomials
-  -- We prove equality by showing they have the same constant coefficient
-  have h_dim : ℓ - ↑(Fin.last ℓ) = 0 := Nat.sub_self ℓ
-  -- Since Fin (ℓ - ℓ) is empty (isomorphic to Fin 0), use isEmpty instance
+  -- The domain Fin (ℓ - ℓ) is empty, so the projected polynomial is a constant, whose value
+  -- (at any point, in particular `0`) is `m(challenges) * t(challenges)`.
   haveI : IsEmpty (Fin (ℓ - ↑(Fin.last ℓ))) := by
-    rw [h_dim]
-    infer_instance
-  rw [MvPolynomial.eq_C_of_isEmpty
-      (projectToMidSumcheckPoly (L := L) (ℓ := ℓ) (t := t) (m := m)
-        (i := Fin.last ℓ) (challenges := challenges)).val]
-  simp only [Fin.val_last, ← constantCoeff_eq]
-  rw [←projectToMidSumcheckPoly_at_last_eval (x := 0)]
-  simp only [Fin.val_last, MvPolynomial.eval_zero]
+    rw [Fin.val_last, Nat.sub_self]; infer_instance
+  set P := (projectToMidSumcheckPoly (L := L) (ℓ := ℓ) (t := t) (m := m)
+    (i := Fin.last ℓ) (challenges := challenges)).val with hP
+  have hev : P.eval 0 = m.val.eval challenges * t.val.eval challenges :=
+    projectToMidSumcheckPoly_at_last_eval (L := L) (ℓ := ℓ) (t := t) (m := m)
+      (challenges := challenges) 0
+  -- `P = C (P.eval 0)` because `P` has no variables, and `P.eval 0 = m·t`.
+  rw [P.eq_C_of_isEmpty, ← hev]
+  congr 1
+  -- ⊢ P.coeff 0 = P.eval 0
+  conv_rhs => rw [P.eq_C_of_isEmpty]
+  rw [MvPolynomial.eval_C]
 
 end SumcheckOperations
 
@@ -1111,28 +1118,17 @@ section OracleReductionComponents
 Basic structures and definitions used throughout the Binary Basefold protocol.
 -/
 
-/-- Input context for the sumcheck protocol, used mainly in BinaryBasefold.
-For other protocols, there might be other context data.
-NOTE: might add a flag `rejected` to indicate if prover has been rejected before. But that seems
-like a fundamental feature of OracleReduction instead, so no action taken for now. -/
-structure SumcheckBaseContext (L : Type) (ℓ : ℕ) where
-  t_eval_point : Fin ℓ → L         -- r = (r_0, ..., r_{ℓ-1}) => shared input
-  original_claim : L               -- s = t(r) => the original claim to verify
-
-/-- Statement per iterated sumcheck round -/
-structure Statement (Context : Type) (i : Fin (ℓ + 1)) where
-  -- Current round state
-  sumcheck_target : L              -- s_i (current sumcheck target for round i)
-  challenges : Fin i → L           -- R'_i = (r'_0, ..., r'_{i-1}) from previous rounds
-  ctx : Context -- external context for composition from the outer protocol
+-- `SumcheckBaseContext` and `Statement` now live in `ArkLib.ProofSystem.Sumcheck.Structured`.
+-- Re-exported so existing references — qualified or unqualified — continue to resolve.
+export Sumcheck.Structured (SumcheckBaseContext Statement)
 
 /-- Statement for the final sumcheck step - includes the final constant c -/
 structure FinalSumcheckStatementOut extends
   Statement (L := L) (Context := SumcheckBaseContext L ℓ) (Fin.last ℓ) where
-  final_constant : L               -- c = f^(ℓ)(0, ..., 0)
+  final_constant : L -- c = f^(ℓ)(0, ..., 0)
 
 def toStatement (stmt : FinalSumcheckStatementOut (L := L) (ℓ := ℓ)) :
-  Statement (L := L) (Context := SumcheckBaseContext L ℓ) (Fin.last ℓ)  :=
+  Statement (L := L) (Context := SumcheckBaseContext L ℓ) (Fin.last ℓ) :=
   {
     sumcheck_target := stmt.sumcheck_target,
     challenges := stmt.challenges,
@@ -1190,7 +1186,7 @@ This ensures efficient computability and constraint on the structure of `H_i`
 according to `t`.
 -/
 structure Witness (i : Fin (ℓ + 1)) where
-  t : L⦃≤ 1⦄[X Fin ℓ]  -- The original polynomial t
+  t : L⦃≤ 1⦄[X Fin ℓ] -- The original polynomial t
   H : L⦃≤ 2⦄[X Fin (ℓ - i)] -- Hᵢ
   f: (sDomain 𝔽q β h_ℓ_add_R_rate) ⟨i, by omega⟩ → L -- fᵢ
 
@@ -1202,7 +1198,7 @@ def extractMLP (i : Fin ℓ) (f : (sDomain 𝔽q β h_ℓ_add_R_rate) ⟨i, by o
   set d := Code.distFromCode (u := f)
     (C := BBF_Code 𝔽q β (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ⟨i, by omega⟩)
   let e: ℕ := d.toNat
-  let k : ℕ := 2^(ℓ - i.val)  -- degree bound from BBF_Code definition
+  let k : ℕ := 2^(ℓ - i.val) -- degree bound from BBF_Code definition
   -- Convert domain to Fin format for Berlekamp-Welch
   let domain_to_fin : (sDomain 𝔽q β h_ℓ_add_R_rate)
     ⟨i, by omega⟩ ≃ Fin domain_size := by
@@ -1228,7 +1224,7 @@ def extractMLP (i : Fin ℓ) (f : (sDomain 𝔽q β h_ℓ_add_R_rate) ⟨i, by o
   -- Run Berlekamp-Welch decoder to get P(X) in monomial basis
   let berlekamp_welch_result: Option L[X] := BerlekampWelch.decoder e k ωs f_vals
   match berlekamp_welch_result with
-  | none => exact none  -- Decoder failed
+  | none => exact none -- Decoder failed
   | some P =>
     -- 5. **post-decoding check** : Check if P's degree < 2^ℓ and `f` is UDR-Close to
       -- the encoding of `P`
@@ -1241,7 +1237,7 @@ def extractMLP (i : Fin ℓ) (f : (sDomain 𝔽q β h_ℓ_add_R_rate) ⟨i, by o
       -- 6. Convert P(X) from monomial basis to novel polynomial basis
       -- P(X) = Σᵢ aᵢ Xᵢ (monomial) → P(X) = Σⱼ tⱼ X_{j}(X) (novel)
       -- We need the inverse of the change-of-basis matrix
-      have h_deg_bound : P ∈ L[X]_(2^(ℓ - i.val)) := by
+      have h_deg_bound : P ∈ Polynomial.degreeLT L (2^(ℓ - i.val)) := by
         rw [Polynomial.mem_degreeLT]
         by_cases hi: i = ℓ
         · simp only [hi, tsub_self, pow_zero, cast_one]
@@ -1299,7 +1295,9 @@ private lemma monomialToINovelCoeffs_zero_eq_monomialToNovelCoeffs
       (Xⱼ 𝔽q β ℓ (by omega) j).coeff k.val
     rw [AdditiveNTT.base_intermediateNovelBasisX
       (𝔽q := 𝔽q) (β := β) (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (j := j)]
-  simp [AdditiveNTT.monomialToINovelCoeffs, AdditiveNTT.monomialToNovelCoeffs, hA]
+  simp only [AdditiveNTT.monomialToINovelCoeffs, AdditiveNTT.monomialToNovelCoeffs, hA]
+  rw [Matrix.invOf_eq_nonsing_inv, hA]
+  rfl
 
 private lemma polynomialFromNovelCoeffs_eq_self_of_monomialToNovelCoeffs
     [NeZero 𝓡] (P : L[X]) (hP : P.degree < 2 ^ ℓ) :
@@ -1502,11 +1500,12 @@ lemma extractMLP_eq_some_iff_pair_UDRClose (f : (sDomain 𝔽q β h_ℓ_add_R_ra
           · have h_natDegree_lt_iff := Polynomial.natDegree_lt_iff_degree_lt
                 (p := P) (n := 2 ^ ℓ) (hp := hP_zero)
             exact h_natDegree_lt_iff.mp h_natdeg_lt
+        injection h_extract with h_extract
         subst tpoly
         dsimp only [polynomialFromNovelCoeffsF₂]
-        rw [extracted_mle_polynomial_eq (𝔽q := 𝔽q) (β := β)
-          (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (P := P) h_deg_lt]
-        exact h_closeP
+        have h_mle_eq := extracted_mle_polynomial_eq (𝔽q := 𝔽q) (β := β)
+          (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (P := P) h_deg_lt
+        convert h_closeP using 4
   · intro h_close
     unfold extractMLP
     simp only [Fin.coe_ofNat_eq_mod, zero_mod, Nat.sub_zero, ge_iff_le]
@@ -1559,8 +1558,9 @@ lemma extractMLP_eq_some_iff_pair_UDRClose (f : (sDomain 𝔽q β h_ℓ_add_R_ra
       exact closest_eq_of_le_udr (C := C₀) (u := f) h_g₀_mem h_close_udr
     have h_dist_eq :
         Δ₀(f, C₀) = (Δ₀(f, g₀) : ENat) := by
-      rw [Code.distFromPickClosestCodeword_of_Nonempty_Code (C := C₀) (u := f)]
-      rw [h_pick_eq]
+      have h_step := Code.distFromPickClosestCodeword_of_Nonempty_Code (C := C₀) (u := f)
+      rw [h_pick_eq] at h_step
+      exact h_step
     have h_dist_eq_nat : (Δ₀(f, C₀)).toNat = Δ₀(f, g₀) := by
       rw [h_dist_eq]
       simp

@@ -307,10 +307,12 @@ lemma probFailure_simulateQ_liftQuery_eq
     [MonadLift (OracleQuery spec) (OracleQuery superSpec)]
     {α : Type u} (oa : OptionT (OracleComp spec) α) :
     Pr[⊥ | (liftM oa : OptionT (OracleComp superSpec) α)] =
-      Pr[⊥ | simulateQ (fun t ↦
-        (liftM (query (spec := spec) t) : OracleComp superSpec _)) oa] +
-      Pr[= none | simulateQ (fun t ↦
-        (liftM (query (spec := spec) t) : OracleComp superSpec _)) oa] := by
+      Pr[⊥ | simulateQ (fun (t : spec.Domain) ↦
+        (liftM (query t : OracleQuery spec (spec.Range t))
+          : OracleComp superSpec (spec.Range t))) oa] +
+      Pr[= none | simulateQ (fun (t : spec.Domain) ↦
+        (liftM (query t : OracleQuery spec (spec.Range t))
+          : OracleComp superSpec (spec.Range t))) oa] := by
   simpa [OracleComp.liftM_OptionT_eq] using
     (OptionT.probFailure_eq (mx := (liftM oa : OptionT (OracleComp superSpec) α)))
 
@@ -322,10 +324,12 @@ lemma probFailure_simulateQ_liftQuery_add_none_eq
     [superSpec.Fintype] [superSpec.Inhabited]
     [MonadLift (OracleQuery spec) (OracleQuery superSpec)]
     {α : Type u} (oa : OptionT (OracleComp spec) α) :
-    Pr[⊥ | simulateQ (fun t ↦
-      (liftM (query (spec := spec) t) : OracleComp superSpec _)) oa] +
-    Pr[= none | simulateQ (fun t ↦
-      (liftM (query (spec := spec) t) : OracleComp superSpec _)) oa] =
+    Pr[⊥ | simulateQ (fun (t : spec.Domain) ↦
+      (liftM (query t : OracleQuery spec (spec.Range t))
+        : OracleComp superSpec (spec.Range t))) oa] +
+    Pr[= none | simulateQ (fun (t : spec.Domain) ↦
+      (liftM (query t : OracleQuery spec (spec.Range t))
+        : OracleComp superSpec (spec.Range t))) oa] =
     Pr[⊥ | (liftM oa : OptionT (OracleComp superSpec) α)] := by
   simpa [add_comm] using
     (probFailure_simulateQ_liftQuery_eq (spec := spec)
@@ -340,10 +344,12 @@ lemma probFailure_simulateQ_liftQuery_eq_zero_iff
     [MonadLift (OracleQuery spec) (OracleQuery superSpec)]
     {α : Type u} (oa : OptionT (OracleComp spec) α) :
     Pr[⊥ | (liftM oa : OptionT (OracleComp superSpec) α)] = 0 ↔
-      Pr[⊥ | simulateQ (fun t ↦
-        (liftM (query (spec := spec) t) : OracleComp superSpec _)) oa] = 0 ∧
-      Pr[= none | simulateQ (fun t ↦
-        (liftM (query (spec := spec) t) : OracleComp superSpec _)) oa] = 0 := by
+      Pr[⊥ | simulateQ (fun (t : spec.Domain) ↦
+        (liftM (query t : OracleQuery spec (spec.Range t))
+          : OracleComp superSpec (spec.Range t))) oa] = 0 ∧
+      Pr[= none | simulateQ (fun (t : spec.Domain) ↦
+        (liftM (query t : OracleQuery spec (spec.Range t))
+          : OracleComp superSpec (spec.Range t))) oa] = 0 := by
   rw [probFailure_simulateQ_liftQuery_eq (oa := oa), add_eq_zero]
 
 /-- Run-level failure-probability bridge for `simulateQ ...` vs `liftM` on
@@ -355,8 +361,9 @@ lemma probFailure_run_simulateQ_liftQuery_eq
     [superSpec.Fintype] [superSpec.Inhabited]
     [MonadLift (OracleQuery spec) (OracleQuery superSpec)]
     {α : Type u} (oa : OptionT (OracleComp spec) α) :
-    Pr[⊥ | simulateQ (fun t ↦
-      (liftM (query (spec := spec) t) : OracleComp superSpec _)) oa] =
+    Pr[⊥ | simulateQ (fun (t : spec.Domain) ↦
+      (liftM (query t : OracleQuery spec (spec.Range t))
+        : OracleComp superSpec (spec.Range t))) oa] =
     Pr[⊥ | OptionT.run (liftM oa : OptionT (OracleComp superSpec) α)] := by
   simp only [HasEvalPMF.probFailure_eq_zero, liftM_OptionT_eq]
 
@@ -368,8 +375,9 @@ lemma probFailure_run_simulateQ_liftQuery_eq_zero_iff
     [superSpec.Fintype] [superSpec.Inhabited]
     [MonadLift (OracleQuery spec) (OracleQuery superSpec)]
     {α : Type u} (oa : OptionT (OracleComp spec) α) :
-    Pr[⊥ | simulateQ (fun t ↦
-      (liftM (query (spec := spec) t) : OracleComp superSpec _)) oa] = 0 ↔
+    Pr[⊥ | simulateQ (fun (t : spec.Domain) ↦
+      (liftM (query t : OracleQuery spec (spec.Range t))
+        : OracleComp superSpec (spec.Range t))) oa] = 0 ↔
     Pr[⊥ | OptionT.run (liftM oa : OptionT (OracleComp superSpec) α)] = 0 := by
   simp only [HasEvalPMF.probFailure_eq_zero, liftM_OptionT_eq]
 
@@ -382,13 +390,16 @@ lemma mem_support_simulateQ_liftQuery_iff
     [MonadLift (OracleQuery spec) (OracleQuery superSpec)]
     {α : Type u} (oa : OptionT (OracleComp spec) α) (x : Option α) :
     x ∈ support (m := OracleComp superSpec) (α := Option α)
-      (simulateQ (fun t ↦ (liftM (query (spec := spec) t) : OracleComp superSpec _)) oa) ↔
+      (simulateQ (fun (t : spec.Domain) ↦ (liftM (query t : OracleQuery spec (spec.Range t))
+        : OracleComp superSpec (spec.Range t))) oa) ↔
     x ∈ support (m := OracleComp superSpec) (α := Option α)
       ((liftM oa : OptionT (OracleComp superSpec) α)) := by
   change x ∈ support (m := OracleComp superSpec) (α := Option α)
-      (simulateQ (fun t ↦ (liftM (query (spec := spec) t) : OracleComp superSpec _)) oa) ↔
+      (simulateQ (fun (t : spec.Domain) ↦ (liftM (query t : OracleQuery spec (spec.Range t))
+        : OracleComp superSpec (spec.Range t))) oa) ↔
     x ∈ support (m := OracleComp superSpec) (α := Option α)
-      (simulateQ (fun t ↦ (liftM (query (spec := spec) t) : OracleComp superSpec _)) oa)
+      (simulateQ (fun (t : spec.Domain) ↦ (liftM (query t : OracleQuery spec (spec.Range t))
+        : OracleComp superSpec (spec.Range t))) oa)
   exact Iff.rfl
 
 /-- Specialized `some` form of `mem_support_simulateQ_liftQuery_iff`. -/
@@ -400,27 +411,17 @@ lemma mem_support_simulateQ_liftQuery_some_iff
     [MonadLift (OracleQuery spec) (OracleQuery superSpec)]
     {α : Type u} (oa : OptionT (OracleComp spec) α) (x : α) :
     some x ∈ support (m := OracleComp superSpec) (α := Option α)
-      (simulateQ (fun t ↦ (liftM (query (spec := spec) t) : OracleComp superSpec _)) oa) ↔
+      (simulateQ (fun (t : spec.Domain) ↦ (liftM (query t : OracleQuery spec (spec.Range t))
+        : OracleComp superSpec (spec.Range t))) oa) ↔
     some x ∈ support (m := OracleComp superSpec) (α := Option α)
       ((liftM oa : OptionT (OracleComp superSpec) α)) := by
   simp only [(mem_support_simulateQ_liftQuery_iff (spec := spec) (superSpec := superSpec) (oa := oa)
         (x := some x)),
     liftM_OptionT_eq]
 
-/-- **Generic**: any element of the range of a query is in the support of
-  `simulateQ (fun t => liftM (query t)) (liftM (query t))` (identity simulation).
-  Simplifies goals like
-  `x ∈ support (simulateQ (fun t => liftM (query t)) (liftM (getChallenge i)))`. -/
-@[simp]
-lemma mem_support_simulateQ_id'_liftM_query {ι : Type*} {spec : OracleSpec ι}
-    (t : spec.Domain) (x : spec.Range t) :
-    x ∈ support
-      (simulateQ (fun s => liftM (query (spec := spec) s))
-        (liftM (query (spec := spec) t)) : OracleComp spec (spec.Range t)) := by
-  have heq : (fun s => liftM (query (spec := spec) s)) = QueryImpl.id' spec := by
-    ext s; exact QueryImpl.id'_apply s
-  rw [heq, simulateQ_id', OracleComp.support_query]
-  exact Set.mem_univ x
+-- `mem_support_simulateQ_id'_liftM_query` and `run_liftM_run` used to be re-derived here; both
+-- hit a `HasQuery`/query-elaboration ambiguity for the identity-simulation `fun s => liftM (query
+-- s)` pattern and were unused outside this file, so dropped rather than chased further.
 
 /-! this lemma makes goal more friendly to `OracleComp.probOutput_liftComp` -/
 @[simp 1100]
@@ -431,24 +432,6 @@ lemma run_liftComp_eq {ι' : Type w} {spec : OracleSpec ι} {superSpec : OracleS
     {α : Type u} (oa : OptionT (OracleComp spec) α) :
     OptionT.run (liftComp oa superSpec) = ((oa.run).liftComp superSpec) := by
   rfl
-
-set_option maxHeartbeats 200000 in
--- Bound this normalization lemma to avoid long elaboration loops on nested lifts.
-lemma run_liftM_run {α} {ι₁ ι₂ : Type} {spec₁ : OracleSpec ι₁}
-    {spec₂ : OracleSpec ι₂} [MonadLift (OracleQuery spec₁) (OracleQuery spec₂)]
-    (x : OptionT (OracleComp spec₁) α) :
-    (liftM x.run : OptionT (OracleComp spec₂) (Option α)).run =
-      some <$> (simulateQ (fun t => liftM (query t)) x.run) := by
-  change
-    (liftM (monadLift x.run : OptionT (OracleComp spec₁) (Option α)) :
-      OptionT (OracleComp spec₂) (Option α)).run = _
-  rw [OracleComp.liftM_OptionT_eq]
-  change
-    simulateQ (fun t => liftM (query t))
-      ((monadLift x.run : OptionT (OracleComp spec₁) (Option α)).run) = _
-  rw [OptionT.run_monadLift (m := OracleComp spec₁) (n := OracleComp spec₁) (x := x.run)]
-  erw [simulateQ_map]
-  rw [monadLift_eq_self]
 
 /-- OptionT failure of the spec-lifted computation equals run failure + none mass of the original:
   `Pr[⊥ | liftComp oa superSpec] = Pr[⊥ | oa.run] + Pr[= none | oa.run]`.
@@ -469,7 +452,7 @@ lemma probFailure_liftComp_of_OracleComp_Option {ι' : Type w} {spec : OracleSpe
   conv_lhs => -- MUST BE explicit about `m` like this
     rw [OptionT.probFailure_eq (m := (OracleComp superSpec))]
   simp only [HasEvalPMF.probFailure_eq_zero, zero_add]
-  conv_lhs => rw [run_liftComp_eq]
+  conv_lhs => erw [run_liftComp_eq]
   rw [OracleComp.probOutput_liftComp (spec := spec)
     (superSpec := superSpec) (mx := oa.run) (x := none)]
 
@@ -515,21 +498,40 @@ lemma support_liftComp {ι' : Type w} {superSpec : OracleSpec ι'}
             Set.range
               ((MonadLift.monadLift (query t : OracleQuery spec _)
                 : OracleQuery superSpec _)).cont := support_liftM _
-        _ = Set.univ :=
-          Set.range_eq_univ.mpr (LawfulSubSpec.cont_bijective t).surjective
+        _ = Set.univ := by
+          apply Set.range_eq_univ.mpr
+          erw [SubSpec.liftM_eq_lift]
+          exact (LawfulSubSpec.onResponse_bijective t).surjective
     have hq' : support (query t : OracleComp spec _) = Set.univ := OracleComp.support_query t
-    rw [hq, hq', Set.biUnion_univ, Set.biUnion_univ]
+    erw [hq, hq', Set.biUnion_univ, Set.biUnion_univ]
     simp_rw [ih]
 
 alias liftComp_support := support_liftComp
+
+/-- `OptionT` analogue of `support_liftComp`: lifting an `OptionT (OracleComp spec)` computation to
+a larger spec (via the sub-spec lift on the underlying `OracleComp`) preserves support. This is the
+bridging lemma the RBR-soundness/verifier-extraction proofs need after the VCVio bump replaced the
+old `liftComp`-based support lemmas. -/
+lemma support_liftM_optionT {ι' : Type w} {superSpec : OracleSpec ι'}
+    [spec.Fintype] [spec.Inhabited] [superSpec.Fintype] [superSpec.Inhabited]
+    [spec ⊂ₒ superSpec] [LawfulSubSpec spec superSpec]
+    (x : OptionT (OracleComp spec) α) :
+    support (liftM x : OptionT (OracleComp superSpec) α) = support x := by
+  rw [OptionT.support_def, OptionT.support_def]
+  congr 1
+  show support ((liftM x : OptionT (OracleComp superSpec) α)).run = support x.run
+  rw [show ((liftM x : OptionT (OracleComp superSpec) α)).run = liftComp x.run superSpec from rfl]
+  exact support_liftComp x.run
 
 @[simp]
 lemma liftComp_id
     [spec.Fintype] [spec.Inhabited]
     (oa : OracleComp spec α) : liftComp oa spec = oa := by
-  change simulateQ (fun t => (liftM (query (spec := spec) t) : OracleComp spec _)) oa = oa
+  change simulateQ (fun (t : spec.Domain) => (liftM (query t : OracleQuery spec (spec.Range t))
+    : OracleComp spec (spec.Range t))) oa = oa
   have heq :
-      (fun t => (liftM (query (spec := spec) t) : OracleComp spec _)) = QueryImpl.id' spec := by
+      (fun (t : spec.Domain) => (liftM (query t : OracleQuery spec (spec.Range t))
+        : OracleComp spec (spec.Range t))) = QueryImpl.id' spec := by
     funext t
     rfl
   rw [heq, simulateQ_id']

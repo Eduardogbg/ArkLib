@@ -6,7 +6,7 @@ Authors: Chung Thai Nguyen, Quang Dao
 
 import ArkLib.ProofSystem.Binius.BinaryBasefold.QueryPhase
 import ArkLib.ProofSystem.Binius.FRIBinius.CoreInteractionPhase
-import ArkLib.ProofSystem.Binius.RingSwitching.BatchingPhase
+import ArkLib.ProofSystem.RingSwitching.BatchingPhase
 import ArkLib.OracleReduction.Security.Basic
 import ArkLib.OracleReduction.Security.Implications
 
@@ -175,7 +175,7 @@ noncomputable def fullOracleProof :
       (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate)).OStmtIn)
     (Witness := BatchingWitIn L K ℓ ℓ')
     (pSpec:= fullPspec κ L K β ℓ' 𝓡 ϑ γ_repetitions (h_ℓ_add_R_rate := h_ℓ_add_R_rate)) :=
-  fullOracleReduction κ L K β ℓ ℓ' 𝓡 ϑ γ_repetitions (h_ℓ_add_R_rate := h_ℓ_add_R_rate) h_l (𝓑:=𝓑)
+  fullOracleReduction κ L K β ℓ ℓ' 𝓡 ϑ γ_repetitions (h_ℓ_add_R_rate := h_ℓ_add_R_rate) h_l (𝓑 := 𝓑)
 
 /-!
 ## Security Properties
@@ -199,7 +199,7 @@ theorem fullOracleReduction_perfectCompleteness (hInit : NeverFail init) :
     (init := init)
     (impl := impl) :=
   OracleReduction.append_perfectCompleteness
-    (R₁ := batchingCoreReduction κ L K β ℓ ℓ' 𝓡 ϑ h_ℓ_add_R_rate h_l (𝓑 := 𝓑))
+    (R₁ := batchingCoreReduction κ L K β ℓ ℓ' 𝓡 ϑ h_ℓ_add_R_rate h_l )
     (R₂ := QueryPhase.queryOracleReduction K β γ_repetitions
       (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (ϑ:=ϑ))
     (OStmt₁ := (BinaryBasefoldAbstractOStmtIn (β := β)

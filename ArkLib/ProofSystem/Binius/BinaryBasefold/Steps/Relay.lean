@@ -220,17 +220,15 @@ theorem relayOracleReduction_perfectCompleteness (hInit : NeverFail init) (i : F
     simp only [Challenge,ChallengeIdx,
       liftComp_eq_liftM, MessageIdx, Message] at hx_mem_support
     obtain ⟨h_verOut_mem_support, h_prvOut_mem_support⟩ := hx_mem_support
-    -- Step 2c: Simplify the verifier computation
+    -- Step 2c: Simplify the verifier computation. Since `simulateQ _ (pure stmtIn) = pure stmtIn`,
+    -- the whole lifted map collapses to a `pure`, so its support is a singleton.
     conv at h_verOut_mem_support =>
-      dsimp only [liftM, monadLift, MonadLift.monadLift]
-      rw [support_liftComp]
-      erw [simulateQ_pure]
-      -- dsimp only [Functor.map]
-      erw [support_bind]
-      simp only [support_pure, Set.mem_singleton_iff, Function.comp_apply,
-        Set.iUnion_iUnion_eq_left, OptionT.support_OptionT_pure_run, Option.some.injEq,
-        Prod.mk.injEq]
-    rcases h_verOut_mem_support with ⟨verStmtOut_eq, verOStmtOut_eq⟩
+      erw [_root_.simulateQ_pure]
+      erw [support_liftM_optionT]
+      rw [support_map]
+      erw [support_pure]
+      simp only [Set.image_singleton, Set.mem_singleton_iff, Prod.mk.injEq]
+    obtain ⟨verStmtOut_eq, verOStmtOut_eq⟩ := h_verOut_mem_support
     obtain ⟨⟨prvStmtOut_eq, prvOStmtOut_eq⟩, prvWitOut_eq⟩ := h_prvOut_mem_support
     constructor
     · rw [prvWitOut_eq, verStmtOut_eq, verOStmtOut_eq];
@@ -324,7 +322,7 @@ def relayKnowledgeStateFunction (i : Fin ℓ) (hNCR : ¬ isCommitmentRound ℓ �
       | inr hGood =>
         right
         refine ⟨hGood.1, hGood.2.1, ?_, ?_⟩
-        · rw [getFirstOracle_mapOStmtOutRelayStep_eq (i := i) (hNCR := hNCR)
+        · erw [getFirstOracle_mapOStmtOutRelayStep_eq (i := i) (hNCR := hNCR)
             (oStmtIn := oStmtIn)]
           exact hGood.2.2.1
         · have hFold' :
@@ -345,7 +343,7 @@ def relayKnowledgeStateFunction (i : Fin ℓ) (hNCR : ¬ isCommitmentRound ℓ �
         right
         refine ⟨hGood.1, hGood.2.1, ?_, ?_⟩
         · have hFirst := hGood.2.2.1
-          rw [getFirstOracle_mapOStmtOutRelayStep_eq (i := i) (hNCR := hNCR)
+          erw [getFirstOracle_mapOStmtOutRelayStep_eq (i := i) (hNCR := hNCR)
             (oStmtIn := oStmtIn)] at hFirst
           exact hFirst
         · have hFold' :

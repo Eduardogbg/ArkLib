@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Chung Thai Nguyen, Quang Dao
 -/
 
-import ArkLib.Data.CodingTheory.ProximityGap.DG25
+import ArkLib.Data.CodingTheory.ProximityGap.DG25.Basic
+import ArkLib.Data.CodingTheory.ProximityGap.DG25.MainResults
+import ArkLib.Data.CodingTheory.ProximityGap.DG25.ReedSolomon
 import ArkLib.ProofSystem.Binius.BinaryBasefold.Compliance
 import ArkLib.ProofSystem.Binius.BinaryBasefold.Soundness.Lift
 import CompPoly.Fields.Binary.Tower.Prelude
@@ -1203,7 +1205,7 @@ lemma prop_4_21_2_case_2_fiberwise_far_incremental
   · apply le_trans (Pr_le_Pr_of_implies ($ᵖ L) _ _ (fun r_new h => h.1))
     have : Pr_{ let r_new ← $ᵖ L }[¬Ek_close] = 0 := by
       rw [prob_uniform_eq_card_filter_div_card]
-      simp only [not_not.mpr h_Ek_close, filter_False, card_empty, CharP.cast_eq_zero,
+      simp only [not_not.mpr h_Ek_close, filter_false, card_empty, CharP.cast_eq_zero,
         ENNReal.coe_zero, ENNReal.coe_natCast, ENNReal.zero_div]
     rw [this]; exact zero_le _
   · apply le_trans (Pr_le_Pr_of_implies ($ᵖ L) _ _ (fun r_new h => h.2))

@@ -4,7 +4,10 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Katerina Hristova, František Silváši, Chung Thai Nguyen
 -/
 
-import ArkLib.Data.CodingTheory.Basic
+import ArkLib.Data.CodingTheory.Basic.DecodingRadius
+import ArkLib.Data.CodingTheory.Basic.Distance
+import ArkLib.Data.CodingTheory.Basic.LinearCode
+import ArkLib.Data.CodingTheory.Basic.RelativeDistance
 import ArkLib.Data.CodingTheory.ReedSolomon
 import Mathlib.Logic.Equiv.Fin.Basic
 import Mathlib.Order.CompletePartialOrder
@@ -20,8 +23,6 @@ import Mathlib.InformationTheory.Hamming
 import Mathlib.Tactic.Qify
 import Mathlib.Topology.MetricSpace.Infsep
 import Mathlib.Data.NNReal.Defs
-
-noncomputable section
 
 /-!
 ## Main definitions
@@ -137,7 +138,7 @@ def interleavedCodeSet {A : Type*} {κ ι : Type*}
 
 /-- If C is finite and membership is decidable, then interleavedCodeSet C is finite. -/
 @[simp]
-instance interleavedCodeSet_fintype {A : Type*} {κ ι : Type*}
+noncomputable instance interleavedCodeSet_fintype {A : Type*} {κ ι : Type*}
     [Fintype κ] [Fintype ι] [Fintype A] [DecidableEq A]
     (C : Set (ι → A)) :
     Fintype (interleavedCodeSet (κ := κ) (ι := ι) C) := by
@@ -229,7 +230,8 @@ def interleaveCodewordStack (u : CodewordStack A κ ι C) : InterleavedCodeword 
 
 @[simp]
 def finMapTwoWords {A : Type*} {ι : Type*} (u₀ u₁ : Word A ι)
-    : WordStack A (κ := Fin 2) (ι := ι) := fun rowIdx =>
+    : WordStack A (κ := Fin 2) (ι := ι)
+    := fun rowIdx =>
   match rowIdx with
   | ⟨0, _⟩ => u₀
   | ⟨1, _⟩ => u₁
@@ -344,10 +346,10 @@ lemma interleave_wordStack_eq (u : WordStack A κ ι) : (⋈|u) = u.transpose :=
 omit [AddCommMonoid A] [Fintype κ] [Fintype ι] in
 @[simp]
 lemma interleave_codewordStack_val_eq (u : CodewordStack A κ ι C) :
-  (⋈| u).val = u.val.transpose := rfl
+    (⋈| u).val = u.val.transpose := rfl
 
 @[simp]
-instance instFintypeInterleavedModuleCode [Fintype A] : Fintype (MC ^⋈ κ) := by
+noncomputable instance instFintypeInterleavedModuleCode [Fintype A] : Fintype (MC ^⋈ κ) := by
   exact Fintype.ofFinite ((MC ^⋈ κ) : Set (ι → (κ → A)))
 
 @[simp]
@@ -418,25 +420,23 @@ export InterleavedStructure (eq_iff_all_rows_eq eq_iff_all_symbols_eq eq_iff_all
 
 -- WordStack
 @[simp] instance (priority := 500) instInterleavedStructureWordStack :
-    ∀ κ, InterleavedStructure (α := WordStack A κ ι) (RowIdx := κ) (SymbolIdx := ι)
-      (RowType := Word A ι) (SymbolType := InterleavedSymbol A κ) (CellTy := A) := fun κ => by
-  exact {
-    getRow u k := WordStack.getRowWord u k
-    getSymbol u i := WordStack.getSymbol u i
-    getCell u k i := (WordStack.getRowWord u k) i
-    eq_iff_all_rows_eq := by
-      intro u v; constructor
-      · intro h; exact fun i ↦ congrFun h i
-      · intro h; ext i k; exact congrFun (h i) k
-    eq_iff_all_symbols_eq := by
-      intro u v; constructor
-      · intro h; exact fun k ↦ congrFun (congrArg Matrix.transpose h) k
-      · intro h; ext i k; exact congrFun (h k) i
-    eq_iff_all_cells_eq := by
-      intro u v; constructor
-      · intro h; exact fun i k ↦ congrFun (congrFun h i) k
-      · intro h; ext i k; exact h i k
-  }
+    InterleavedStructure (α := WordStack A κ ι) (RowIdx := κ) (SymbolIdx := ι)
+      (RowType := Word A ι) (SymbolType := InterleavedSymbol A κ) (CellTy := A) where
+  getRow u k := WordStack.getRowWord u k
+  getSymbol u i := WordStack.getSymbol u i
+  getCell u k i := (WordStack.getRowWord u k) i
+  eq_iff_all_rows_eq := by
+    intro u v; constructor
+    · intro h; exact fun i ↦ congrFun h i
+    · intro h; ext i k; exact congrFun (h i) k
+  eq_iff_all_symbols_eq := by
+    intro u v; constructor
+    · intro h; exact fun k ↦ congrFun (congrArg Matrix.transpose h) k
+    · intro h; ext i k; exact congrFun (h k) i
+  eq_iff_all_cells_eq := by
+    intro u v; constructor
+    · intro h; exact fun i k ↦ congrFun (congrFun h i) k
+    · intro h; ext i k; exact h i k
 
 -- CodewordStack
 @[simp] instance instInterleavedStructureCodewordStack :
@@ -548,9 +548,10 @@ omit [AddCommMonoid A] [Fintype κ] [Fintype ι] in
 @[simp]
 lemma getRowOfCodewordStack_mem_code (C : Set (ι → A))
     (u : CodewordStack A κ ι C) (rowIdx : κ) :
-    getRow (u.val) rowIdx ∈ C := by
-  let getRowAsIC := getRow (show InterleavedCodeword A κ ι C from ⋈|u) rowIdx
-  exact getRowAsIC.property
+    u.val rowIdx ∈ C := by
+  have := u.property
+  rw [mem_codewordStack_iff] at this
+  exact this rowIdx
 
 /-- Notation for stacking one stack on top of another -/
 infixl:65 " ++ₕ " => HAppend.hAppend
@@ -563,19 +564,19 @@ instance instNonemptyInterleavedCode [Nonempty C] :
   intro k
   exact c.property
 
-example (C : Set (ι → A)) : ((C ^⋈ (Fin 2))) = interleavedCodeSet (κ := Fin 2) C := by rfl
+example (C : Set (ι → A)) : ((C ^⋈ (Fin 2))) = interleavedCodeSet (κ := Fin 2) C
+    := by rfl
 example (MC : ModuleCode ι F A) : (MC ^⋈ (Fin 2))
-  = ModuleCode.moduleInterleavedCode (F := F) (A := A) (κ := Fin 2) (ι := ι) (MC := MC) := by rfl
+    = ModuleCode.moduleInterleavedCode (F := F) (A := A) (κ := Fin 2) (ι := ι) (MC := MC)
+    := by rfl
 example (u : CodewordStack A κ ι C) :
   let iuCodewords: InterleavedCodeword A κ ι C := ⋈|u
   let iuWords: InterleavedWord A κ ι := ⋈|u.val
-  iuCodewords.val = iuWords
-  := by rfl
+  iuCodewords.val = iuWords := by rfl
 example (v₀ v₁ : C) :
   let iv_codeword : InterleavedWord A (Fin 2) ι := v₀.val ⋈₂ v₁.val
   let iv_word : InterleavedCodeword A (Fin 2) ι C := v₀ ⋈₂ v₁
-  iv_codeword = iv_word
-  := by rfl
+  iv_codeword = iv_word := by rfl
 
 end InterleavedCode
 
@@ -670,7 +671,7 @@ TOOD: this can generalize further to support the consequent of mutual correlated
 def jointAgreement {F κ ι : Type*} [Fintype ι] [DecidableEq F]
     (C : Set (ι → F)) (δ : ℝ≥0) (W : κ → ι → F) : Prop :=
   ∃ S : Finset ι, S.card ≥ (1 - δ) * (Fintype.card ι) ∧
-    ∃ v : κ → ι → F, ∀ i, v i ∈ C ∧ S ⊆ Finset.filter (fun j => v i j = W i j) Finset.univ
+      ∃ v : κ → ι → F, ∀ i, v i ∈ C ∧ S ⊆ Finset.filter (fun j => v i j = W i j) Finset.univ
 
 open InterleavedCode in
 /-- Equivalence between the agreement-based definition `jointAgreement` and
@@ -678,9 +679,10 @@ the distance/proximity-based definition `jointProximity` (the latter is represen
 upperbound of interleaved-code distance). -/
 @[simp]
 theorem jointAgreement_iff_jointProximity
-    {F : Type*} {κ ι : Type*} [Fintype κ] [Fintype ι] [Nonempty ι] [DecidableEq F] [DecidableEq ι]
+    {F : Type*} {κ ι : Type*} [Fintype κ] [Fintype ι] [Nonempty ι] [DecidableEq F]
     (C : Set (ι → F)) (u : WordStack F κ ι) (δ : ℝ≥0) :
     jointAgreement (C := C) (δ := δ) (W := u)  ↔ jointProximity (C := C) (u := u) (δ := δ) := by
+  classical
   let e : ℕ := Nat.floor (δ * Fintype.card ι)
   constructor
   · -- Forward direction: jointAgreement → jointProximity
@@ -733,7 +735,8 @@ theorem jointAgreement_iff_jointProximity
     rw [←ENNReal.coe_le_coe] at h_dist
     -- Since v_interleaved ∈ MC.interleavedCode, we have δᵣ(u_interleaved, MC.interleavedCode) ≤ δ
     unfold jointProximity
-    have h_min_dist : δᵣ(u_interleaved, interleavedCodeSet C) ≤ δᵣ(u_interleaved, v_interleaved)
+    have h_min_dist :
+        δᵣ(u_interleaved, interleavedCodeSet C) ≤ δᵣ(u_interleaved, v_interleaved)
       := by
       apply relDistFromCode_le_relDist_to_mem (u := u_interleaved) (C := interleavedCodeSet C)
         (v := v_interleaved) (hv := hv_interleaved_mem)

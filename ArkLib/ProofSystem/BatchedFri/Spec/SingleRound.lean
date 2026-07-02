@@ -1,7 +1,9 @@
 import ArkLib.OracleReduction.Basic
-import ArkLib.ProofSystem.Fri.Domain
 import ArkLib.ProofSystem.Fri.RoundConsistency
 import ArkLib.ProofSystem.Fri.Spec.SingleRound
+import CompPoly.Univariate.Basic
+import CompPoly.Univariate.Linear
+import CompPoly.Univariate.ToPoly.Impl
 
 /-!
 # The Batched FRI protocol
@@ -13,7 +15,7 @@ import ArkLib.ProofSystem.Fri.Spec.SingleRound
 
 namespace BatchedFri
 
-open Polynomial MvPolynomial OracleSpec OracleComp ProtocolSpec Finset Fri CosetDomain NNReal
+open Polynomial MvPolynomial OracleSpec OracleComp ProtocolSpec Finset Fri NNReal
 
 namespace Spec
 
@@ -26,24 +28,27 @@ namespace Spec
    - `d` the degree bound on the final polynomial returned in the final folding round.
    - `m` the number of polynomials batched
 -/
-variable {F : Type} [NonBinaryField F] [Finite F] (D : Subgroup Fˣ)
-variable {n : ℕ} [DIsCyclicC : IsCyclicWithGen D] [DSmooth : SmoothPowerOfTwo n D] (x : Fˣ)
+variable {F : Type} [NonBinaryField F] [Fintype F] [DecidableEq F]
+variable {n : ℕ}
 variable {k : ℕ} (s : Fin (k + 1) → ℕ+) (d : ℕ+)
 variable (m : ℕ)
+variable {ω : ReedSolomon.SmoothCosetFftDomain n F}
 
 
 /-- An oracle for each batched polynomial. -/
 @[reducible]
-def OracleStatement : Fin (m + 1) → Type :=
-  fun _ => evalDomain D x 0 → F
+def OracleStatement (ω : ReedSolomon.SmoothCosetFftDomain n F) : Fin (m + 1) → Type :=
+  fun _ => ω.toFinset → F
 
 /-- The Batched FRI protocol has as witness for each batched polynomial
-    that is supposed to correspond to the putative codewords in the oracle statement. -/
+    that is supposed to correspond to the putative codewords in the oracle statement.
+    We use `CompPoly.CPolynomial`, the computable representation, by way of the
+    iso to Mathlib's `Polynomial`. -/
 @[reducible]
-def Witness (F : Type) [Semiring F] {k : ℕ} (s : Fin (k + 1) → ℕ+) (d : ℕ+) (m : ℕ) :=
-  Fin (m + 1) → F⦃< 2 ^ (∑ i, (s i).1) * d⦄[X]
+def Witness (F : Type) [Zero F] {k : ℕ} (s : Fin (k + 1) → ℕ+) (d : ℕ+) (m : ℕ) :=
+  Fin (m + 1) → CompPoly.CPolynomial.degreeLT (R := F) (2 ^ (∑ i, (s i).1) * d)
 
-instance : ∀ j, OracleInterface (OracleStatement D x m j) :=
+instance : ∀ j, OracleInterface (OracleStatement m ω j) :=
   fun _ => inferInstance
 
 namespace BatchingRound
@@ -51,7 +56,7 @@ namespace BatchingRound
 def inputRelation :
     Set
       (
-        (Unit × (∀ j, OracleStatement D x m j)) ×
+        (Unit × (∀ j, OracleStatement m ω j)) ×
         Witness F s d m
       ) := sorry
 
@@ -61,7 +66,7 @@ def outputRelation :
     Set
       (
         (Fri.Spec.Statement F (0 : Fin (k + 1)) ×
-        (∀ j, Fri.Spec.OracleStatement D x s (0 : Fin (k + 1)) j)) ×
+        (∀ j, Fri.Spec.OracleStatement s ω (0 : Fin (k + 1)) j)) ×
         Fri.Spec.Witness F s d (0 : Fin (k + 2))
       ) := sorry
 
@@ -100,15 +105,15 @@ noncomputable instance : ∀ j, Fintype ((batchSpec F m).Challenge j) := by
   simpa [batchSpec, Challenge] using (inferInstance : Fintype (Fin m → F))
 
 /-- The batching round oracle prover. -/
-noncomputable def batchProver :
+def batchProver :
   OracleProver []ₒ
-    Unit (OracleStatement D x m) (Witness F s d m)
+    Unit (OracleStatement m ω) (Witness F s d m)
     ((Fin m → F) × Fri.Spec.Statement F (0 : Fin (k + 1)))
-      (OracleStatement D x m) (Fri.Spec.Witness F s d (0 : Fin (k + 2)))
+      (OracleStatement m ω) (Fri.Spec.Witness F s d (0 : Fin (k + 2)))
     (batchSpec F m) where
   PrvState
-  | 0 => (∀j, OracleStatement D x m j) × Witness F s d m
-  | 1 => (Fin m → F) × (∀j, OracleStatement D x m j) × Fri.Spec.Witness F s d (0 : Fin (k + 2))
+  | 0 => (∀j, OracleStatement m ω j) × Witness F s d m
+  | 1 => (Fin m → F) × (∀j, OracleStatement m ω j) × Fri.Spec.Witness F s d (0 : Fin (k + 2))
 
   input := fun i => ⟨i.1.2, i.2⟩
 
@@ -118,16 +123,26 @@ noncomputable def batchProver :
   receiveChallenge
   | ⟨0, _⟩ => fun ⟨os, ps⟩ => pure <|
     fun (cs : Fin m → F) =>
+      let q : CompPoly.CPolynomial F :=
+        (ps 0).1 + ∑ i, CompPoly.CPolynomial.C (cs i) * (ps i.succ).1
       ⟨cs, os,
         ⟨
-          ps 0 + ∑ i, Polynomial.C (cs i) * (ps i.succ).1,
+          q,
           by
             unfold Fri.Spec.Witness
             simp only [Fin.coe_ofNat_eq_mod, Nat.zero_mod]
+            rw [CompPoly.CPolynomial.degreeLT_toPoly]
+            change (((ps 0).1 + ∑ i, CompPoly.CPolynomial.C (cs i) * (ps i.succ).1)
+              : CompPoly.CPolynomial F).toPoly ∈ _
+            rw [CompPoly.CPolynomial.toPoly_add, CompPoly.CPolynomial.toPoly_sum]
+            simp only [CompPoly.CPolynomial.toPoly_mul, CompPoly.CPolynomial.C_toPoly]
+            set q : F[X] :=
+              (ps 0).1.toPoly + ∑ i, Polynomial.C (cs i) * (ps i.succ).1.toPoly with hq
             apply mem_degreeLT.mpr
-            by_cases h : ↑(ps 0) + ∑ i, Polynomial.C (cs i) * ↑(ps i.succ) = 0
+            by_cases h : q = 0
             · rw [h]
-              simp
+              simp only [degree_zero, finRangeTo, List.take_zero, List.toFinset_nil, sum_empty,
+                tsub_zero, Nat.cast_mul, Nat.cast_pow, Nat.cast_ofNat]
               exact compareOfLessAndEq_eq_lt.mp rfl
             · rw [Polynomial.degree_eq_natDegree h]
               norm_cast
@@ -135,35 +150,36 @@ noncomputable def batchProver :
               transitivity
               · exact Polynomial.natDegree_add_le _ _
               · apply Nat.max_le_of_le_of_le
-                · have := mem_degreeLT.mp (ps 0).2
-                  by_cases h₀ : (ps 0).1 = 0
+                · have h_ps0 := mem_degreeLT.mp
+                    ((CompPoly.CPolynomial.degreeLT_toPoly (R := F)).mp (ps 0).2)
+                  by_cases h₀ : (ps 0).1.toPoly = 0
                   · rw [h₀]
                     simp
-                  · have := mem_degreeLT.mp (ps 0).2
-                    erw
+                  · erw
                       [
                         Polynomial.degree_eq_natDegree h₀,
                         WithBot.coe_lt_coe,
                         Nat.cast_id, Nat.cast_id
-                      ] at this
-                    exact Nat.le_pred_of_lt this
+                      ] at h_ps0
+                    exact Nat.le_pred_of_lt h_ps0
                 · apply Polynomial.natDegree_sum_le_of_forall_le
                   intros i _
                   by_cases h : Polynomial.C (cs i) = 0
                   · rw [h]
                     simp
-                  · by_cases h' : (ps i.succ).1 = 0
+                  · by_cases h' : (ps i.succ).1.toPoly = 0
                     · rw [h']
                       simp
                     · rw [Polynomial.natDegree_mul h h', Polynomial.natDegree_C, zero_add]
-                      have := mem_degreeLT.mp (ps i.succ).2
+                      have h_psi := mem_degreeLT.mp
+                        ((CompPoly.CPolynomial.degreeLT_toPoly (R := F)).mp (ps i.succ).2)
                       erw
                         [
                           Polynomial.degree_eq_natDegree h',
                           WithBot.coe_lt_coe,
                           Nat.cast_id, Nat.cast_id
-                        ] at this
-                      exact Nat.le_pred_of_lt this
+                        ] at h_psi
+                      exact Nat.le_pred_of_lt h_psi
         ⟩
       ⟩
 
@@ -171,11 +187,11 @@ noncomputable def batchProver :
     ⟨⟨⟨cs, Fin.elim0⟩, os⟩, p⟩
 
 /-- The batching round oracle verifier. -/
-noncomputable def batchVerifier :
+def batchVerifier :
   OracleVerifier []ₒ
-    Unit (OracleStatement D x m)
+    Unit (OracleStatement m ω)
     ((Fin m → F) × Fri.Spec.Statement F (0 : Fin (k + 1)))
-    (OracleStatement D x m)
+    (OracleStatement m ω)
     (batchSpec F m) where
   verify := fun _ chals => pure ⟨chals ⟨0, by simp⟩, Fin.elim0⟩
   embed :=
@@ -186,15 +202,15 @@ noncomputable def batchVerifier :
   hEq := by simp
 
 /-- The batching round oracle reduction. -/
-noncomputable def batchOracleReduction :
+def batchOracleReduction :
   OracleReduction []ₒ
-    Unit (OracleStatement D x m) (Witness F s d m)
+    Unit (OracleStatement m ω) (Witness F s d m)
     ((Fin m → F) × Fri.Spec.Statement F (0 : Fin (k + 1)))
-    (OracleStatement D x m)
+    (OracleStatement m ω)
     (Fri.Spec.Witness F s d (0 : Fin (k + 2)))
     (batchSpec F m) where
-  prover := batchProver D x s d m
-  verifier := batchVerifier (k := k) D x m
+  prover := batchProver s d m
+  verifier := batchVerifier (k := k) m
 
 end BatchingRound
 

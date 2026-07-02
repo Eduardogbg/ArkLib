@@ -172,7 +172,7 @@ theorem unroll_n_message_reduction_perfectCompleteness
         simpa only [ChallengeIdx, Challenge, add_apply_inr, QueryImpl.liftTarget_apply,
           StateT.run_map, StateT.run_monadLift, monadLift_self, bind_pure_comp, Functor.map_map,
           support_map, Set.fmap_eq_image, toPFunctor_add, ofPFunctor_add, ofPFunctor_toPFunctor,
-          support_liftM, QueryImpl.mapQuery, OracleQuery.input_apply, OracleQuery.cont_apply,
+          QueryImpl.mapQuery, OracleQuery.input_apply, OracleQuery.cont_apply,
           liftM_map] using hq
       )]
   conv_lhs =>
@@ -189,7 +189,7 @@ theorem unroll_n_message_reduction_perfectCompleteness
         simpa only [ChallengeIdx, Challenge, add_apply_inr, QueryImpl.liftTarget_apply,
           StateT.run_map, StateT.run_monadLift, monadLift_self, bind_pure_comp, Functor.map_map,
           support_map, Set.fmap_eq_image, toPFunctor_add, ofPFunctor_add, ofPFunctor_toPFunctor,
-          support_liftM, QueryImpl.mapQuery, OracleQuery.input_apply, OracleQuery.cont_apply,
+          QueryImpl.mapQuery, OracleQuery.input_apply, OracleQuery.cont_apply,
           liftM_map] using hq
       )]
   simp only [liftM_bind]
@@ -249,24 +249,29 @@ theorem unroll_n_message_reduction_perfectCompleteness
         · intro h pStmtOut pOStmtOut vStmtOut vOstmtOut witOut tr h_vOut
             lastPrvState h_mem_prvRun h_pOut
           have h_res := h tr pStmtOut pOStmtOut witOut vStmtOut vOstmtOut (by
-            use tr, lastPrvState
-            constructor
-            · exact h_mem_prvRun
-            · use pStmtOut, pOStmtOut, witOut
-              refine ⟨?_, ?_⟩
-              · exact h_pOut
-              · use vStmtOut, vOstmtOut
-                constructor
-                · exact h_vOut
-                · simp only [OptionT.support_OptionT_pure_run, Set.mem_singleton_iff]
+            erw [OptionT.mem_support_OptionT_bind_run_some_iff]
+            refine ⟨(tr, lastPrvState), h_mem_prvRun, ?_⟩
+            erw [OptionT.mem_support_OptionT_bind_run_some_iff]
+            refine ⟨((pStmtOut, pOStmtOut), witOut), h_pOut, ?_⟩
+            erw [OptionT.mem_support_OptionT_bind_run_some_iff]
+            refine ⟨(vStmtOut, vOstmtOut), ?_, ?_⟩
+            · simp only [OptionT.mem_support_simulateQ_liftQuery_iff, liftM_OptionT_eq]
+              exact h_vOut
+            · simp only [Function.comp_apply, OptionT.support_OptionT_pure_run,
+                Set.mem_singleton_iff]
           )
           exact h_res
         · intro h tr pStmtOut pOStmtOut witOut vStmtOut vOstmtOut h_exists_tr_lastPrvState
-          rcases h_exists_tr_lastPrvState with
-            ⟨a, b, h_prv, a_1, b_1, b_2, h_out, a_2, b_ver, h_ver, h_pure⟩
-          simp only [OptionT.support_OptionT_pure_run, Set.mem_singleton_iff, Option.some.injEq,
-            Prod.mk.injEq] at h_pure
-          rcases h_pure with ⟨⟨rfl, ⟨rfl, rfl⟩, rfl⟩, rfl, rfl⟩
+          erw [OptionT.mem_support_OptionT_bind_run_some_iff] at h_exists_tr_lastPrvState
+          obtain ⟨⟨trx, b⟩, h_prv, h_exists_tr_lastPrvState⟩ := h_exists_tr_lastPrvState
+          erw [OptionT.mem_support_OptionT_bind_run_some_iff] at h_exists_tr_lastPrvState
+          obtain ⟨⟨⟨px, py⟩, pw⟩, h_out, h_exists_tr_lastPrvState⟩ := h_exists_tr_lastPrvState
+          erw [OptionT.mem_support_OptionT_bind_run_some_iff] at h_exists_tr_lastPrvState
+          obtain ⟨⟨vx, vy⟩, h_ver, h_pure⟩ := h_exists_tr_lastPrvState
+          simp only [Function.comp_apply, OptionT.support_OptionT_pure_run, Set.mem_singleton_iff,
+            Option.some.injEq, Prod.mk.injEq] at h_pure
+          obtain ⟨⟨rfl, ⟨rfl, rfl⟩, rfl⟩, rfl, rfl⟩ := h_pure
+          simp only [OptionT.mem_support_simulateQ_liftQuery_iff, liftM_OptionT_eq] at h_ver
           exact
             SetRel.mem_inv.mp
               (h pStmtOut pOStmtOut vStmtOut vOstmtOut (witOut, vStmtOut, vOstmtOut).1 tr h_ver b
@@ -276,43 +281,53 @@ theorem unroll_n_message_reduction_perfectCompleteness
           · intro hLeft pStmtOut pOStmtOut vStmtOut vOStmtOut witOut
               tr h_ver lastPrvState h_mem_prvRun h_pOut
             apply hLeft tr pStmtOut pOStmtOut witOut vStmtOut vOStmtOut
-            use tr, lastPrvState
-            refine ⟨h_mem_prvRun, ?_⟩
-            use pStmtOut, pOStmtOut, witOut
-            refine ⟨h_pOut, ?_⟩
-            use vStmtOut, vOStmtOut
-            refine ⟨?_, rfl⟩
-            dsimp only [OptionT.run] at h_ver
-            simp only [OptionT.mem_support_simulateQ_liftQuery_iff, liftM_OptionT_eq]
-            exact h_ver
+            erw [OptionT.mem_support_OptionT_bind_run_some_iff]
+            refine ⟨(tr, lastPrvState), h_mem_prvRun, ?_⟩
+            erw [OptionT.mem_support_OptionT_bind_run_some_iff]
+            refine ⟨((pStmtOut, pOStmtOut), witOut), h_pOut, ?_⟩
+            erw [OptionT.mem_support_OptionT_bind_run_some_iff]
+            refine ⟨(vStmtOut, vOStmtOut), ?_, ?_⟩
+            · simp only [OptionT.mem_support_simulateQ_liftQuery_iff, liftM_OptionT_eq]
+              exact h_ver
+            · simp only [Function.comp_apply, OptionT.support_OptionT_pure_run,
+                Set.mem_singleton_iff]
           · intro hRight tr pStmtOut pOStmtOut pWitOut vStmtOut vOStmtOut h_exists_tr_lastPrvState
-            rcases h_exists_tr_lastPrvState with
-              ⟨a, b, h_prv, a_1, b_1, b_2, h_out, a_2, b_ver, h_ver, h_pure⟩
-            simp only [OptionT.support_OptionT_pure_run, Set.mem_singleton_iff, Option.some.injEq,
-              Prod.mk.injEq] at h_pure
-            rcases h_pure with ⟨⟨rfl, ⟨rfl, rfl⟩, rfl⟩, rfl, rfl⟩
+            erw [OptionT.mem_support_OptionT_bind_run_some_iff] at h_exists_tr_lastPrvState
+            obtain ⟨⟨trx, b⟩, h_prv, h_exists_tr_lastPrvState⟩ := h_exists_tr_lastPrvState
+            erw [OptionT.mem_support_OptionT_bind_run_some_iff] at h_exists_tr_lastPrvState
+            obtain ⟨⟨⟨px, py⟩, pw⟩, h_out, h_exists_tr_lastPrvState⟩ := h_exists_tr_lastPrvState
+            erw [OptionT.mem_support_OptionT_bind_run_some_iff] at h_exists_tr_lastPrvState
+            obtain ⟨⟨vx, vy⟩, h_ver, h_pure⟩ := h_exists_tr_lastPrvState
+            simp only [Function.comp_apply, OptionT.support_OptionT_pure_run, Set.mem_singleton_iff,
+              Option.some.injEq, Prod.mk.injEq] at h_pure
+            obtain ⟨⟨rfl, ⟨rfl, rfl⟩, rfl⟩, rfl, rfl⟩ := h_pure
             exact (hRight pStmtOut pOStmtOut vStmtOut vOStmtOut pWitOut tr h_ver b h_prv h_out)
         · constructor
           · intro hLeft pStmtOut pOstmtOut vStmtOut vOstmtOut pWitOut
               tr h_vOut lastPrvState h_mem_prvRun h_pOut
             have h_res := hLeft tr pStmtOut pOstmtOut pWitOut vStmtOut vOstmtOut (by
-              use tr, lastPrvState
-              refine ⟨?_, ?_⟩
-              · exact h_mem_prvRun
-              · use pStmtOut, pOstmtOut, pWitOut
-                refine ⟨?_, ?_⟩
-                · exact h_pOut
-                · use vStmtOut, vOstmtOut
-                  refine ⟨?_, rfl⟩
-                  · exact h_vOut
+              erw [OptionT.mem_support_OptionT_bind_run_some_iff]
+              refine ⟨(tr, lastPrvState), h_mem_prvRun, ?_⟩
+              erw [OptionT.mem_support_OptionT_bind_run_some_iff]
+              refine ⟨((pStmtOut, pOstmtOut), pWitOut), h_pOut, ?_⟩
+              erw [OptionT.mem_support_OptionT_bind_run_some_iff]
+              refine ⟨(vStmtOut, vOstmtOut), ?_, ?_⟩
+              · simp only [OptionT.mem_support_simulateQ_liftQuery_iff, liftM_OptionT_eq]
+                exact h_vOut
+              · simp only [Function.comp_apply, OptionT.support_OptionT_pure_run,
+                  Set.mem_singleton_iff]
             )
             exact h_res
           · intro hRight tr pStmtOut pOstmtOut pWitOut vStmtOut vOstmtOut h_exists_tr_lastPrvState
-            rcases h_exists_tr_lastPrvState with
-              ⟨a, b, h_prv, a_1, b_1, b_2, h_out, a_2, b_ver, h_ver, h_pure⟩
-            simp only [OptionT.support_OptionT_pure_run, Set.mem_singleton_iff, Option.some.injEq,
-              Prod.mk.injEq] at h_pure
-            rcases h_pure with ⟨⟨rfl, ⟨rfl, rfl⟩, rfl⟩, rfl, rfl⟩
+            erw [OptionT.mem_support_OptionT_bind_run_some_iff] at h_exists_tr_lastPrvState
+            obtain ⟨⟨trx, b⟩, h_prv, h_exists_tr_lastPrvState⟩ := h_exists_tr_lastPrvState
+            erw [OptionT.mem_support_OptionT_bind_run_some_iff] at h_exists_tr_lastPrvState
+            obtain ⟨⟨⟨px, py⟩, pw⟩, h_out, h_exists_tr_lastPrvState⟩ := h_exists_tr_lastPrvState
+            erw [OptionT.mem_support_OptionT_bind_run_some_iff] at h_exists_tr_lastPrvState
+            obtain ⟨⟨vx, vy⟩, h_ver, h_pure⟩ := h_exists_tr_lastPrvState
+            simp only [Function.comp_apply, OptionT.support_OptionT_pure_run, Set.mem_singleton_iff,
+              Option.some.injEq, Prod.mk.injEq] at h_pure
+            obtain ⟨⟨rfl, ⟨rfl, rfl⟩, rfl⟩, rfl, rfl⟩ := h_pure
             exact (hRight pStmtOut pOstmtOut vStmtOut vOstmtOut pWitOut tr h_ver b h_prv h_out)
 
 
@@ -371,6 +386,7 @@ theorem unroll_0_message_reduction_perfectCompleteness
   simp only [Fin.induction_zero]
   dsimp only [ChallengeIdx, Challenge, Fin.isValue, Fin.reduceLast, liftComp_eq_liftM]
   simp only [liftM_pure, bind_pure_comp, pure_bind, Prod.mk.eta]
+  rfl
 
 end ZeroMessageProtocol
 
@@ -443,6 +459,7 @@ theorem unroll_1_message_reduction_perfectCompleteness_P_to_V
   congr!
   rename_i _ prvState1 prvOut
   all_goals
+    congr 2
     funext i
     fin_cases i <;> rfl
 
@@ -510,9 +527,9 @@ theorem unroll_1_message_reduction_perfectCompleteness_V_to_P
     bind_map_left]
   congr!
   all_goals
-  · funext i
-    fin_cases i
-    · rfl
+    congr 2
+    funext i
+    fin_cases i <;> rfl
 
 end OneMessageProtocol
 
@@ -590,10 +607,9 @@ theorem unroll_2_message_reduction_perfectCompleteness
     Prod.mk.eta, bind_assoc]
   congr!
   all_goals
-  · funext i
-    fin_cases i
-    · rfl
-    · rfl
+    congr 2
+    funext i
+    fin_cases i <;> rfl
 
 end TwoMessageProtocol
 
@@ -1095,8 +1111,7 @@ theorem probOutput_eq_PMF_apply
     (h : evalDist oa = OptionT.lift pmf) :
     Pr[= x | oa] = pmf x := by
   have h' : evalDist oa = liftM pmf := by
-    exact (show evalDist oa = liftM pmf from by
-      simpa [OptionT.liftM_def] using h)
+    rw [← OptionT.liftM_def] at h; exact h
   exact (evalDist_eq_liftM_iff (mx := oa) (p := pmf)).1 h' x
 
 open Classical in
@@ -1134,7 +1149,8 @@ theorem probOutput_uniformOfFintype_eq_Pr
     (x : L) :
     Pr[= x | $ᵗ L] = Pr_{ let y ← $ᵖ L }[y = x] := by
   refine probOutput_uniform_eq_Pr ($ᵗ L) x ?_
-  simpa [OptionT.liftM_def] using (evalDist_uniformSample (α := L))
+  rw [← OptionT.liftM_def]
+  exact evalDist_uniformSample (α := L)
 
 open Classical in
 /-- **Convert sum of uniform probabilities back to Pr_ notation**

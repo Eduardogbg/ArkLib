@@ -8,10 +8,16 @@ import Mathlib.Algebra.Lie.OfAssociative
 import Mathlib.LinearAlgebra.Matrix.Rank
 import Mathlib.LinearAlgebra.AffineSpace.Pointwise
 import CompPoly.Data.Nat.Bitwise
+import Mathlib.LinearAlgebra.AffineSpace.Combination
+import Mathlib.RingTheory.Henselian
+import Mathlib.InformationTheory.Hamming
+
+/-! # Coding-Theory Preliminaries -/
 
 section TensorCombination
 variable {F : Type*} [CommRing F] [Fintype F] [DecidableEq F]
-variable {A : Type*} [AddCommMonoid A] [Module F A]
+         {A : Type*} [AddCommMonoid A] [Module F A]
+
 /--
 The tensor product weight `⊗_{i=0}^{ϑ-1}(1 - rᵢ, rᵢ)` for a specific index `i` given randomness `r`.
 Corresponds to `eq(i, r)` in multilinear polynomial literature.
@@ -102,13 +108,12 @@ noncomputable section
 variable {F : Type*}
          {ι : Type*} [Fintype ι]
          {ι' : Type*} [Fintype ι']
-         {m n : ℕ}
+         {m n k : ℕ}
 
 namespace Matrix
 
 /-- The set of column indices where two matrices differ. -/
-def neqCols [DecidableEq F] (U V : Matrix ι ι' F) : Finset ι' :=
-  {j | ∃ i : ι, V i j ≠ U i j}
+def neqCols [DecidableEq F] (U V : Matrix ι ι' F) : Finset ι' := {j | ∃ i : ι, V i j ≠ U i j}
 
 section
 
@@ -127,9 +132,7 @@ def colSpan : Submodule F (ι → F) :=
   Submodule.span F {Matrix.transpose U i | i : ι'}
 
 /-- The column rank of a matrix (dimension of the column span). -/
-def colRank : ℕ :=
-  Module.finrank F (colSpan U)
-
+def colRank : ℕ := Module.finrank F (colSpan U)
 
 end
 
@@ -137,18 +140,18 @@ section
 
 /-- Extract an n×n submatrix from an m×n matrix by selecting n rows. -/
 def subUpFull (U : Matrix (Fin m) (Fin n) F) (r_reindex : Fin n → Fin m) :
-  Matrix (Fin n) (Fin n) F := Matrix.submatrix U r_reindex id
+    Matrix (Fin n) (Fin n) F := Matrix.submatrix U r_reindex id
 
 /-- Extract an m×m submatrix from an m×n matrix by selecting m columns. -/
 def subLeftFull (U : Matrix (Fin m) (Fin n) F) (c_reindex : Fin m → Fin n) :
-  Matrix (Fin m) (Fin m) F := Matrix.submatrix U id c_reindex
+    Matrix (Fin m) (Fin m) F := Matrix.submatrix U id c_reindex
 
 variable [CommRing F] [Nontrivial F]
          {U : Matrix (Fin m) (Fin n) F}
 
 /-- An m×n matrix has full rank if the submatrix consisting of rows 1 through n has rank n. -/
 lemma rank_eq_if_subUpFull_eq (h : n ≤ m) :
-   (subUpFull U (Fin.castLE h)).rank = n  → U.rank = n  := by
+    (subUpFull U (Fin.castLE h)).rank = n → U.rank = n  := by
    intro h_sub_mat_rank
    apply le_antisymm
    ·  exact Matrix.rank_le_width U
@@ -157,7 +160,7 @@ lemma rank_eq_if_subUpFull_eq (h : n ≤ m) :
 
 /-- cRank and Rank agree for a finite matirx -/
 lemma cRank_rank_conversion :
-  ↑(U.rank) = U.cRank := by
+    ↑(U.rank) = U.cRank := by
   rw[
     Matrix.rank_eq_finrank_span_cols,
     ← Matrix.cRank_toNat_eq_finrank,
@@ -169,7 +172,7 @@ lemma cRank_rank_conversion :
 
 /-- An m×n matrix has full rank if the submatrix consisting of columns 1 through m has rank m. -/
 lemma full_row_rank_via_rank_subLeftFull (h : m ≤ n) :
-   (subLeftFull U (Fin.castLE h)).rank = m → U.rank = m := by
+    (subLeftFull U (Fin.castLE h)).rank = m → U.rank = m := by
    intro h_sub_mat_rank
    rw[
     Matrix.rank_eq_finrank_span_cols,
@@ -186,7 +189,7 @@ lemma full_row_rank_via_rank_subLeftFull (h : m ≤ n) :
 
 /-- A square matrix over an integral domain has full rank if its determinant is nonzero. -/
 lemma rank_eq_if_det_ne_zero {U : Matrix (Fin n) (Fin n) F} [IsDomain F] :
-  Matrix.det U ≠ 0 → U.rank = n  := by
+    Matrix.det U ≠ 0 → U.rank = n  := by
     intro h_det
     have h_ind : (LinearIndependent F U.col) := Matrix.linearIndependent_cols_of_det_ne_zero h_det
     rw[
@@ -194,7 +197,6 @@ lemma rank_eq_if_det_ne_zero {U : Matrix (Fin n) (Fin n) F} [IsDomain F] :
       finrank_span_eq_card h_ind,
       Fintype.card_fin
     ]
-
 
 end
 
@@ -205,7 +207,7 @@ variable [Field F]
 
 /-- A square matrix has full rank iff the determinant is nonzero. -/
 lemma rank_eq_iff_det_ne_zero {U : Matrix (Fin n) (Fin n) F} :
-U.rank = n ↔ U.det ≠ 0 := by
+    U.rank = n ↔ U.det ≠ 0 := by
   rw[
     ← isUnit_iff_ne_zero,
     ← Matrix.isUnit_iff_isUnit_det,
@@ -237,6 +239,26 @@ lemma rank_eq_min_row_col_rank : U.rank = min (rowRank U) (colRank U) := by
 end
 
 end Matrix
+
+namespace LinearCombination
+
+/-- A nonzero linear combination of linearly independent vectors is nonzero. -/
+theorem linearCombination_ne_zero
+    {F : Type*} [Field F] {ℓ : Type*} [Fintype ℓ]
+    {M : Type*} [AddCommMonoid M] [Module F M]
+    {P : ℓ → M} (hP : LinearIndependent F P)
+    {v : ℓ → F} (hv : v ≠ 0) :
+    ∑ j : ℓ, v j • P j ≠ 0 := by
+  have := @Fintype.linearIndependent_iff (ℓ) F M
+  contrapose! hv
+  contrapose! this
+  refine ⟨?_,? _, ?_, ?_⟩
+  · all_goals try infer_instance
+  · exact Module.addCommMonoidToAddCommGroup F
+  · exact inferInstance
+  · refine ⟨P, inferInstance, Or.inl ⟨hP, v, hv, Function.ne_iff.mp this⟩⟩
+
+end LinearCombination
 
 end
 
@@ -375,13 +397,13 @@ Let `u := {u₀, ..., u_{k-1}}` be a collection of vectors with coefficients in 
 The polynomial curve of degree `k-1` generated by `u` is the set of linear
 combinations of the form `{∑ i ∈ k, r ^ i • u_i | r ∈ F}`. -/
 @[reducible]
-def polynomialCurve {k : ℕ} (u : Fin k → ι → A) : Set (ι → A)
-  := {v | ∃ r : F, v = polynomialCurveEval u r}
+def polynomialCurve {k : ℕ} (u : Fin k → ι → A) : Set (ι → A) :=
+  {v | ∃ r : F, v = polynomialCurveEval u r}
 
 /-- A polynomial curve over a finite field, as a `Finset`. Requires `DecidableEq ι` and
   `DecidableEq F` to be able to construct the `Finset`. -/
 def polynomialCurveFinite
-  {k : ℕ} (u : Fin k → ι → A) : Finset (ι → A) :=
+    {k : ℕ} (u : Fin k → ι → A) : Finset (ι → A) :=
   {v | ∃ r : F, v = polynomialCurveEval u r}
 
 /-- A polynomial curve over a nonempty finite field contains at least one point. -/
@@ -432,7 +454,7 @@ variable {α : Type*} [DecidableEq α] {s : Finset α}
 /-- The diagonal of `s × s` has the same cardinality as `s`. -/
 @[simp]
 theorem card_filter_prod_self_eq :
-  #({x ∈ s ×ˢ s | x.1 = x.2}) = #s := by
+    #({x ∈ s ×ˢ s | x.1 = x.2}) = #s := by
   rw [Finset.card_eq_of_equiv]
   exact
     { toFun := fun ⟨⟨x, y⟩, hxy⟩ ↦
@@ -459,7 +481,7 @@ variable [Fintype α]
 /-- The number of elements different from a fixed element `e` is one less than the total. -/
 @[simp]
 theorem card_univ_filter_eq {e : α} :
-  #{x : α | x ≠ e} = #(Finset.univ (α := α)) - 1 := by
+    #{x : α | x ≠ e} = #(Finset.univ (α := α)) - 1 := by
   rw [
     Finset.filter_congr (q := (· ∉ ({e} : Finset _))) (by simp),
     ←Finset.sdiff_eq_filter, Finset.card_univ_diff
@@ -469,7 +491,7 @@ theorem card_univ_filter_eq {e : α} :
 /-- The diagonal of `s × s` (intersection form) has the same cardinality as `s`. -/
 @[simp]
 theorem card_prod_self_eq :
-  #(((s ×ˢ s : Finset _) ∩ ({x : α × α | x.1 = x.2} : Finset _)) : Finset _) = #s := by
+    #(((s ×ˢ s : Finset _) ∩ ({x : α × α | x.1 = x.2} : Finset _)) : Finset _) = #s := by
   rw [Finset.card_eq_of_equiv]
   exact
     { toFun := fun ⟨⟨x, y⟩, hxy⟩ ↦

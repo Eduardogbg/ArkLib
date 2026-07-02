@@ -115,6 +115,7 @@ lemma polyToOracleFunc_eq_getFirstOracle
     rw [iterated_fold_zero_steps 𝔽q β (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (i := 0)
       (h_destIdx := by simp only [Nat.zero_mod, zero_mul, Fin.coe_ofNat_eq_mod])]
   conv_rhs => simp only [cast_cast, cast_eq]; simp only [←fun_eta_expansion]
+  rfl
 
 /-- Decompose challenge v at position i into (fiberIndex, suffix).
     This is the inverse of `Nat.joinBits` in some sense.

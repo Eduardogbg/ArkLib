@@ -32,8 +32,8 @@ variable {α : Type*}
 The definitional equality we want is that:
 `vprod a = a 0 * (a 1 * (... * (a (n-1) * 1)))`
 -/
-@[to_additive vsum
-"Version of summing over `Fin` vectors with good definitional equalities, using `dfoldl'`.
+@[to_additive vsum /-- Version of summing over `Fin` vectors with good definitional equalities,
+using `dfoldl'`.
 
 The definitional equality we want is that: `vsum a = a 0 + (a 1 + (... + (a (n-1) + 0)))`.
 
@@ -43,7 +43,7 @@ When `x + 0 = x` definitionally in `α`, we have the following definitional equa
 - `vsum !v[a, b] = a + b`
 - `vsum !v[a, b, c] = a + (b + c)`
 - and so on
-"]
+-/]
 def vprod [CommMonoid α] {n : ℕ} (a : Fin n → α) : α :=
   Fin.dfoldr' n (fun _ => α) (fun i acc => a i * acc) 1
 
@@ -132,14 +132,12 @@ theorem embedSum_splitSum {m : ℕ} {n : Fin m → ℕ} (k : Fin (vsum n)) :
   induction m with
   | zero => exact Fin.elim0 k
   | succ m ih =>
-    rw [splitSum_succ]
     induction k using Fin.addCases with
-    | left j =>
-      rw [Fin.dappend_left]
-      simp [embedSum_succ_zero]
+    | left j => rw [splitSum_succ]; erw [Fin.dappend_left]; rfl
     | right j =>
-      rw [Fin.dappend_right]
-      simp [embedSum_succ_succ, ih]
+      rw [splitSum_succ]; erw [Fin.dappend_right]
+      simp only [embedSum_succ_succ, ih]
+      rfl
 
 @[simp]
 theorem splitSum_embedSum {m : ℕ} {n : Fin m → ℕ} (i : Fin m) (j : Fin (n i)) :
@@ -148,13 +146,10 @@ theorem splitSum_embedSum {m : ℕ} {n : Fin m → ℕ} (i : Fin m) (j : Fin (n 
   | zero => exact Fin.elim0 i
   | succ m ih =>
     induction i using Fin.cases with
-    | zero =>
-      simp [embedSum_succ_zero, splitSum_succ, Fin.dappend_left]
+    | zero => rw [embedSum_succ_zero, splitSum_succ]; erw [Fin.dappend_left]
     | succ i =>
-      simp [embedSum_succ_succ, splitSum_succ, Fin.dappend_right]
-      have := ih (n := n ∘ Fin.succ) i j
-      rw [this]
-      simp
+      rw [embedSum_succ_succ, splitSum_succ]; erw [Fin.dappend_right]
+      rw [ih]
 
 @[simp]
 theorem splitSum_embedSum_fst {m : ℕ} {n : Fin m → ℕ} (i : Fin m) (j : Fin (n i)) :
@@ -228,7 +223,7 @@ theorem dflatten_splitSum {m : ℕ} {n : Fin m → ℕ} {motive : (k : Fin (vsum
   induction m with
   | zero => exact Fin.elim0 k
   | succ m ih =>
-    induction k using Fin.addCases with
+induction k using Fin.addCases with
     | left j =>
       simp [dflatten_succ, embedSum_succ_zero]
     | right j =>
@@ -247,7 +242,8 @@ theorem dflatten_embedSum {m : ℕ} {n : Fin m → ℕ} {motive : (k : Fin (vsum
     induction i using induction with
     | zero => simp
     | succ i ih' =>
-      simp
+      simp only [embedSum_succ_succ, dflatten_succ]
+      erw [dappend_right]
       exact ih (motive := fun i => motive (natAdd (n 0) i)) (fun i => v i.succ) i j
 
 /-- Homogeneous flatten: flattens a nested homogeneous vector
@@ -279,9 +275,7 @@ theorem vflatten_eq_vappend_last {m : ℕ} {n : Fin (m + 1) → ℕ}
   induction m with
   | zero => ext i; simp
   | succ m ih =>
-    ext i
-    rw [vflatten_succ, ih, vflatten_succ, vappend_assoc]
-    simp
+    rw [vflatten_succ, ih, vflatten_succ]
     sorry
 
 @[simp]
@@ -534,9 +528,9 @@ def finSigmaFinEquiv' {m : ℕ} {n : Fin m → ℕ} : (i : Fin m) × Fin (n i) �
       conv_rhs => rw [← Fin.sum_congr' n hi, Fin.sum_univ_add, Fin.sum_univ_add, add_assoc]
       have hk {k : Fin i} : Fin.castLE i.isLt.le k =
             Fin.cast hi (Fin.castAdd (m - i - 1) (Fin.castAdd 1 k)) := by
-        simp only [Fin.castLE, Fin.cast, Fin.coe_castAdd]
+        simp only [Fin.castLE, Fin.cast, Fin.val_castAdd]
       simp_rw [hk, Nat.add_lt_add_iff_left, univ_unique, sum_singleton]
-      exact Nat.lt_add_right _ (by simp only [Fin.cast, Fin.coe_castAdd, Fin.coe_natAdd,
+      exact Nat.lt_add_right _ (by simp only [Fin.cast, Fin.val_castAdd, Fin.val_natAdd,
           Fin.val_eq_zero, add_zero, Fin.is_lt])⟩)
     (fun k => ⟨k.divSum, k.modSum⟩)
     (by

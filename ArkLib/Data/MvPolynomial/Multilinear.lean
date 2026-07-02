@@ -44,11 +44,11 @@ theorem singleEqPolynomial_symm (r : R) (s : R) :
 
 @[simp]
 theorem singleEqPolynomial_zero (x : MvPolynomial σ R) : singleEqPolynomial (0 : R) x = 1 - x := by
-  unfold singleEqPolynomial ; simp
+  unfold singleEqPolynomial; simp
 
 @[simp]
 theorem singleEqPolynomial_one (x : MvPolynomial σ R) : singleEqPolynomial (1 : R) x = x := by
-  unfold singleEqPolynomial ; simp
+  unfold singleEqPolynomial; simp
 
 -- @[simp]
 theorem singleEqPolynomial_zeroOne (r : Fin 2) (x : MvPolynomial σ R) :
@@ -76,28 +76,38 @@ abbrev eqPolynomial' : R[X (σ ⊕ σ)] :=
 abbrev eqPolynomial (r : σ → R) : R[X σ] :=
   ∏ i : σ, singleEqPolynomial (r i) (X i)
 
+/-- The equality polynomial value `eq̃(r, r') := eval r' (eqPolynomial r)` — the multilinear
+extension of the equality indicator on `{0,1}^σ`. Equals `1` iff `r = r'` on the Boolean cube.
+This is the canonical `eq̃` used in multilinear-extension-based sumcheck protocols (Binius
+ring-switching, Hachi range checks, …). -/
+noncomputable def eqTilde (r r' : σ → R) : R := eval r' (eqPolynomial r)
+
 theorem eqPolynomial_expanded (r : σ → R) :
     eqPolynomial r = ∏ i : σ, ((1 - C (r i)) * (1 - X i) + C (r i) * X i) := rfl
 
 theorem eqPolynomial_symm (x : σ → R) (y : σ → R) :
     MvPolynomial.eval y (eqPolynomial x) = MvPolynomial.eval x (eqPolynomial y) := by
-  simp [eqPolynomial_expanded] ; congr ; funext ; ring_nf
+  simp only [map_prod, map_add, map_mul, map_sub, map_one, eval_C, eval_X]
+  congr
+  funext
+  ring_nf
 
 -- @[simp]
 theorem eqPolynomial_zeroOne (r : σ → Fin 2) : (eqPolynomial r : MvPolynomial σ R) =
     ∏ i : σ, if r i = 0 then 1 - X i else X i := by
-  unfold eqPolynomial ; congr ; funext i ; simp [singleEqPolynomial_zeroOne]
+  unfold eqPolynomial; congr; funext i; simp [singleEqPolynomial_zeroOne]
 
 @[simp]
 theorem eqPolynomial_eval_zeroOne (r x : σ → Fin 2) :
     eval (x : σ → R) (eqPolynomial r) = if x = r then 1 else 0 := by
-  unfold eqPolynomial ; simp
+  unfold eqPolynomial
+  simp only [map_prod, map_add, map_natCast, map_mul, map_sub, map_one, eval_X]
   by_cases h : x = r
-  · simp [h]
+  · subst h
     have (i : Fin 2) : (1 - (i : R)) * (1 - (i : R)) + i * i = 1 := by
       fin_cases i <;> ring_nf <;> simp
     simp [this]
-  · simp [h]
+  · rw [if_neg h]
     have : ∃ i : σ, x i ≠ r i := Function.ne_iff.mp h
     obtain ⟨i, hi⟩ := this
     refine Finset.prod_eq_zero (Finset.mem_univ i) ?_
@@ -121,7 +131,7 @@ def MLE' {n : ℕ} (evals : Fin (2 ^ n) → R) : MvPolynomial (Fin n) R :=
 theorem MLE_expanded (evals : (σ → Fin 2) → R) : MLE evals =
     ∑ x : σ → Fin 2, (∏ i : σ, ((1 - C (x i : R)) * (1 - X i) + C (x i : R) * X i))
       * C (evals x) := by
-  unfold MLE ; congr
+  unfold MLE; congr
 
 @[simp]
 theorem MLE_eval_zeroOne (x : σ → Fin 2) (evals : (σ → Fin 2) → R) :
@@ -157,12 +167,14 @@ theorem singleEqPolynomial_degreeOf (r : R) (i j : σ) :
     _ ≤ max (0 + (if i = j then 1 else 0)) 0 := by
       gcongr
       by_cases h : i = j
-      · simp [h]; exact degreeOf_X_le j _
-      · simp [h]; exact degreeOf_X_of_ne i j h
+      · simpa only [h] using degreeOf_X_le (R := R) j i
+      · simpa only [h] using le_of_eq (degreeOf_X_of_ne (R := R) i j h)
     _ = if i = j then 1 else 0 := by norm_num
 
+omit [DecidableEq σ] in
 theorem eqPolynomial_mem_restrictDegree (r : σ → R) : (eqPolynomial r) ∈ R⦃≤ 1⦄[X σ] := by
-  simp [mem_restrictDegree_iff_degreeOf_le, eqPolynomial]
+  classical
+  rw [mem_restrictDegree_iff_degreeOf_le]
   intro i
   calc
     _ ≤ ∑ j : σ, degreeOf i (singleEqPolynomial (r j) (X j)) := by
@@ -172,12 +184,14 @@ theorem eqPolynomial_mem_restrictDegree (r : σ → R) : (eqPolynomial r) ∈ R�
       exact singleEqPolynomial_degreeOf _ _ _
     _ = 1 := by norm_num
 
+omit [DecidableEq σ] in
 theorem eqPolynomial_degreeOf (r : σ → R) (i : σ) : degreeOf i (eqPolynomial r) ≤ 1 := by
   apply (mem_restrictDegree_iff_degreeOf_le _ _).mp
   exact eqPolynomial_mem_restrictDegree r
 
 theorem MLE_mem_restrictDegree (evals : (σ → Fin 2) → R) : (MLE evals) ∈ R⦃≤ 1⦄[X σ] := by
-  simp [mem_restrictDegree_iff_degreeOf_le, MLE]
+  classical
+  rw [mem_restrictDegree_iff_degreeOf_le]
   intro i
   calc
     _ ≤ (@Finset.univ (σ → Fin 2) _).sup
@@ -202,36 +216,47 @@ end DegreeOf
 
 variable [DecidableEq R] [IsDomain R]
 
+omit [Fintype σ] [DecidableEq σ] [DecidableEq R] in
 theorem is_multilinear_eq_iff_eq_evals_zeroOne (p : MvPolynomial σ R) (q : MvPolynomial σ R)
+    [Finite σ]
     (hp : p ∈ R⦃≤ 1⦄[X σ]) (hq : q ∈ R⦃≤ 1⦄[X σ]) :
     p = q ↔ p.toEvalsZeroOne = q.toEvalsZeroOne := by
+  classical
+  letI := Fintype.ofFinite σ
   constructor <;> intro h
   · simp only [h]
   · unfold toEvalsZeroOne at h
-    simp [mem_restrictDegree_iff_degreeOf_le] at hp hq
+    rw [mem_restrictDegree_iff_degreeOf_le] at hp hq
     let S : σ → Finset R := fun i => {0, 1}
     have hDegree : ∀ i, degreeOf i (p - q) < #(S i) := fun i => by
-      simp [S]
+      have hSi : #(S i) = 2 := by simp [S]
+      rw [hSi]
       apply Nat.lt_of_le_pred (by decide)
       apply le_trans (degreeOf_sub_le i _ _)
       simp [hp, hq]
     have hEval : ∀ x ∈ piFinset fun i => S i, eval (x : σ → R) (p - q) = 0 := fun x hx => by
       simp only [eval_sub, sub_eq_zero]
-      simp [S] at hx
+      have hx' : ∀ i, x i = 0 ∨ x i = 1 := by
+        simpa [S] using hx
       let y : σ → Fin 2 := fun i => if x i = 0 then 0 else 1
-      have : x = y := by ext i; have := hx i; by_cases h : x i = 0 <;> simp_all [y, h]
+      have : x = y := by
+        ext i
+        have := hx' i
+        by_cases h : x i = 0 <;> simp_all [y]
       rw [this]
       apply funext_iff.mp at h
       exact h y
     suffices p - q = 0 by exact eq_of_sub_eq_zero this
     exact eq_zero_of_degreeOf_lt_card_of_eval_eq_zero S hDegree hEval
 
+omit [DecidableEq R] in
 theorem is_multilinear_iff_eq_evals_zeroOne {p : MvPolynomial σ R} :
     p ∈ R⦃≤ 1⦄[X σ] ↔ MLE p.toEvalsZeroOne = p := by
+  classical
   constructor <;> intro h
   · refine (is_multilinear_eq_iff_eq_evals_zeroOne (MLE p.toEvalsZeroOne) p
       (MLE_mem_restrictDegree p.toEvalsZeroOne) h).mpr ?_
-    unfold toEvalsZeroOne ; simp only [MLE_eval_zeroOne]
+    unfold toEvalsZeroOne; simp only [MLE_eval_zeroOne]
   · rw [←h]
     exact MLE_mem_restrictDegree p.toEvalsZeroOne
 
@@ -239,7 +264,9 @@ theorem is_multilinear_iff_eq_evals_zeroOne {p : MvPolynomial σ R} :
 def MLEEquiv : R⦃≤ 1⦄[X σ] ≃ ((σ → Fin 2) → R) where
   toFun := fun p x => MvPolynomial.eval (x : σ → R) p
   invFun := fun evals => ⟨MLE evals, MLE_mem_restrictDegree evals⟩
-  left_inv := fun ⟨p, hp⟩ => by simp; exact is_multilinear_iff_eq_evals_zeroOne.mp hp
+  left_inv := fun ⟨p, hp⟩ => by
+    simp only [Subtype.mk.injEq]
+    exact is_multilinear_iff_eq_evals_zeroOne.mp hp
   right_inv := fun evals => by simp only [MLE_eval_zeroOne]
 
 def MLEEquivFin {n : ℕ} : R⦃≤ 1⦄[X (Fin n)] ≃ (Fin (2 ^ n) → R) :=

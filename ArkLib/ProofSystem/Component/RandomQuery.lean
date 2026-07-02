@@ -89,7 +89,7 @@ def oracleVerifier : OracleVerifier oSpec
 
   embed := Function.Embedding.inl
 
-  hEq := by simp
+  hEq := by intro i; exact rfl
 
 /--
 Combine the trivial prover and this verifier to form the `RandomQuery` oracle reduction:
@@ -103,8 +103,12 @@ def oracleReduction :
   prover := oracleProver oSpec OStatement
   verifier := oracleVerifier oSpec OStatement
 
+instance : VerifierOnly (pSpec OStatement) where
+  verifier_first' := by simp
+
 variable {σ : Type} {init : ProbComp σ} {impl : QueryImpl oSpec (StateT σ ProbComp)}
 
+set_option linter.unusedSimpArgs false in
 /-- The `RandomQuery` oracle reduction is perfectly complete. -/
 @[simp]
 theorem oracleReduction_completeness :
@@ -113,19 +117,70 @@ theorem oracleReduction_completeness :
   simp only [OracleReduction.perfectCompleteness, oracleReduction, relIn, relOut]
   simp only [Reduction.perfectCompleteness_eq_prob_one]
   intro ⟨stmt, oStmt⟩ wit hOStmt
-  simp [Reduction.run, Prover.run, Verifier.run, Prover.runToRound, Prover.processRound,
-    OracleReduction.toReduction, OracleVerifier.toVerifier, oracleVerifier, oracleProver,
-    Transcript.concat, FullTranscript.challenges]
-  sorry
-  -- constructor
-  -- -- Soon we won't have to reason about failure of `init` here.
-  -- · intro s hs
-  --   simp [StateT.run]
-  --   unfold SimOracle.append
-  --   simp [challengeQueryImpl, liftM, monadLift, MonadLift.monadLift, StateT.lift]
-  --   have := SampleableType.probFailure_selectElem (β := Query OStatement)
-  --   aesop
-  -- · aesop
+  have hEq : oStmt 0 = oStmt 1 := hOStmt
+  simp only [OracleReduction.toReduction, Reduction.run,
+    Prover.run_of_verifier_first, oracleProver, oracleVerifier,
+    OracleVerifier.toVerifier, Verifier.run]
+  simp_rw [show (pure : _ → OptionT (OracleComp _) _) = fun x => (pure (some x) :
+    OracleComp _ _) from rfl]
+  simp only [← OracleComp.liftComp_eq_liftM, OracleComp.liftComp_pure,
+    pure_bind, bind_assoc]
+  erw [simulateQ_bind]
+  erw [simulateQ_bind]
+  simp only [QueryImpl.addLift_def, simulateQ_pure,
+    QueryImpl.simulateQ_add_liftComp_right, QueryImpl.simulateQ_add_liftComp_left,
+    simulateQ_query,
+    ← OracleComp.liftComp_eq_liftM, OracleComp.liftComp_pure,
+    pure_bind, bind_assoc, map_pure, monadLift_pure, monadLift_bind]
+  erw [simulateQ_bind]
+  simp only [QueryImpl.addLift_def, simulateQ_pure,
+    QueryImpl.simulateQ_add_liftComp_right, QueryImpl.simulateQ_add_liftComp_left,
+    simulateQ_query,
+    ← OracleComp.liftComp_eq_liftM, OracleComp.liftComp_pure,
+    pure_bind, bind_assoc, map_pure, monadLift_pure, monadLift_bind,
+    OptionT.run_mk, OptionT.run_pure, OptionT.run_bind, OptionT.run,
+    Option.getM, Option.bind_some, Option.elimM,
+    FullTranscript.challenges, FullTranscript.messages, ChallengeIdx, Challenge,
+    hEq]
+  erw [simulateQ_query]
+  simp only [StmtOut, OStmtOut, WitOut, Fin.isValue, Fin.vcons_of_one, ChallengeIdx,
+    Challenge, ofPFunctor_toPFunctor, QueryImpl.liftTarget_self, MessageIdx, OStmtIn,
+    Message, bind_map_left, StateT.run'_eq, StateT.run_bind, map_bind, OptionT.mk_bind,
+    Set.mem_setOf_eq, probEvent_eq_one_iff, probFailure_bind_eq_zero_iff,
+    OptionT.probFailure_liftM, HasEvalPMF.probFailure_eq_zero, OptionT.support_liftM,
+    Prod.forall, true_and, support_bind, Set.mem_iUnion, OptionT.mem_support_iff,
+    OptionT.run_mk, support_map, Set.mem_image, Prod.exists, exists_and_right,
+    exists_eq_right, exists_prop, forall_exists_index, and_imp, Prod.mk.injEq]
+  constructor <;> intro <;> intro <;> intro <;> intro
+  all_goals try erw [simulateQ_bind]
+  all_goals simp only [MonadLift.monadLift, liftM, monadLift, MonadLiftT.monadLift]
+  all_goals simp only [OracleComp.liftComp_pure, QueryImpl.simulateQ_add_liftComp_left,
+    simulateQ_pure, simulateQ_id', pure_bind, bind_assoc, map_pure, monadLift_pure,
+    OptionT.run_mk, OptionT.run_pure, OptionT.run_bind, OptionT.run,
+    StateT.run'_eq, probFailure_eq_zero, hEq,
+    support_pure, Set.mem_singleton_iff, Prod.eq_iff_fst_eq_snd_eq]
+  all_goals try erw [simulateQ_pure]
+  all_goals try simp_all only [simulateQ_pure, pure_bind, map_pure,
+    OptionT.run_mk, OptionT.run_pure, OptionT.run_bind, OptionT.run,
+    StateT.run'_eq, StateT.run_pure, probFailure_eq_zero,
+    support_pure, support_map, Set.mem_singleton_iff, Set.mem_image,
+    OptionT.probFailure_eq, probOutput_pure, hEq]
+  · rw [show OptionT.mk = id from rfl]
+    simp only [ChallengeIdx, Fin.vcons_of_one, Challenge, Fin.isValue, input_query,
+      cont_query, input_apply, id_eq, zero_add, probOutput_eq_zero_iff, support_map,
+      Set.mem_image, Prod.exists, exists_and_right, exists_eq_right, not_exists]
+    intro
+    erw [simulateQ_pure]
+    simp [support_pure, pure_bind]
+  · intro a b x hx x_1 hx1 x_2 x_3
+    erw [simulateQ_bind]
+    simp only [liftComp_eq_liftM, pure_bind, simulateQ_pure, OptionT.lift,
+      OptionT.run_mk, map_pure]
+    erw [simulateQ_pure]
+    simp only [pure_bind, simulateQ_pure, support_pure, StateT.run, StateT.run',
+      Set.mem_singleton_iff, Prod.mk.injEq]
+    rintro ⟨⟨rfl, rfl⟩, rfl⟩
+    refine ⟨?_, rfl, ?_⟩ <;> congr 1
 
 -- def langIn : Set (Unit × (∀ _ : Fin 2, OStatement)) := setOf fun ⟨(), oracles⟩ =>
 --   oracles 0 = oracles 1
@@ -143,15 +198,31 @@ def stateFunction [Inhabited OStatement] : (oracleVerifier oSpec OStatement).Sta
   toFun_empty := fun stmt => by simp
   toFun_next | 0 => fun hDir ⟨stmt, oStmt⟩ tr h => by simp_all
   toFun_full := fun ⟨stmt, oStmt⟩ tr h => by
-    sorry
-    -- simp_all only [Fin.reduceLast, Fin.isValue, OStmtIn, Nat.reduceAdd, Fin.coe_ofNat_eq_mod,
-    --   Nat.reduceMod, Fin.zero_eta, StmtOut, OStmtOut, StmtIn, StateT.run'_eq, Set.language, WitOut,
-    --   relOut, Set.mem_image, Set.mem_setOf_eq, Prod.exists, exists_const, exists_eq_right,
-    --   probEvent_eq_zero_iff, support_bind, support_map, Set.mem_iUnion, exists_and_right,
-    --   exists_prop, forall_exists_index, and_imp, Prod.forall]
-    -- intro a b s hs s' hSupp
-    -- simp [OracleVerifier.toVerifier, Verifier.run, oracleVerifier] at hSupp
-    -- simp [hSupp.1, h]
+    -- The verifier deterministically returns `(tr 0, oStmt)`. The output is in `relOut.language`
+    -- iff `answer (oStmt 0) (tr 0) = answer (oStmt 1) (tr 0)`, but the hypothesis `h` says exactly
+    -- the opposite for the last-round state function `toFun 1`.
+    rw [probEvent_eq_zero_iff]
+    intro x hx
+    rw [OptionT.mem_support_iff] at hx
+    -- Unfold the verifier-run inside `hx`.
+    simp only [Verifier.run, OracleVerifier.toVerifier, oracleVerifier,
+      Function.Embedding.inl_apply, OptionT.run_mk, support_bind, Set.mem_iUnion] at hx
+    obtain ⟨s, _, hx⟩ := hx
+    -- The inner `simulateQ (simOracle2 ...) (pure ...)` reduces via `simulateQ_pure` and
+    -- absorbs the outer `pure (stmtOut, ...)`.
+    erw [simulateQ_pure] at hx
+    -- Now hx : some x ∈ support ((pure (some (tr.challenges ⟨0,_⟩, fun i => oStmt i))).run' s)
+    -- `pure` in `StateT σ ProbComp` unfolds via `StateT.run_pure`, then `map_pure` + `support_pure`.
+    simp only [StateT.run'_eq, StateT.run_pure, map_pure, support_pure,
+      Set.mem_singleton_iff, Option.some.injEq] at hx
+    subst hx
+    -- Now goal: `(tr.challenges ⟨0, _⟩, oStmt) ∉ relOut.language`. The state function `h` at
+    -- last round denies `answer (oStmt 0) (tr 0) = answer (oStmt 1) (tr 0)`, which is what
+    -- being in `relOut.language` would require (witness is `Unit`).
+    simp only [Set.not_mem_language_iff]
+    intro wit hMem
+    simp only [relOut, Set.mem_setOf_eq] at hMem
+    exact h hMem
 
 /-- The round-by-round extractor is trivial since the output witness is `Unit`. -/
 def rbrExtractor : Extractor.RoundByRound oSpec
@@ -171,11 +242,26 @@ def knowledgeStateFunction :
     answer (oracles 0) q = answer (oracles 1) q
   toFun_empty := fun stmt => by simp
   toFun_next | 0 => fun hDir ⟨stmt, oStmt⟩ tr h => by simp_all
-  toFun_full := fun ⟨stmt, oStmt⟩ tr _ => by
-    sorry
-    -- simp_all [oracleVerifier, OracleVerifier.toVerifier, Verifier.run]
+  toFun_full := fun ⟨stmt, oStmt⟩ tr witOut => by
+    -- The verifier deterministically returns `(tr 0, oStmt)`. If the output is in `relOut` for some
+    -- witness `witOut : Unit`, then `answer (oStmt 0) (tr 0) = answer (oStmt 1) (tr 0)`, exactly
+    -- what `toFun 1 _ tr ()` asserts.
+    intro h
+    rw [gt_iff_lt, probEvent_pos_iff] at h
+    obtain ⟨x, hx, hRel⟩ := h
+    rw [OptionT.mem_support_iff] at hx
+    simp only [Verifier.run, OracleVerifier.toVerifier, oracleVerifier,
+      Function.Embedding.inl_apply, OptionT.run_mk, support_bind, Set.mem_iUnion] at hx
+    obtain ⟨s, _, hx⟩ := hx
+    erw [simulateQ_pure] at hx
+    simp only [StateT.run'_eq, StateT.run_pure, map_pure, support_pure,
+      Set.mem_singleton_iff, Option.some.injEq] at hx
+    subst hx
+    -- Now `hRel : ((tr.challenges ⟨0, _⟩, oStmt), witOut) ∈ relOut`.
+    simp only [relOut, Set.mem_setOf_eq] at hRel
+    exact hRel
 
-variable [Fintype (Query OStatement)] [∀ q, DecidableEq (O.Response q)]
+variable [Fintype (Query OStatement)] [∀ q, DecidableEq (O.toOC.spec q)]
 
 instance : Fintype ((pSpec OStatement).Challenge ⟨0, by simp⟩) := by
   dsimp [pSpec, ProtocolSpec.Challenge]; infer_instance
@@ -203,7 +289,21 @@ theorem oracleVerifier_rbrKnowledgeSoundness [Nonempty (Query OStatement)]
   subst i
   dsimp at oracles
   simp [Prover.runWithLogToRound, Prover.runToRound, rbrExtractor, knowledgeStateFunction]
-  sorry
+  -- After simp, the goal bounds the probability over a uniformly sampled challenge that
+  -- `¬oracles 0 = oracles 1 ∧ answer (oracles 0) chal = answer (oracles 1) chal`. Case split.
+  rcases Classical.em (oracles 0 = oracles 1) with hOracles | hOracles
+  · simp [hOracles]
+  · -- Eliminate `¬ oracles 0 = oracles 1` from the conjunction (it always holds).
+    simp only [hOracles, not_false_eq_true, true_and]
+    -- BLOCKED: Schwartz–Zippel surface. The intended bound is via the marginal-uniform
+    -- distribution of `challenge`, then `probEvent_uniformSample` + `distanceLE`. Mechanizing this
+    -- requires deep manipulation through `simulateQ (impl + challengeQueryImpl-lift)` of a do-block
+    -- (nested OracleComp + StateT + WriterT loggingOracle), which does not reduce under
+    -- standard simp lemmas due to multiple monad-transformer layers and `Fin (↑(Fin.last 1))`
+    -- type-class synthesis failures on `change` rewrites. See the prior agent's commented-out
+    -- `probEvent_bind_eq_tsum` + `ENNReal.tsum_mul_right` + `OracleComp.tsum_probOutput_le_one`
+    -- calc-block below for the intended proof skeleton.
+    sorry
   -- unfold SimOracle.append
   -- simp [challengeQueryImpl]
   -- classical

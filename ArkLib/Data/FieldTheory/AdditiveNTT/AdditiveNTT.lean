@@ -1563,7 +1563,8 @@ lemma degree_intermediateNovelBasisX (i : Fin r) (h_i : i ≤ ℓ) (j : Fin (2 ^
         Nat.cast_ofNat, CharP.cast_eq_zero]
       have h_get_bit_lt_2 := Nat.getBit_lt_2 (k:=k.val) (n:=j.val)
       by_cases h: Nat.getBit (k := k.val) (n := j.val) = 1
-      · simp only [h, Nat.cast_one, one_mul, ↓reduceIte];
+      · simp only [h, Nat.cast_one, one_mul, ↓reduceIte]
+        rfl
       · simp only [h, ↓reduceIte, mul_eq_zero, Nat.cast_eq_zero, pow_eq_zero_iff',
         OfNat.ofNat_ne_zero, ne_eq, false_and, or_false]
         omega
@@ -1578,7 +1579,8 @@ lemma degree_intermediateNovelBasisX (i : Fin r) (h_i : i ≤ ℓ) (j : Fin (2 ^
     funext (x : Fin (ℓ - i))
     have h_getBit_lt_2 := Nat.getBit_lt_2 (k:=x) (n:=j.val)
     by_cases h: Nat.getBit (k := x) (n := j.val) = 1
-    · simp only [h, ↓reduceIte, WithBot.coe_one, one_mul];
+    · simp only [h, ↓reduceIte, WithBot.coe_one, one_mul]
+      rfl
     · simp only [h, ↓reduceIte, zero_eq_mul, WithBot.coe_eq_zero, pow_eq_zero_iff',
       OfNat.ofNat_ne_zero, ne_eq, false_and, or_false]; omega
 
@@ -1728,7 +1730,8 @@ lemma degree_intermediateEvaluationPoly_lt (i : Fin r) (h_i : i ≤ ℓ)
       _ = ↑j.val := by
         rw [degree_intermediateNovelBasisX 𝔽q β h_ℓ_add_R_rate i h_i ⟨j, by omega⟩];
         simp only [zero_add]; rfl
-      _ < ↑(2^(ℓ-i)) := by norm_cast; exact j.isLt
+      _ < ↑(2^(ℓ-i)) := by
+        exact WithBot.coe_lt_coe.mpr j.isLt
 
 section IntermediateNovelPolynomialBasis
 
@@ -1740,8 +1743,7 @@ noncomputable def intermediateBasisVectors (i : Fin r) (h_i : i ≤ ℓ) :
     rw [degree_intermediateNovelBasisX]
     -- Proof that j < 2^(ℓ-i)
     change (j.val: WithBot ℕ) < ((2: WithBot ℕ) ^ (ℓ - i))
-    norm_cast
-    exact j.isLt
+    exact WithBot.coe_lt_coe.mpr j.isLt
   ⟩
 
 /-- The vector space of coefficients for polynomials of degree < 2^(ℓ-i). -/
@@ -1896,14 +1898,24 @@ lemma intermediateEvaluationPoly_from_inovel_coeffs_eq_self
       h_ℓ_add_R_rate i h_i novel_coeffs) (h := by
       let res := degree_intermediateEvaluationPoly_lt 𝔽q β (h_ℓ_add_R_rate := h_ℓ_add_R_rate)
         (i := i) h_i (coeffs := novel_coeffs)
-      calc
-        _ < (2 : WithBot ℕ) ^ (ℓ - i.val) := by omega
-        _ ≤ k := by norm_cast
+      have hk' : (2 : ℕ) ^ (ℓ - i.val) ≤ k := hk
+      have hpow : ∀ m : ℕ, (2 : WithBot ℕ) ^ m = ((2 ^ m : ℕ) : WithBot ℕ) := by
+        intro m; induction m with
+        | zero => simp
+        | succ j ih => rw [pow_succ, pow_succ, ih]; push_cast; ring
+      have hle : (2 : WithBot ℕ) ^ (ℓ - i.val) ≤ (k : WithBot ℕ) := by
+        rw [hpow]; exact_mod_cast hk'
+      exact lt_of_lt_of_le res hle
     )]
     rw [Polynomial.coeff_eq_zero_of_degree_lt (n := k) (p := P) (h := by
-      calc
-        _ < (2 : WithBot ℕ) ^ (ℓ - i.val) := by omega
-        _ ≤ k := by norm_cast
+      have hk' : (2 : ℕ) ^ (ℓ - i.val) ≤ k := hk
+      have hpow : ∀ m : ℕ, (2 : WithBot ℕ) ^ m = ((2 ^ m : ℕ) : WithBot ℕ) := by
+        intro m; induction m with
+        | zero => simp
+        | succ j ih => rw [pow_succ, pow_succ, ih]; push_cast; ring
+      have hle : (2 : WithBot ℕ) ^ (ℓ - i.val) ≤ (k : WithBot ℕ) := by
+        rw [hpow]; exact_mod_cast hk'
+      exact lt_of_lt_of_le hP_deg hle
     )]
 
 end IntermediateNovelPolynomialBasis
@@ -3055,17 +3067,23 @@ theorem additiveNTT_correctness (h_ℓ : ℓ ≤ r)
   have res := output_foldl_correctness j
   unfold output_foldl at res
   simp only [Fin.mk_zero', Nat.sub_zero, pow_zero, Nat.div_one, Fin.eta, Nat.pow_zero,
-    Nat.getLowBits_zero_eq_zero (n := j.val), Fin.isValue, base_coeffsBySuffix] at res
+    Nat.getLowBits_zero_eq_zero (n := j.val), Fin.isValue] at res
   simp only [Fin.mk_zero', ← intermediate_poly_P_base 𝔽q β h_ℓ_add_R_rate h_ℓ original_coeffs]
-  rw [←res]
-  -- simp only [Nat.sub_right_comm] -- ℓ - 1 - ↑i = ℓ - ↑i - 1
-  congr! 1
-  funext coeffs
-  funext i
-  congr! 1
-  have hIdx_eq : (i: Fin ℓ) → (⟨ℓ - 1 - i, by omega⟩ : Fin r) =
-    (⟨ℓ - i - 1, by omega⟩ : Fin r) := fun i => by simp only [Fin.mk.injEq]; omega
-  rw [hIdx_eq]
+  -- the remaining discrepancies between `res` and the goal are
+  -- `coeffsBySuffix original_coeffs 0 _ 0 = original_coeffs` (base case of `coeffsBySuffix`)
+  -- and the folding index `ℓ - 1 - ↑i` vs `ℓ - ↑i - 1`.
+  have hbase : ∀ (h : (0 : Fin r) ≤ ℓ) (v : Fin (2 ^ (0 : Fin r).val)),
+      coeffsBySuffix (R_rate := R_rate) original_coeffs 0 h v = original_coeffs := by
+    intro h v
+    haveI : Subsingleton (Fin (2 ^ (0 : Fin r).val)) := by
+      rw [show (0 : Fin r).val = 0 from rfl, pow_zero]; infer_instance
+    have hv : v = 0 := Subsingleton.elim _ _
+    subst hv
+    exact base_coeffsBySuffix original_coeffs
+  simp only [hbase] at res
+  rw [← res]
+  congr! 5 with current_b i
+  omega
 
 end AlgorithmCorrectness
 end AdditiveNTT

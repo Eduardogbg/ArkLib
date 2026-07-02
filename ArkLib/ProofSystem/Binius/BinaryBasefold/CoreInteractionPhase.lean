@@ -464,7 +464,7 @@ def lastBlockOracleVerifier :=
     ⟨bIdx * ϑ + i, by apply lastBlockIdx_mul_ϑ_add_x_lt_ℓ_succ (hx:=by omega)⟩
   let oStmt := fun i: Fin (ϑ + 1) => OracleStatement 𝔽q β ϑ
     ⟨bIdx * ϑ + i, by apply lastBlockIdx_mul_ϑ_add_x_lt_ℓ_succ (hx:=by omega)⟩
-  let V:  OracleVerifier []ₒ (StmtIn := Statement (L := L) (ℓ := ℓ) Context
+  let V: OracleVerifier []ₒ (StmtIn := Statement (L := L) (ℓ := ℓ) Context
       ⟨bIdx * ϑ, by apply lastBlockIdx_mul_ϑ_add_x_lt_ℓ_succ (x:=0) (hx:=by omega)⟩)
     (OStmtIn := OracleStatement 𝔽q β (h_ℓ_add_R_rate := h_ℓ_add_R_rate) ϑ
       ⟨bIdx * ϑ, by apply lastBlockIdx_mul_ϑ_add_x_lt_ℓ_succ (x:=0) (hx:=by omega)⟩)
@@ -719,10 +719,10 @@ def lastBlockOracleReduction :=
   let stmt : Fin (ϑ + 1) → Type := fun i => Statement (L := L) (ℓ := ℓ) Context
     ⟨bIdx * ϑ + i, by apply lastBlockIdx_mul_ϑ_add_x_lt_ℓ_succ (hx:=by omega)⟩
   let oStmt := fun i: Fin (ϑ + 1) => OracleStatement 𝔽q β ϑ
-    ⟨bIdx * ϑ + i, by  apply lastBlockIdx_mul_ϑ_add_x_lt_ℓ_succ (hx:=by omega)⟩
+    ⟨bIdx * ϑ + i, by apply lastBlockIdx_mul_ϑ_add_x_lt_ℓ_succ (hx:=by omega)⟩
   let wit := fun i: Fin (ϑ + 1) => Witness (L := L) 𝔽q β (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (ℓ:=ℓ)
     ⟨bIdx * ϑ + i, by apply lastBlockIdx_mul_ϑ_add_x_lt_ℓ_succ (hx:=by omega)⟩
-  let V:  OracleReduction []ₒ (StmtIn := Statement (L := L) (ℓ := ℓ) Context
+  let V: OracleReduction []ₒ (StmtIn := Statement (L := L) (ℓ := ℓ) Context
     ⟨bIdx * ϑ, by apply lastBlockIdx_mul_ϑ_add_x_lt_ℓ_succ (x:=0) (hx:=by omega)⟩)
     (OStmtIn := OracleStatement 𝔽q β ϑ
       ⟨bIdx * ϑ, by apply lastBlockIdx_mul_ϑ_add_x_lt_ℓ_succ (x:=0) (hx:=by omega)⟩)
@@ -1719,7 +1719,7 @@ theorem coreInteractionOracleVerifier_rbrKnowledgeSoundness :
     (rel₂ := roundRelation 𝔽q β (ϑ:=ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (𝓑:=𝓑) (Fin.last ℓ) )
     (rel₃ := finalSumcheckRelOut 𝔽q β (ϑ:=ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate) )
     (V₁ := sumcheckFoldOracleVerifier 𝔽q β
-      (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (ϑ:=ϑ))
+      (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (ϑ:=ϑ) )
     (V₂ := finalSumcheckVerifier 𝔽q β
       (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (ϑ:=ϑ))
     (Oₛ₃:=by exact fun i ↦ by exact OracleInterface.instDefault)
@@ -2377,7 +2377,7 @@ theorem sumcheckFoldKnowledgeError_le :
           foldCommitKnowledgeError 𝔽q β (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate)
             (i := nonLastSingleBlockCommitIdx (ℓ := ℓ) (ϑ := ϑ) bIdx) k) := by
     unfold nonLastSingleBlockRbrKnowledgeError
-    rw [Equiv.sum_comp (Equiv.symm ChallengeIdx.sumEquiv)]
+    erw [Equiv.sum_comp (Equiv.symm ChallengeIdx.sumEquiv)]
     rw [Fintype.sum_sum_type]
     simp only [Sum.elim_inl, Sum.elim_inr]
   have h_nonLastFoldRelaySeq_decomp (bIdx : Fin (ℓ / ϑ - 1)) :
@@ -2686,7 +2686,8 @@ theorem sumcheckFoldKnowledgeError_le :
     unfold getLastOracleDomainIndex oraclePositionToDomainIndex
     rw [← mkLastOracleIndex_eq_getLastOraclePositionIndex (ℓ := ℓ) (ϑ := ϑ) (i := i.castSucc)]
     unfold mkLastOracleIndex
-    simp [i.isLt]
+    simp only [Fin.coe_castSucc, i.isLt, ↓reduceDIte, eq_mpr_eq_cast, Fin.val_mk]
+    rfl
   have h_lt_r_of_le_ℓ {x : ℕ} (hx : x ≤ ℓ) : x < r := by
     exact lt_r_of_le_ℓ (h_ℓ_add_R_rate := h_ℓ_add_R_rate) hx
   let cardL : ℝ≥0 := (Fintype.card L : ℝ≥0)
