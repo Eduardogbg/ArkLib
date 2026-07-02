@@ -45,7 +45,11 @@ is either:
   the trivial / vacuous case of the bound (e.g. T4.13's `1 - τ(t+1) - 3/(2t)`
   truncates outside the regime where the bound is meaningfully informative).
 
-## Main statements (external admits)
+## Main statements
+
+Most of these are external-admit *statements*; the exceptions are noted inline (e.g.
+R4.10 is *derived in-tree* from R4.2 + the admitted T4.9.2, so it carries no admit of
+its own beyond the inherited T4.9.2 `sorry`).
 
 ### General linear codes
 
@@ -56,6 +60,12 @@ is either:
 
 ### Reed-Solomon codes
 
+- `rs_epsCA_bchks25_item2` — ABF26 Theorem 4.9 Item 2 [BCHKS25 Thm 1.3]: RS `ε_ca` bound
+  in the `δ_min/3`-to-Johnson regime (external admit).
+- `rs_epsCA_small_loss_r4_10` — ABF26 Remark 4.10: small-proximity-loss (`δ_int - δ_fld =
+  γ/n`) simplification of T4.9.2. **Derived in-tree** from R4.2 (`epsCA_eq_of_floor_eq`,
+  proven) + T4.9.2 (admitted), under an added no-level-set-crossing hypothesis; its only
+  `sorry` dependency is the one inherited from T4.9.2.
 - `rs_epsMCA_johnson_range_bchks25` — ABF26 Theorem 4.12 [BCHKS25 Thm 4.6]: explicit
   `ε_mca` bound for RS codes in the Johnson range `δ < 1 - √ρ₊ - η`, where
   `ρ₊ := ρ + 1/n`.
@@ -68,6 +78,10 @@ is either:
   constants (Lean lacks a generic `Θ` notation).
 - `rs_epsCA_breakdown_cs25` — ABF26 Theorem 4.17 [CS25 Cor 1]: complete CA breakdown
   for RS codes when the rate sits inside an entropy-defined band.
+- `rs_epsCA_subfield_lower_cs25_thm3` — ABF26 `thm:base-field-ca-lowerbound` [CS25 Thm 3]:
+  subfield/extension-field CA lower bound near capacity for `RS[F, L, k]` with `L ⊆ B ⊆ F`.
+  The third, distinct CS25 result (Cor 1 = T4.17 above; Thm 2 = T5.3 in
+  `ListDecodingAndCA.lean`). Uses the helper `cs25SubfieldFactor` (`a(x)` in the paper).
 - `rs_epsCA_johnson_jump_bchks25` — ABF26 Theorem 4.18 [BCHKS25 Cor 1.7]: jump in
   `ε_ca` exactly at the Johnson bound, witnessed by characteristic-2 RS codes.
 - `linear_epsCA_ge_sampling_dg25` — ABF26 Lemma 4.19 [DG25 Thm 2.5]: `ε_ca(C, δ)`
@@ -97,7 +111,10 @@ code-family definitions in Phase 3.
 - [BCHKS25] Theorem 4.6 / Corollary 1.7 in their paper.
 - [KKH26] Krachun-Kazanin-Haböck (source of Theorem 4.16; proved the bound that
   [BCHKS25]/[KK25] had under a conjecture).
-- [CS25] Corollary 1, source of Theorem 4.17.
+- [CS25] Crites–Stewart, *On Reed–Solomon Proximity Gaps Conjectures*, ePrint 2025/2046.
+  Corollary 1 = source of Theorem 4.17; Theorem 2 = source of T5.3
+  (`ListDecodingAndCA.lean`); Theorem 3 = source of `thm:base-field-ca-lowerbound`
+  (`rs_epsCA_subfield_lower_cs25_thm3`, this file).
 - [DG25] Theorem 2.5, source of Lemma 4.19.
 -/
 
@@ -213,14 +230,35 @@ unique-decoding regime, which is itself an external admit.
 
 As with T4.9.2 (`rs_epsCA_bchks25_item2`), this inherits the paper `thm:ud-rs`
 enclosing hypothesis `δ_fld ≤ (1-ρ)/2` — the remark is a specialisation of Item 2
-and is only asserted inside that unique-decoding scope. Admitted as a derived
-result from R4.2 + T4.9.2. -/
+and is only asserted inside that unique-decoding scope.
+
+**This proof is machine-checked in-tree** from R4.2 (`epsCA_eq_of_floor_eq`, which is
+*proven*, sorry-free) plus T4.9.2 (`rs_epsCA_bchks25_item2`, an external admit). The only
+`sorryAx` this theorem depends on is the one inherited from T4.9.2; R4.2 contributes none.
+
+**Added no-level-set-crossing hypothesis `_h_no_cross`.** The paper's R4.2 "shift by
+`β ∈ [0, 1/n)`" idiom silently assumes the shifted interval does not cross a multiple of
+`1/n`. Concretely, collapsing `ε_ca(C, δ_fld, δ_fld) = ε_ca(C, δ_fld, δ_fld + γ/n)` via R4.2
+requires `⌊δ_fld·n + γ⌋ = ⌊δ_fld·n⌋`, which *fails* whenever `fract(δ_fld·n) + γ ≥ 1`. In
+that case no equal-floor `δ_int` with gap `≥ γ/n` exists, and since `x ↦ (a+x)/x` is
+decreasing the achievable second max-branch is strictly *worse* than the claimed
+`(n·δ_fld + γ)/(γ·|F|)` (recall `epsCA` is antitone in `δ_int`, `Errors.lean:269`, the wrong
+direction to transfer the bound from a larger `δ_int`). So the γ-bound is *not* derivable
+from T4.9.2 without this hypothesis. It holds automatically whenever `δ_fld·n` is an integer
+— the paper's implicit reading — and is exactly the caveat documented on
+`epsCA_eq_of_floor_eq` (R4.2) in `Errors.lean` ("that form follows … whenever the interval
+does not cross a multiple of `1/n` — in particular when `δ` is itself such a multiple"). We
+keep `_hγ_lt : γ < 1` for hypothesis-parity with the paper even though `_h_no_cross` implies
+it. -/
 theorem rs_epsCA_small_loss_r4_10
     (domain : ι ↪ F) (k : ℕ) (δ_fld : ℝ≥0) (γ : ℝ≥0)
     (_h_ud : (δ_fld : ℝ) ≤ (1 - (k : ℝ) / Fintype.card ι) / 2)
     (_h_dmin : (Code.minDist ((ReedSolomon.code domain k : Set (ι → F))) : ℝ)
                 / Fintype.card ι / 3 ≤ δ_fld)
-    (_hγ_pos : 0 < γ) (_hγ_lt : (γ : ℝ) < 1) :
+    (_hγ_pos : 0 < γ) (_hγ_lt : (γ : ℝ) < 1)
+    (_h_no_cross :
+        Nat.floor ((δ_fld + γ / (Fintype.card ι : ℝ≥0)) * (Fintype.card ι : ℝ≥0))
+          = Nat.floor ((δ_fld : ℝ≥0) * (Fintype.card ι : ℝ≥0))) :
     let n : ℝ := Fintype.card ι
     let ρ : ℝ := k / n
     let bound : ℝ :=
@@ -228,7 +266,47 @@ theorem rs_epsCA_small_loss_r4_10
           ((n * δ_fld + γ) / (γ * Fintype.card F))
     epsCA (F := F) (A := F) ((ReedSolomon.code domain k : Set (ι → F))) δ_fld δ_fld ≤
       ENNReal.ofReal bound := by
-  sorry -- ABF26-R4.10; derived from R4.2 + T4.9.2 (both external/admitted).
+  intro n ρ bound
+  -- `n = |ι| > 0`.
+  have hn_pos : 0 < Fintype.card ι := Fintype.card_pos
+  have hn_ne0 : (Fintype.card ι : ℝ≥0) ≠ 0 := by exact_mod_cast hn_pos.ne'
+  have hn_ne0R : (Fintype.card ι : ℝ) ≠ 0 := by exact_mod_cast hn_pos.ne'
+  -- Interleaved distance `δ_int := δ_fld + γ/n`.
+  set δ_int : ℝ≥0 := δ_fld + γ / (Fintype.card ι : ℝ≥0) with hδ_int
+  -- `γ/n > 0`, so `δ_fld < δ_int`.
+  have hγn_pos : (0 : ℝ≥0) < γ / (Fintype.card ι : ℝ≥0) :=
+    div_pos _hγ_pos (by exact_mod_cast hn_pos)
+  have hlt : δ_fld < δ_int := by rw [hδ_int]; exact lt_add_of_pos_right _ hγn_pos
+  -- Collapse `ε_ca(δ_fld, δ_fld) = ε_ca(δ_fld, δ_int)` via R4.2 and `_h_no_cross`.
+  have hcollapse :
+      epsCA (F := F) (A := F) ((ReedSolomon.code domain k : Set (ι → F))) δ_fld δ_fld
+        = epsCA (F := F) (A := F) ((ReedSolomon.code domain k : Set (ι → F))) δ_fld δ_int :=
+    epsCA_eq_of_floor_eq (F := F) (A := F) _ δ_fld δ_fld δ_int _h_no_cross.symm
+  rw [hcollapse]
+  -- Apply T4.9.2 at `δ_int`.
+  have hT492 := rs_epsCA_bchks25_item2 (F := F) domain k δ_fld δ_int _h_ud _h_dmin hlt
+  simp only at hT492
+  refine le_trans hT492 ?_
+  -- Reduce to real-number equality of the two `max` bounds and monotonicity of `ENNReal.ofReal`.
+  apply ENNReal.ofReal_le_ofReal
+  apply le_of_eq
+  -- The first max-branch is syntactically identical; only the second branch changes.
+  refine congrArg₂ max rfl ?_
+  -- `(δ_int : ℝ) = δ_fld + γ/n` and `(δ_int : ℝ) - δ_fld = γ/n`.
+  have hδ_int_coe : (δ_int : ℝ) = (δ_fld : ℝ) + (γ : ℝ) / (Fintype.card ι : ℝ) := by
+    rw [hδ_int]; push_cast [NNReal.coe_div]; ring
+  -- Second branch of T4.9.2: `δ_int / ((δ_int - δ_fld) * |F|)`.
+  -- Second branch of the goal: `(n·δ_fld + γ) / (γ · |F|)`.
+  rw [hδ_int_coe]
+  have hsub : (δ_fld : ℝ) + (γ : ℝ) / (Fintype.card ι : ℝ) - (δ_fld : ℝ)
+      = (γ : ℝ) / (Fintype.card ι : ℝ) := by ring
+  rw [hsub]
+  -- Now: `(δ_fld + γ/n) / ((γ/n) · |F|) = (n·δ_fld + γ) / (γ · |F|)`.
+  change ((δ_fld : ℝ) + (γ : ℝ) / (Fintype.card ι : ℝ))
+      / (((γ : ℝ) / (Fintype.card ι : ℝ)) * (Fintype.card F : ℝ))
+    = ((Fintype.card ι : ℝ) * (δ_fld : ℝ) + (γ : ℝ)) / ((γ : ℝ) * (Fintype.card F : ℝ))
+  have hγ_ne0R : (γ : ℝ) ≠ 0 := by exact_mod_cast _hγ_pos.ne'
+  field_simp
 
 /-- **ABF26 Theorem 4.12 [BCHKS25 Thm 4.6].** For `C := RS[F, L, k]` with rate `ρ` and
 `η > 0`, letting `ρ_plus := ρ + 1/n` and `m := max(⌈√ρ_plus/(2η)⌉, 3)`, for
@@ -341,6 +419,68 @@ theorem rs_epsCA_breakdown_cs25
     (_hδ_hi : (k : ℝ) / Fintype.card ι ≤ 1 - (δ : ℝ) - 2 / (Fintype.card ι : ℝ)) :
     epsCA (F := F) (A := F) ((ReedSolomon.code domain k : Set (ι → F))) δ δ = 1 := by
   sorry -- ABF26-T4.17; external admit [CS25 Cor 1].
+
+/-- **The factor `a(x)` from ABF26 `thm:base-field-ca-lowerbound` [CS25 Theorem 3].**
+
+  `a(x) := exp(x)` if `x ≤ 3/2`, else `exp(2√x) / √(2π·⌊√x⌋)`.
+
+This is the analytic factor appearing in the subfield CA lower bound
+(`rs_epsCA_subfield_lower_cs25_thm3`). For `x > 3/2` we have `√x > 1`, so `⌊√x⌋₊ ≥ 1`
+and the denominator `√(2π·⌊√x⌋)` is strictly positive (well-defined). -/
+noncomputable def cs25SubfieldFactor (x : ℝ) : ℝ :=
+  if x ≤ 3 / 2 then Real.exp x
+  else Real.exp (2 * Real.sqrt x) / Real.sqrt (2 * Real.pi * ⌊Real.sqrt x⌋₊)
+
+/-- **ABF26 `thm:base-field-ca-lowerbound` [CS25 Theorem 3].** Subfield/extension-field CA
+lower bound near capacity. Let `C := RS[F, L, k]` be a Reed-Solomon code where `B ⊆ F` are
+finite fields, `L ⊆ B`, `n := |L|`, and fix `δ ∈ (0, 1 - ρ(C))`. Then
+
+  `ε_ca(C, δ) ≥ 1 − [ |F| · |B|^{n(1−ρ−δ)} · a(δ(1−δ)n²/|B|) ] / C(n, δn)`
+
+where `a(x) := exp(x)` if `x ≤ 3/2`, else `a(x) := exp(2√x)/√(2π·⌊√x⌋)`
+(the helper `cs25SubfieldFactor`).
+
+**Disambiguation of the three formalized CS25 results.** [CS25] = Crites–Stewart,
+*On Reed–Solomon Proximity Gaps Conjectures*, ePrint 2025/2046. Three of its results are
+formalized in ArkLib and must not be conflated:
+
+- [CS25 Corollary 1] = `rs_epsCA_breakdown_cs25` (T4.17, this file) — complete CA breakdown
+  in an entropy-defined rate band.
+- [CS25 Theorem 2] = `rs_epsCA_implies_lambda_extended_cs25` (T5.3, `ListDecodingAndCA.lean`).
+- [CS25 Theorem 3] = **this declaration** — the third, distinct result: the
+  subfield/extension-field CA lower bound near capacity.
+
+**Prize relevance.** This bound powers the attack table `tab:cs25-ca-lowerbound`
+(`.tex` ~L2845), and the subfield regime `L ⊆ B ⊆ F` matches the koala instantiation of the
+toy protocol (an extension field over a small base field).
+
+**Encoding choices (matching this file's conventions).**
+- *Subfield.* `B : Subfield F` with `_h_dom : ∀ i, domain i ∈ B` encoding `L ⊆ B`; `|B|` is
+  `Nat.card B` (avoids a `DecidablePred (· ∈ B)`/`Fintype` synthesis dependency; over the
+  finite field `F` it equals the cardinality of the subfield).
+- *`|B|` power.* `|B|^{n(1−ρ−δ)}` uses `Real.rpow` (real exponent).
+- *Binomial `C(n, δn)`.* Encoded as `Nat.choose n ⌊δ·n⌋₊`, guarded by the integrality
+  hypothesis `_h_int : (⌊δ·n⌋₊ : ℝ) = δ·n` so the admitted statement cannot silently drift
+  from the paper's `C(n, δn)` at non-integral `δn` (same conservatism as the file's other
+  satisfiability guards).
+- *`a(x)` helper.* `cs25SubfieldFactor` above.
+
+Admitted as an external result. -/
+theorem rs_epsCA_subfield_lower_cs25_thm3
+    (domain : ι ↪ F) (k : ℕ) (δ : ℝ≥0) (B : Subfield F)
+    (_h_dom : ∀ i, domain i ∈ B)
+    (_h_int : ((⌊(δ : ℝ) * Fintype.card ι⌋₊ : ℝ)) = (δ : ℝ) * Fintype.card ι)
+    (_hδ_pos : 0 < δ)
+    (_hδ_lt : (δ : ℝ) < 1 - (k : ℝ) / Fintype.card ι) :
+    let n : ℝ := Fintype.card ι
+    let ρ : ℝ := k / n
+    ENNReal.ofReal
+        (1 - (Fintype.card F * (Nat.card B : ℝ) ^ (n * (1 - ρ - δ) : ℝ)
+              * cs25SubfieldFactor ((δ : ℝ) * (1 - δ) * (Fintype.card ι) ^ 2
+                  / Nat.card B))
+            / (Nat.choose (Fintype.card ι) ⌊(δ : ℝ) * Fintype.card ι⌋₊)) ≤
+      epsCA (F := F) (A := F) ((ReedSolomon.code domain k : Set (ι → F))) δ δ := by
+  sorry -- ABF26 thm:base-field-ca-lowerbound; external admit [CS25 Thm 3].
 
 /-- **ABF26 Theorem 4.18 [BCHKS25 Cor 1.7].** CA jump at the Johnson bound. (In the
 canonical `.tex` this is the unnumbered theorem at ≈ lines 1908–1914; after the 2026-06
