@@ -864,7 +864,7 @@ nothing else in the achievable chain — `koalaIRS_minRelDist`, `koala_spotcheck
 `ε_mca(C, 3/10) + |Λ(C^{≡2}, 3/10)|/|F| ≤ 2^(-65)`. **Why it is true at this point.**
 `δ = 3/10` sits just above the Johnson list-decoding radius `1 - √ρ ≈ 0.2929` and
 above the MDS unique-decoding radius `δ_min/2 ≈ 0.25`, but it is far below the Elias
-list-decoding capacity (`δ_E ≈ 0.4667`, where the interleaved list first exceeds
+list-decoding capacity (`δ_E ≈ 0.4678`, where the interleaved list first exceeds
 `|F|`) and the §6.4.1 attack threshold (`δ* = 0.468`). In this below-capacity regime
 the interleaved list `Λ(C^{≡2}, 3/10)` is small (`≪ |F| = q^6 ≈ 2^186`), so
 `|Λ|/|F|` is negligible and `ε_mca(C, 3/10)` is likewise small; the paper's own
@@ -910,7 +910,7 @@ noncomputable def irsLowerBoundT128 : SecurityLowerBound koalaIRS where
       -- ★ THE single owed external coding-theory bound at the paper's §6.3 point
       --   (|L| = 2^21, m = 2^20, ρ = 1/2, |F| = q^6 ≈ 2^186):
       --   `ε_mca(C, 3/10) + |Λ(C^{≡2}, 3/10)|/|F| ≤ 2^(-65)`.
-      -- δ = 3/10 is far below the Elias capacity δ_E ≈ 0.4667 and the attack
+      -- δ = 3/10 is far below the Elias capacity δ_E ≈ 0.4678 and the attack
       -- threshold δ* = 0.468, so the interleaved list Λ(C^{≡2}, 3/10) is small
       -- (≪ |F|), making |Λ|/|F| negligible and ε_mca(C, 3/10) small; the paper's
       -- §6.3.1 analysis reports the companion figure ≈ 2^(-71.5) for this term.
@@ -947,8 +947,10 @@ the Elias thresholds `tab:elias-lowerbound-thresholds`). The floor over the δ s
   `(1-δ)^128 ≥ (0.532)^128 ≈ 2^(-116.54) ≥ 2^(-117)`;
 * for `δ ∈ [δ*, δ_min)` the L6.13 CA attack (`epsCA_le_winningSetSoundness`) floors
   the `winningSetSoundness` term (and the convex combination dominates it,
-  `convex ≥ winningSetSoundness` since `winningSetSoundness ≤ 1`) at
-  `ε_ca(C, δ) ≥ 2^(-116.49) ≥ 2^(-117)` (`tab:cs25-ca-lowerbound`, `.tex` ~2870).
+  `convex ≥ winningSetSoundness` since `winningSetSoundness ≤ 1`) by the CS25 CA
+  lower bound `ε_ca(C, δ)`, which is `≈ 1` here (see below) and hence `≥ 2^(-117)`
+  with vast margin (`thm:base-field-ca-lowerbound` / `tab:cs25-ca-lowerbound`,
+  `.tex` ~2870).
 
 **Faithful at the paper's block length.** With `koalaIRS` now at the paper's
 `|L| = 2^21`, `m = 2^20`, `ρ = 1/2` point, the sweep window is `(0, δ_min)` with
@@ -961,13 +963,17 @@ length-4 MDS list size is `≤ C(4,2) = 6`, so the owed list-size bound
 `|L| = 2^21` the asymptotic attack numbers actually hold.
 
 **Why the CA route (not the list-size route).** Past the Elias capacity
-`δ_E ≈ 0.4667` the interleaved list `N := |Λ(C^{≡2}, δ)|` *exceeds* `|F| = q^6 ≈
+`δ_E ≈ 0.4678` the interleaved list `N := |Λ(C^{≡2}, δ)|` *exceeds* `|F| = q^6 ≈
 2^186` (it blows up as `δ → δ_min`), so the list-decoding hook
 `listDecoding_le_winningSetSoundness` — which requires `N < |F|` — does **not** apply
 across most of `(δ*, δ_min)`. The CS25 correlated-agreement lower bound has no such
-restriction: `ε_ca(C, δ) ≥ 2^(-116.49)` already at `δ* = 0.468` and increases toward
-`δ_min`, so the proven hook `epsCA_le_winningSetSoundness` floors the winning-set
-soundness across the *whole* large band with a single owed external.
+restriction, and the crossover `δ* = 0.468` sits *just above* the point
+`≈ 0.4678` where the CS25 bound stops being vacuous and jumps to `≈ 1`: so
+`ε_ca(C, δ) ≈ 1` across the *whole* large band `(δ*, δ_min)` (not the tiny
+`2^(-116.49)` — that figure in `tab:cs25-ca-lowerbound` is the resulting *protocol
+soundness* the CA bound proves, not `ε_ca` itself). Hence `ε_ca ≥ 2^(-117)` holds
+with vast margin, and the proven hook `epsCA_le_winningSetSoundness` floors the
+winning-set soundness across the whole band with a single owed external.
 
 **Why `bits := 117`, not 116** (2026-06-10 second adversarial review, M2): a
 *ceiling* must round **up**. The certified sweep floor is the spot/attack crossing
@@ -990,12 +996,15 @@ split at the crossover `δ* = 117/250`:
    convex combination dominates `winningSetSoundness` (`w ≤ 1`, proven), which the
    **proven** L6.13 hook `epsCA_le_winningSetSoundness` floors at `ε_ca(C, δ, δ)`.
    Reaching `2^(-117)` then needs the single numeric `2^(-117) ≤ ε_ca(C, δ, δ)` on
-   `(δ*, δ_min)` — the CS25 correlated-agreement lower bound (`tab:cs25-ca-lowerbound`
-   gives `ε_ca ≥ 2^(-116.49)` at `δ*`, rising to `δ_min`), a **by-design external
-   coding-theory admit** (no proven `ε_ca` lower bound exists in ArkLib; closing it is
-   the prize's own research content). **Axiom-clean is infeasible by design**; the
-   reduction is full down to this single named admit (one fewer than the previous,
-   now-unsound, two-admit list-size route). -/
+   `(δ*, δ_min)` — the CS25 correlated-agreement lower bound (`thm:base-field-ca-lowerbound`),
+   which for `δ ∈ (δ*, 1-ρ)` gives `ε_ca ≈ 1` (`δ*` sits just above the CS25
+   non-vacuity threshold `≈ 0.4678`); the thin sliver `[1-ρ, δ_min)` of width `2^{-21}`
+   is past CS25's `δ < 1-ρ` hypothesis but there `ε_ca → 1` by the general
+   capacity-failure phenomenon, so `≥ 2^(-117)` still holds. This is a **by-design
+   external coding-theory admit** (no proven `ε_ca` lower bound exists in ArkLib;
+   closing it is the prize's own research content). **Axiom-clean is infeasible by
+   design**; the reduction is full down to this single named admit (one fewer than the
+   previous, now-unsound, two-admit list-size route). -/
 noncomputable def listDecodingUpperBoundAttack : SecurityUpperBound koalaIRS where
   bits := 117
   proof := by
@@ -1048,11 +1057,14 @@ noncomputable def listDecodingUpperBoundAttack : SecurityUpperBound koalaIRS whe
         koalaIRS.enc koalaIRS.enc_injective rfl)
       -- ★ THE single owed external CA lower bound on `(δ*, δ_min)`:
       --   `2^(-117) ≤ ε_ca(C, δ, δ)`.
-      -- CS25 (`thm:base-field-ca-lowerbound`, `tab:cs25-ca-lowerbound`) gives
-      -- `ε_ca(C, δ) ≥ 2^(-116.49)` at `δ* = 0.468`, increasing toward `δ_min`; past
-      -- the Elias capacity `δ_E ≈ 0.4667` correlated agreement fails badly, so the
-      -- bound only strengthens. No proven `ε_ca` lower bound exists in ArkLib —
-      -- irreducibly external, exactly as the lower anchor's `ε_mca` ceiling.
+      -- CS25 (`thm:base-field-ca-lowerbound`) makes ε_ca ≈ 1 here: the crossover
+      -- δ* = 0.468 sits just above the CS25 non-vacuity threshold ≈ 0.4678 (= the
+      -- Elias capacity, where correlated agreement fails), so ε_ca(C, δ) ≈ 1 across
+      -- (δ*, 1-ρ), vastly exceeding 2^(-117); the thin [1-ρ, δ_min) sliver (width
+      -- 2^-21) is past CS25's δ < 1-ρ hypothesis but ε_ca → 1 there by general
+      -- capacity failure. (The 2^(-116.49) in tab:cs25-ca-lowerbound is the resulting
+      -- protocol soundness, NOT ε_ca itself.) No proven ε_ca lower bound exists in
+      -- ArkLib — irreducibly external, exactly as the lower anchor's ε_mca ceiling.
       -- Cited external / external-owed.
       sorry
 

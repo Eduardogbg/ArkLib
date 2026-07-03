@@ -249,9 +249,9 @@ on `s·|L| ≥ k` distinct points is zero, so the unfolded evaluation — hence
 zero-free precisely so `Admissible koalaFoldω` is not *provably false* (its
 intra-orbit clause fails at `0`; see `koalaFRSDomain`).
 
-**Now a full `sorry`-free derivation** through the new in-tree bridge
+**Now a full `sorry`-free derivation** through the in-tree bridge
 `ReedSolomon.Folded.frsEvalOnPoints_domRestrict_injective` (the `Admissible ω → injective`
-bridge that `dim_frsCode`'s `h_encoder_inj` hypothesis was waiting for): the encoder is
+bridge that also backs the FRS dimension formula `dim_frsCode`): the encoder is
 `(injective domRestrict) ∘ (injective degreeLTEquiv.symm)`. The `domRestrict` injectivity
 consumes `koalaFRSDomain_admissible`, `koalaFRSγ_ne_zero`, and `k = 2^20 ≤ 32 · 2^16 =
 2^21 = s · |ι|`. **Fully axiom-clean** (`[propext, Classical.choice, Quot.sound]`): the
