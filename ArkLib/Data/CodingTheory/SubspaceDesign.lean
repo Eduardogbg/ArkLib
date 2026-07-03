@@ -133,16 +133,20 @@ Note: `[s]` in the paper denotes `{1, …, s}` (one-based), which we encode in L
 `Finset.Icc 1 s`. With this convention `τ(1) = s·ρ/s = ρ` and `τ(s) = s·ρ`, matching
 the paper's boundary values.
 
-The FRS case requires `(L, s)`-admissibility of `ω`; the multiplicity case requires
-`|F| > n` and `char(F) > ρ·s·n > s`. We state only the FRS half here; the multiplicity
-half is gated on `D2.19 / DA.7` (univariate-multiplicity definition), which is tracked
-separately. Admitted as an external result. -/
+The pinned tex (`thm:folded-rs-are-subspace-design`) states `|F| > n` as a shared
+precondition for both the FRS and the multiplicity cases; the FRS case additionally
+requires `(L, s)`-admissibility of `ω` (with `ω ≠ 0`), while the multiplicity case
+additionally requires `char(F) > m`. We state only the FRS half here (hypotheses
+`_hFn : |F| > n`, `_hω : Admissible …`, `_hω0 : ω ≠ 0`); the multiplicity half is gated
+on `D2.19 / DA.7` (univariate-multiplicity definition), tracked separately. Admitted as
+an external result. -/
 theorem frs_is_subspaceDesign_gk16
     {ι : Type} [Fintype ι] [Nonempty ι] [DecidableEq ι]
     {F : Type} [Field F] [Fintype F] [DecidableEq F]
     (domain : ι ↪ F) (k s : ℕ) (ω : F)
     (L : Finset F) (_hL_dom : ∀ i : ι, domain i ∈ L)
-    (_hω : ReedSolomon.Folded.Admissible L s ω) :
+    (_hFn : Fintype.card ι < Fintype.card F)
+    (_hω : ReedSolomon.Folded.Admissible L s ω) (_hω0 : ω ≠ 0) :
     let τ : ℕ → ℝ := fun r ↦
       if r ∈ Finset.Icc 1 s then
         (k : ℝ) / Fintype.card ι / (s - r + 1)

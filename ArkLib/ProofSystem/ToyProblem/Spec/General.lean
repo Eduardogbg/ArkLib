@@ -370,17 +370,20 @@ definitionally `toVerifier.knowledgeSoundness` /
 `toVerifier.rbrKnowledgeSoundness`, so the oracle-flavour statements
 carry no extra proof burden over the bundled-input forms.
 
-**Framework vacuity (KS) — RESOLVED 2026-06-11.** The historical trap —
-`Verifier.knowledgeSoundness` admitted an always-failing `OptionT`
-extractor that drove the bad-event probability to `0` — was fixed by
-PR #569 (`fix/knowledge-soundness-failing-extractor`), now merged and
-synced into this branch: extraction failure (`extractedWitIn? = none`)
-is scored against the prover. The KS sorries below
-(`protocol62_knowledgeSound`, and `simplifiedIOR_knowledgeSound` in
-`Spec/SimplifiedIOR.lean`) may be closed on their mathematical merits.
-`Verifier.rbrKnowledgeSoundness` was never affected, so
-`protocol62_rbrKnowledgeSound` is provable as-is (and is the natural
-first target; KS then follows via the rbrKS → KS implication).
+**Framework vacuity (KS) — RESOLVED 2026-06-11, theorems now CLOSED.** The
+historical trap — `Verifier.knowledgeSoundness` admitted an always-failing
+`OptionT` extractor that drove the bad-event probability to `0` — was fixed by
+PR #569 (`fix/knowledge-soundness-failing-extractor`), now merged and synced into
+this branch: extraction failure (`extractedWitIn? = none`) is scored against the
+prover. All three KS theorems are now proven and axiom-clean
+(`[propext, Classical.choice, Quot.sound]`, verified 2026-07-03):
+`protocol62_knowledgeSound`, `protocol62_rbrKnowledgeSound` (below), and
+`simplifiedIOR_knowledgeSound` (`Spec/SimplifiedIOR.lean`). The rbrKS theorem
+carries the mathematical content; KS follows via the rbrKS → KS implication.
+(Honesty note: `protocol62_knowledgeSound` uses the classical `extractZero`
+extractor rather than the paper's efficient extractor, and
+`protocol62_rbrKnowledgeSound` is the challenge-averaged form, not Def A.5's
+worst-case-per-prefix — both are documented at their declarations.)
 -/
 
 /-- Same as `prover` but exposed at the `OracleProver` signature. The

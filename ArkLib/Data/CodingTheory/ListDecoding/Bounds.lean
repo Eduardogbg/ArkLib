@@ -250,14 +250,22 @@ theorem linear_lambda_ge_elias_volume_eli57
     _ = ((cnt f₀ : ℕ∞) : ENNReal) := by rw [ENNReal.ofReal_natCast, ENat.toENNReal_coe]
     _ ≤ (Lambda ((C : Set (ι → F))) δ : ENNReal) := hLam
 
-/-- **ABF26 Corollary 3.8.** Volume-based lower bound on list size, using the MS77
-volume estimate `Vol_q(δ, n) ≥ q^{n·(ρ-1+H_q(δ))} / √(8·n·δ·(1-δ))`. With `ρ := k/n`:
+/-- **ABF26 Corollary 3.8.** Elias's list-size lower bound (L3.7) made explicit via the
+MS77 volume estimate `Vol_q(δ, n) ≥ q^{n·H_q(δ)} / √(8·n·δ·(1-δ))`: dividing by
+`q^{n-k}` and writing `ρ := k/n` gives the list-size bound
 
-  `|Λ(C, δ)| ≥ q^{n·(ρ - 1 + H_q(δ))} / √(8·n·δ·(1-δ))`
+  `|Λ(C, δ)| ≥ q^{n·(ρ - 1 + H_q(δ))} / √(8·n·δ·(1-δ))`.
 
-Uses `qEntropy` (ABF26 D2.2). Admitted as an external result. -/
+Uses `qEntropy` (ABF26 D2.2). Admitted as an external result.
+
+The hypothesis `_hδn_int` (the radius `δ·n` is an integer) is the regime in which the
+MS77 single-term Stirling estimate is stated; the paper's corollary inherits it
+implicitly. Without it the bound is false at small `δ`: for `0 < δ·n < 1` the relative
+ball collapses to Hamming radius `0`, so the list is `{f} ∩ C` while the entropy-volume
+RHS can exceed `1`. -/
 theorem linear_lambda_ge_entropy_volume
-    (C : Submodule F (ι → F)) (δ : ℝ) (_hδ_pos : 0 < δ) (_hδ_lt : δ < 1) :
+    (C : Submodule F (ι → F)) (δ : ℝ) (_hδ_pos : 0 < δ) (_hδ_lt : δ < 1)
+    (_hδn_int : ∃ d : ℕ, (d : ℝ) = δ * Fintype.card ι) :
     let q : ℕ := Fintype.card F
     let n : ℕ := Fintype.card ι
     let k : ℕ := Module.finrank F C
@@ -274,10 +282,18 @@ error-correcting code of rate `ρ` with `|Λ(C, δ)| ≤ ℓ`. Then:
 
   `|C| ≤ |F|^{n - ⌊(ℓ+1)/ℓ · δ · n⌋}`
 
-Equivalently, `δ ≤ ℓ/(ℓ+1) · (1-ρ)`. Admitted as an external result. -/
+Equivalently, `δ ≤ ℓ/(ℓ+1) · (1-ρ)`. Admitted as an external result.
+
+The hypothesis `_hC_card` (`|C| > ℓ`) is implicit in ST20's conventions (an `[n, k]`
+linear code with `k ≥ 1` and `|F| > ℓ` has `|C| = |F|^k > ℓ`): their pigeonhole proof
+produces `ℓ + 1` distinct codewords agreeing on a coordinate prefix, which requires
+`|C| ≥ ℓ + 1` to exist. Without it the statement is false at degenerate subspaces
+(e.g. `C = ⊥`, `ℓ = 1`, `δ` close to `1`: the floor exceeds `n` and the RHS drops
+below `1 = |C|`). -/
 theorem linear_C_le_generalized_singleton_st20
     (C : Submodule F (ι → F)) (ℓ : ℕ) (δ : ℝ)
     (_hℓ_pos : 0 < ℓ) (_hℓ_lt : ℓ < Fintype.card F)
+    (_hC_card : ℓ < Set.ncard ((C : Set (ι → F))))
     (_hδ_pos : 0 < δ) (_hδ_lt : δ < 1)
     (_hΛ : Lambda ((C : Set (ι → F))) δ ≤ (ℓ : ℕ∞)) :
     (Set.ncard ((C : Set (ι → F))) : ℝ)
@@ -517,12 +533,21 @@ T3.4 + T2.18 (FRS is τ-subspace-design).
 With this `ρ` both the radius and the list bound are the paper's expressions
 verbatim; e.g. the radius numerator `ρ·s = k/n`.
 
+**Admissibility.** The paper's FRS definition (ABF26 Definition 2.15) bakes
+`(L, s)`-admissibility of `ω` into the code; ArkLib's `frsCode` deliberately does not,
+so this statement must carry it as the hypothesis `_hadm` (in the in-tree strengthened
+GR08 form) together with `_hω : ω ≠ 0` (which admissibility alone does not imply when
+`0 ∉ L`). Without them the fold degenerates — e.g. at `ω = 0` or `ω = 1` all folds
+collapse — and the capacity bound is false.
+
 Admitted as an external result. -/
 theorem frs_list_decoding_capacity_cz25
     {ι : Type} [Fintype ι] [Nonempty ι] [DecidableEq ι]
     {F : Type} [Field F] [Fintype F] [DecidableEq F]
     (domain : ι ↪ F) (k s : ℕ) (ω : F)
     (_hs_pos : 0 < s)
+    (_hadm : ReedSolomon.Folded.Admissible (Finset.univ.map domain) s ω)
+    (_hω : ω ≠ 0)
     (η : ℝ) (_hη_pos : 0 < η) (_hη_lt_s : 1 / η < s) :
     let n : ℝ := Fintype.card ι
     let ρ : ℝ := k / (s * n)

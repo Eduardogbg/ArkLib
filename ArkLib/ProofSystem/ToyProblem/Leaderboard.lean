@@ -676,56 +676,62 @@ instance. -/
 theorem koalaSextic_card : Nat.card KoalaSextic = KoalaBear.fieldSize ^ 6 :=
   GaloisField.card KoalaBear.fieldSize 6 (by norm_num)
 
-/-- The `3`-point Reed–Solomon evaluation domain `{0, 1, 2} ⊆ KoalaSextic`.
-Distinctness is injectivity of `Nat.cast` below the characteristic
-(`4 ≤ KoalaBear.fieldSize`). The block length `n = |ι| = 4` with message
-dimension `k = 2` realises the prize rate `ρ = k/n = 1/2`. -/
-noncomputable def koalaDomain : Fin 4 ↪ KoalaSextic where
+/-- The `2^21`-point Reed–Solomon evaluation domain `{0, 1, …, 2^21 - 1} ⊆ KoalaSextic`,
+the paper's §6.3 interleaved-RS instance (`|L| = 2^21`, `κ = 2^0`). Distinctness is
+injectivity of `Nat.cast` below the characteristic (`2^21 ≤ KoalaBear.fieldSize
+= 2^31 - 2^24 + 1`). The block length `n = |ι| = 2^21` with message dimension
+`k = m = 2^20` realises the prize rate `ρ = k/n = 1/2`. -/
+noncomputable def koalaDomain : Fin (2 ^ 21) ↪ KoalaSextic where
   toFun i := (i.val : KoalaSextic)
   inj' i j hij := by
-    have hfs : (4 : ℕ) ≤ KoalaBear.fieldSize := by norm_num [KoalaBear.fieldSize]
+    have hfs : (2 ^ 21 : ℕ) ≤ KoalaBear.fieldSize := by norm_num [KoalaBear.fieldSize]
     have hi : (i : ℕ) ∈ Set.Iio KoalaBear.fieldSize := Set.mem_Iio.mpr (i.isLt.trans_le hfs)
     have hj : (j : ℕ) ∈ Set.Iio KoalaBear.fieldSize := Set.mem_Iio.mpr (j.isLt.trans_le hfs)
     exact Fin.val_injective
       (CharP.natCast_injOn_Iio KoalaSextic KoalaBear.fieldSize hi hj hij)
 
-/-- The genuine §6.3 encoder: the degree-`< 2` Reed–Solomon evaluation map on the
-`4` points of `koalaDomain` (`k = 2`, `n = |ι| = 4`, rate `ρ = 1/2`), as an
-`F`-linear map `(Fin 2 → F) →ₗ (Fin 4 → F)`. Built as
+/-- The genuine §6.3 encoder: the degree-`< 2^20` Reed–Solomon evaluation map on the
+`2^21` points of `koalaDomain` (`k = 2^20`, `n = |ι| = 2^21`, rate `ρ = 1/2`), as an
+`F`-linear map `(Fin (2^20) → F) →ₗ (Fin (2^21) → F)`. Built as
 `evalOnPoints ∘ (degreeLTEquiv).symm` so that injectivity reduces to the RS
 kernel-triviality lemma. ([ABF26] Definition 6.1's "code as the injective map";
 the code itself is `ToyParams.code = Set.range koalaEnc`.) -/
 noncomputable def koalaEnc :
-    (Fin 2 → KoalaSextic) →ₗ[KoalaSextic] (Fin 4 → KoalaSextic) :=
-  (ReedSolomon.evalOnPoints koalaDomain).domRestrict (Polynomial.degreeLT KoalaSextic 2)
-    ∘ₗ (Polynomial.degreeLTEquiv KoalaSextic 2).symm.toLinearMap
+    (Fin (2 ^ 20) → KoalaSextic) →ₗ[KoalaSextic] (Fin (2 ^ 21) → KoalaSextic) :=
+  (ReedSolomon.evalOnPoints koalaDomain).domRestrict (Polynomial.degreeLT KoalaSextic (2 ^ 20))
+    ∘ₗ (Polynomial.degreeLTEquiv KoalaSextic (2 ^ 20)).symm.toLinearMap
 
 /-- Injectivity of the genuine KoalaBear-sextic Reed–Solomon encoder
 ([ABF26] Definition 6.1's "code as the injective map"). The encoder is the
 composite of the injective `degreeLTEquiv.symm` and the RS evaluation map
-restricted to degree-`< 2` polynomials, which is injective because `2 ≤ 4 = |ι|`
-distinct points pin a degree-`< 2` polynomial uniquely
+restricted to degree-`< 2^20` polynomials, which is injective because
+`2^20 ≤ 2^21 = |ι|` distinct points pin a degree-`< 2^20` polynomial uniquely
 (`ReedSolomon.evalOnPoints_domRestrict_injective`). -/
 theorem koalaEnc_injective : Function.Injective koalaEnc := by
   simp only [koalaEnc, LinearMap.coe_comp, LinearEquiv.coe_toLinearMap]
-  exact (ReedSolomon.evalOnPoints_domRestrict_injective (n := 2) (by simp)).comp
+  refine (ReedSolomon.evalOnPoints_domRestrict_injective (n := 2 ^ 20) ?_).comp
     (LinearEquiv.injective _)
+  rw [Fintype.card_fin]; norm_num
 
-/-- **The encoder's image is exactly the Reed–Solomon code** `RS[koalaDomain, 2]`.
-`koalaEnc = evalOnPoints ∘ (degreeLTEquiv).symm`, and as `(degreeLTEquiv 2).symm`
-ranges over all degree-`< 2` polynomials its image under `evalOnPoints` is the
-RS code `(degreeLT 2).map (evalOnPoints)`. This identifies `koalaIRS.code` with a
+set_option maxRecDepth 100000 in
+/-- **The encoder's image is exactly the Reed–Solomon code** `RS[koalaDomain, 2^20]`.
+`koalaEnc = evalOnPoints ∘ (degreeLTEquiv).symm`, and as `(degreeLTEquiv (2^20)).symm`
+ranges over all degree-`< 2^20` polynomials its image under `evalOnPoints` is the
+RS code `(degreeLT (2^20)).map (evalOnPoints)`. This identifies `koalaIRS.code` with a
 genuine MDS code, unlocking the `minDist`/admissibility numerics below. -/
 theorem koalaEnc_range :
-    Set.range ⇑koalaEnc = (↑(ReedSolomon.code koalaDomain 2) : Set (Fin 4 → KoalaSextic)) := by
+    Set.range ⇑koalaEnc
+      = (↑(ReedSolomon.code koalaDomain (2 ^ 20)) : Set (Fin (2 ^ 21) → KoalaSextic)) := by
   ext y
   rw [SetLike.mem_coe, ReedSolomon.code, Submodule.mem_map]
   simp only [Set.mem_range]
   constructor
   · rintro ⟨m, rfl⟩
-    exact ⟨↑((Polynomial.degreeLTEquiv KoalaSextic 2).symm m), Submodule.coe_mem _, rfl⟩
+    refine ⟨↑((Polynomial.degreeLTEquiv KoalaSextic (2 ^ 20)).symm m), Submodule.coe_mem _, ?_⟩
+    simp only [koalaEnc, LinearMap.coe_comp, LinearEquiv.coe_toLinearMap, Function.comp_apply,
+      LinearMap.domRestrict_apply]
   · rintro ⟨p, hp, rfl⟩
-    refine ⟨Polynomial.degreeLTEquiv KoalaSextic 2 ⟨p, hp⟩, ?_⟩
+    refine ⟨Polynomial.degreeLTEquiv KoalaSextic (2 ^ 20) ⟨p, hp⟩, ?_⟩
     simp only [koalaEnc, LinearMap.coe_comp, LinearEquiv.coe_toLinearMap, Function.comp_apply,
       LinearEquiv.symm_apply_apply, LinearMap.domRestrict_apply]
 
@@ -768,29 +774,29 @@ pinned δ — δ is swept inside `bestProvableError` per the §6.3 frontier (the
 X side optimizes near `δ = 1 - √ρ - η`, the Y side attacks at `δ* = 0.468`;
 a single shared δ cannot represent the frontier). The carrier is the genuine
 `q^6 ≈ 2^186`-element KoalaBear sextic `KoalaSextic` (`koalaSextic_card`), and
-`koalaEnc` is the genuine degree-`< 2` Reed–Solomon encoder on `4` points
-(`ι = Fin 4`, `k = 2`), so the **realised** rate is `ρ = k/|ι| = 2/4 = 1/2` —
-the documentary `n = 4` is now the true block length, not a stand-in fiction.
+`koalaEnc` is the genuine degree-`< 2^20` Reed–Solomon encoder on `2^21` points
+(`ι = Fin (2^21)`, `k = 2^20`), so the **realised** rate is
+`ρ = k/|ι| = 2^20/2^21 = 1/2` — the paper's §6.3 IRS instance
+(`tab:interleaved-security-analysis`, `κ = 2^0`) at its true block length.
 
-**Short-length caveat (faithfulness, owed to Sessions 2–3).** §6.3's numerics
-are an *asymptotic* `(n → ∞, ρ = 1/2)` analysis, where the admissible window is
-`δ ∈ (0, δ_min)` with `δ_min → 1 - ρ = 1/2`. At this concrete `n = 4` point the
-code is MDS with relative distance `(n-k+1)/n = 3/4`, so `δ_min = 3/4 > 1/2`:
-the realised sweep `(0, 3/4)` is *wider* than the asymptotic `(0, 1/2)`. The X
-optimum (`≈ 0.293`) and the Y attack (`δ* = 0.468`) both lie inside `(0, 1/2)`,
-so the anchors' optimizing/attack δ are admissible here; but the band
-`δ ∈ (0.5, 0.75)` is an artefact of the short length and must be handled
-explicitly when discharging the upper anchor (Session 3). The toy point thus
-*approximates* but does not asymptotically reproduce §6.3 — by design for a
-single concrete parameter point. -/
+**Faithful to §6.3's numerics.** §6.3 fixes `|L| = κ·n = 2^21`, `m = 2^20`,
+`ρ = 1/2`, `t = 128` (folding `κ = 2^0` here), exactly this point. The code is MDS
+with relative distance `(|L|-k+1)/|L| = (2^20+1)/2^21 = 1/2 + 2^{-21}`, so the
+admissible sweep window `δ ∈ (0, δ_min)` with `δ_min = 1/2 + 2^{-21}` matches the
+paper's asymptotic `(0, 1 - ρ) = (0, 1/2)` up to the `2^{-21}` MDS correction. The
+provable X optimum (`δ ≈ 1 - √ρ ≈ 0.293`) and the Y attack threshold
+(`δ* = 0.468`) both lie inside `(0, 1/2)`, and the whole window is now the paper's
+window — there is no short-length artefact band (contrast the earlier `RS[4,2]`
+placeholder, whose `δ_min = 3/4` created a spurious `(1/2, 3/4)` band that the
+attack anchor cannot honestly floor; see the extreme review 2026-07-02). -/
 noncomputable def koalaIRS : ToyParams := by
   haveI : Fintype KoalaSextic := Fintype.ofFinite _
   classical
   exact
     { F := KoalaSextic
-      ι := Fin 4
+      ι := Fin (2 ^ 21)
       A := KoalaSextic
-      k := 2
+      k := 2 ^ 20
       enc := koalaEnc
       enc_injective := koalaEnc_injective
       t := 128
@@ -798,29 +804,37 @@ noncomputable def koalaIRS : ToyParams := by
       ext := 6
       ρ := 1 / 2
       s := 1
-      n := 4 }
+      n := 2 ^ 21 }
 
-/-- **The realised anchor code's relative minimum distance is `3/4`** (the MDS
-bound for the `[n = 4, k = 2]` Reed–Solomon code): `δ_min(koalaIRS.code) =
-minDist / n = (4 - 2 + 1)/4 = 3/4`, via `koalaEnc_range` (the code *is* `RS[4,2]`),
-the RS MDS distance `ReedSolomon.minDist_eq'`, and the absolute→relative bridge
+/-- **The realised anchor code's relative minimum distance is `(2^20+1)/2^21`** (the
+MDS bound for the `[n = 2^21, k = 2^20]` Reed–Solomon code): `δ_min(koalaIRS.code) =
+minDist / n = (2^21 - 2^20 + 1)/2^21 = (2^20 + 1)/2^21 = 1/2 + 2^{-21}`, via
+`koalaEnc_range` (the code *is* `RS[2^21, 2^20]`), the RS MDS distance
+`ReedSolomon.minDist_eq'`, and the absolute→relative bridge
 `minDist_div_card_eq_minRelHammingDistCode`. This pins the admissible δ-window
-`(0, 3/4)` for the §6.3 sweep — in particular `δ = 3/10` (the lower-anchor's
-choice) is admissible and lies below the unique-decoding radius `δ_min/2 = 3/8`. -/
-theorem koalaIRS_minRelDist : minRelHammingDistCode koalaIRS.code = (3 / 4 : ℚ≥0) := by
+`(0, δ_min)` for the §6.3 sweep — matching the paper's `(0, 1 - ρ) = (0, 1/2)` up to
+the `2^{-21}` MDS correction; in particular `δ = 3/10` (the lower anchor) and
+`δ* = 0.468` (the attack) are both admissible. -/
+theorem koalaIRS_minRelDist :
+    minRelHammingDistCode koalaIRS.code = ((2 ^ 20 + 1) / 2 ^ 21 : ℚ≥0) := by
   classical
-  have hcode : koalaIRS.code = (↑(ReedSolomon.code koalaDomain 2) : Set (Fin 4 → KoalaSextic)) :=
+  haveI : NeZero (2 ^ 20 : ℕ) := ⟨by norm_num⟩
+  have hcode : koalaIRS.code
+      = (↑(ReedSolomon.code koalaDomain (2 ^ 20)) : Set (Fin (2 ^ 21) → KoalaSextic)) :=
     koalaEnc_range
-  have hcard : Fintype.card (Fin 4) = 4 := Fintype.card_fin 4
-  have hmin : Code.minDist koalaIRS.code = 3 := by
+  have hcard : Fintype.card (Fin (2 ^ 21)) = 2 ^ 21 := Fintype.card_fin _
+  have hmin : Code.minDist koalaIRS.code = 2 ^ 20 + 1 := by
     have key :
-        Code.minDist (↑(ReedSolomon.code koalaDomain 2) : Set (Fin 4 → KoalaSextic)) = 3 := by
-      rw [ReedSolomon.minDist_eq' (n := 2) (by rw [hcard]; norm_num)]; simp [Fintype.card_fin]
+        Code.minDist (↑(ReedSolomon.code koalaDomain (2 ^ 20)) : Set (Fin (2 ^ 21) → KoalaSextic))
+          = 2 ^ 20 + 1 := by
+      rw [ReedSolomon.minDist_eq' (n := 2 ^ 20) (by rw [hcard]; norm_num), Fintype.card_fin]
+      norm_num
     rw [hcode]; exact key
   have hbridge := minDist_div_card_eq_minRelHammingDistCode koalaIRS.code
-  have hcardι : Fintype.card koalaIRS.ι = 4 := hcard
+  have hcardι : Fintype.card koalaIRS.ι = 2 ^ 21 := hcard
   rw [hmin, hcardι] at hbridge
-  have hQ : ((minRelHammingDistCode koalaIRS.code : ℚ≥0) : ℚ) = ((3 / 4 : ℚ≥0) : ℚ) := by
+  have hQ : ((minRelHammingDistCode koalaIRS.code : ℚ≥0) : ℚ)
+      = (((2 ^ 20 + 1) / 2 ^ 21 : ℚ≥0) : ℚ) := by
     rw [← hbridge]; push_cast; norm_num
   exact_mod_cast hQ
 
@@ -831,13 +845,13 @@ point.** Cites **Lemmas 6.10 / 6.6 / 6.8 of [ABF26]** and the §6.3.1
 formalized derivation, reduced to a single owed external coding-theory bound**
 (it is no longer an opaque `sorry`):
 
-1. **Pick `δ := 3/10`** — admissible: `0 < 3/10 < δ_min = 3/4` (`koalaIRS_minRelDist`,
-   the MDS rel-distance of the realised `RS[4,2]` code), and below the
-   unique-decoding radius `δ_min/2 = 3/8`. The lower bound is an infimum, so one
-   admissible δ suffices (`bestProvableError_le`).
+1. **Pick `δ := 3/10`** — admissible: `0 < 3/10 < δ_min = (2^20+1)/2^21 ≈ 0.5`
+   (`koalaIRS_minRelDist`, the MDS rel-distance of the realised `RS[2^21, 2^20]`
+   code). The lower bound is an infimum, so one admissible δ suffices
+   (`bestProvableError_le`).
 2. **Spot-check term** `(1-δ)^128 = (7/10)^128 ≤ 2^(-65)` — proven sorry-free in
    `koala_spotcheck` (reduced to the integer fact `7^128·2^65 ≤ 10^128`; true
-   value `≈ 2^(-65.87)`).
+   value `≈ 2^(-65.87)`). This leaf is independent of the block length.
 3. **`winningSetSoundness` term** — bounded by the **proven** L6.10 bridge
    `winningSetSoundness_le_epsMCA_add` down to `ε_mca(C,3/10) + |Λ(C^{≡2},3/10)|/|F|`,
    which the single owed external admit caps at `2^(-65)`.
@@ -846,20 +860,26 @@ formalized derivation, reduced to a single owed external coding-theory bound**
 
 **The single owed external bound** (`#print axioms` shows `sorryAx`, from this and
 nothing else in the achievable chain — `koalaIRS_minRelDist`, `koala_spotcheck`,
-`koalaEnc_range` are all axiom-clean). At the concrete `n = 4` point the Johnson
-RS bound is vacuous (its range `δ < 1−√(ρ+1/n)` is empty for `ρ+1/n = 3/4`), so the
-governing fact is the **unique-decoding** regime: below `δ_min/2`, ABF26 L4.6
-(`Errors.epsMCA_eq_epsCA_below_udr`) gives `ε_mca = ε_ca`, and with `|F| = q^6 ≈
-2^186` both `ε_ca(C,3/10)` and `|Λ|/|F|` are `≪ 2^(-65)` (the §6.3 asymptotic figure
-is `≈ 2^(-71.5)`). Every such `ε_mca`/`ε_ca`/`Λ` upper bound in ArkLib is a
-**by-design external literature admit** (`epsMCA_eq_epsCA_below_udr`,
-`CapacityBounds.rs_epsMCA_*`, the list-size bounds — `sorry`-backed from
+`koalaEnc_range` are all axiom-clean):
+`ε_mca(C, 3/10) + |Λ(C^{≡2}, 3/10)|/|F| ≤ 2^(-65)`. **Why it is true at this point.**
+`δ = 3/10` sits just above the Johnson list-decoding radius `1 - √ρ ≈ 0.2929` and
+above the MDS unique-decoding radius `δ_min/2 ≈ 0.25`, but it is far below the Elias
+list-decoding capacity (`δ_E ≈ 0.4667`, where the interleaved list first exceeds
+`|F|`) and the §6.4.1 attack threshold (`δ* = 0.468`). In this below-capacity regime
+the interleaved list `Λ(C^{≡2}, 3/10)` is small (`≪ |F| = q^6 ≈ 2^186`), so
+`|Λ|/|F|` is negligible and `ε_mca(C, 3/10)` is likewise small; the paper's own
+§6.3.1 analysis, evaluated at its optimizing `δ = 1 - √ρ - η` with `η = 2^{-21}`,
+gives the companion figure `≈ 2^(-71.5)` for this term (`.tex` ~2718). Every such
+`ε_mca`/`ε_ca`/`Λ` upper bound in ArkLib is a **by-design external literature
+admit** (`CapacityBounds.rs_epsMCA_*`, the list-size bounds — `sorry`-backed from
 BCHKS25/ACFY25/KKH26); this anchor inherits exactly that one external dependency,
 not an opaque hand-wave. (Closing it requires formalizing the cited coding-theory
-results — the prize's own research content — not session-level work.)
+results — the prize's own research content — not session-level work.) The `δ = 3/10`
+choice keeps the block-length-independent spot-check `(7/10)^128 ≤ 2^(-65)` clean;
+the paper's optimal `δ = 1 - √ρ - η` reaches the same `≈ 64`-bit conclusion.
 
 **Why `bits := 63.99`, not 64** (2026-06-10 second adversarial review, M1):
-the paper itself notes (`.tex` 2817–2819) that `(1/√2 + η)^128 > 2^(-64)`
+the paper itself notes (`.tex` 2718–2719) that `(1/√2 + η)^128 > 2^(-64)`
 *strictly* — the tables' `2^(-64.00)` entries are rounding. `bits := 63.99` is the
 honest certified anchor; the `δ=3/10` route above certifies `≤ 2^(-64) ≤ 2^(-63.99)`
 with margin. -/
@@ -867,34 +887,37 @@ noncomputable def irsLowerBoundT128 : SecurityLowerBound koalaIRS where
   bits := 63.99
   proof := by
     -- ABF26-§6.3.1, fully formalized **down to one external coding-theory bound**.
-    -- δ := 3/10 (in the §6.3 X-optimum band [0.293, 0.375) and below the MDS
-    -- unique-decoding radius δ_min/2 = 3/8). The lower bound is an infimum, so one
-    -- admissible δ suffices (`bestProvableError_le`); the convex combination then
-    -- splits into the spot-check term `(7/10)^128 ≤ 2^(-65)` (`koala_spotcheck`,
-    -- proven) and the `winningSetSoundness` term, bounded by the **proven** L6.10
-    -- bridge `winningSetSoundness_le_epsMCA_add` down to `ε_mca + |Λ|/|F| ≤ 2^(-65)`
-    -- (the single owed external admit — see below). Sum `≤ 2^(-64) ≤ 2^(-63.99)`.
-    -- δ-window admissibility: 0 < 3/10 < δ_min = 3/4 (MDS rel-dist of RS[4,2]).
-    have hmin34 : ((minRelHammingDistCode koalaIRS.code : ℚ≥0) : ℝ≥0) = (3 / 4 : ℝ≥0) := by
+    -- δ := 3/10, admissible in the paper's §6.3 window (0, δ_min) with
+    -- δ_min = (2^20+1)/2^21 ≈ 0.5. The lower bound is an infimum, so one admissible
+    -- δ suffices (`bestProvableError_le`); the convex combination then splits into
+    -- the block-length-independent spot-check term `(7/10)^128 ≤ 2^(-65)`
+    -- (`koala_spotcheck`, proven) and the `winningSetSoundness` term, bounded by the
+    -- **proven** L6.10 bridge `winningSetSoundness_le_epsMCA_add` down to
+    -- `ε_mca + |Λ|/|F| ≤ 2^(-65)` (the single owed external admit — see below).
+    -- Sum `≤ 2^(-64) ≤ 2^(-63.99)`.
+    have hmindist : ((minRelHammingDistCode koalaIRS.code : ℚ≥0) : ℝ≥0)
+        = ((2 ^ 20 + 1) / 2 ^ 21 : ℝ≥0) := by
       rw [koalaIRS_minRelDist]; push_cast; norm_num
     have hδmem : (3 / 10 : ℝ≥0) ∈
         Set.Ioo (0 : ℝ≥0) ((minRelHammingDistCode koalaIRS.code : ℝ≥0)) := by
-      rw [Set.mem_Ioo, hmin34]; norm_num
+      rw [Set.mem_Ioo, hmindist]; norm_num
     refine le_trans (bestProvableError_le koalaIRS hδmem) ?_
     rw [ENNReal.coe_le_coe]
     -- The `winningSetSoundness` term, via the proven L6.10 bridge, then the external bound.
     have hW : winningSetSoundness koalaIRS.enc (3 / 10) ≤ (2 : ℝ≥0) ^ (-(65 : ℝ)) := by
       refine le_trans (winningSetSoundness_le_epsMCA_add (C := koalaIRS.code)
         (3 / 10 : ℝ≥0) hδmem koalaIRS.enc koalaIRS.enc_injective rfl) ?_
-      -- ★ THE single owed external coding-theory bound at the concrete `n = 4` point:
+      -- ★ THE single owed external coding-theory bound at the paper's §6.3 point
+      --   (|L| = 2^21, m = 2^20, ρ = 1/2, |F| = q^6 ≈ 2^186):
       --   `ε_mca(C, 3/10) + |Λ(C^{≡2}, 3/10)|/|F| ≤ 2^(-65)`.
-      -- Below the MDS unique-decoding radius (`2·δ·n = 2.4 < 3 = δ_min·n`), ABF26 L4.6
-      -- gives `ε_mca = ε_ca`, and with `|F| = q^6 ≈ 2^186` both the `ε_ca` and the
-      -- `|Λ|/|F|` terms are `≪ 2^(-65)` (the §6.3 figure is `≈ 2^(-71.5)`). Every such
-      -- `ε_mca`/`ε_ca`/`Λ` upper bound in ArkLib is a by-design external admit
-      -- (`Errors.epsMCA_eq_epsCA_below_udr`, `CapacityBounds.rs_epsMCA_*`, the list-size
-      -- bounds — all `sorry`-backed from BCHKS25/ACFY25/KKH26); this anchor inherits
-      -- exactly that single external dependency. Phase-5/external-owed.
+      -- δ = 3/10 is far below the Elias capacity δ_E ≈ 0.4667 and the attack
+      -- threshold δ* = 0.468, so the interleaved list Λ(C^{≡2}, 3/10) is small
+      -- (≪ |F|), making |Λ|/|F| negligible and ε_mca(C, 3/10) small; the paper's
+      -- §6.3.1 analysis reports the companion figure ≈ 2^(-71.5) for this term.
+      -- Every such ε_mca/ε_ca/Λ upper bound in ArkLib is a by-design external admit
+      -- (`CapacityBounds.rs_epsMCA_*`, the list-size bounds — `sorry`-backed from
+      -- BCHKS25/ACFY25/KKH26); this anchor inherits exactly that single external
+      -- dependency. Cited external / external-owed.
       sorry
     -- The spot-check term and the `2^(-64) ≤ 2^(-63.99)` headroom.
     have ha : ((1 : ℝ≥0) - 3 / 10) ^ (128 : ℕ) ≤ (2 : ℝ≥0) ^ (-(65 : ℝ)) := koala_spotcheck
@@ -912,82 +935,79 @@ noncomputable def irsLowerBoundT128 : SecurityLowerBound koalaIRS where
             show (1 : ℝ) + -(65 : ℝ) = -(64 : ℝ) by norm_num]
       _ ≤ (2 : ℝ≥0) ^ (-(63.99 : ℝ)) := hstep
 
-/-- **List-decoding attack upper bound (≈117 bits) at the IRS/KoalaBear/`t=128`
-point.** Cites **Lemma 6.12 of [ABF26]** (§6.4.1) with the [KKH26]/Elias list
-bounds, cf. Fenzi–Sanso eprint 2025/2197 Lemma 4.4 (the paper's §6.4.1
-footnote). The floor over the δ sweep — the convex combination
-`(1-δ)^t + winningSetSoundness·(1 - (1-δ)^t)` dominates **both** of:
+/-- **Correlated-agreement attack upper bound (≈117 bits) at the IRS/KoalaBear/`t=128`
+point.** Cites **Lemma 6.13 of [ABF26]** (`ε_ca` lower-bounds the simplified-IOR
+soundness, §6.4.1) together with the CS25 correlated-agreement lower bound
+`thm:base-field-ca-lowerbound` and its `tab:cs25-ca-lowerbound` numerics (also cf.
+the Elias thresholds `tab:elias-lowerbound-thresholds`). The floor over the δ sweep
+— the convex combination `(1-δ)^t + winningSetSoundness·(1 - (1-δ)^t)` — dominates
+**both** of:
 
 * for `δ ≤ δ* = 0.468` the spot-check term:
-  `(1-δ)^128 ≥ (0.532)^128 ≈ 2^(-116.6) ≥ 2^(-117)`;
-* for `δ ∈ [δ*, δ_min)` the L6.12 + Elias attack
-  (`listDecoding_le_winningSetSoundness` at the §6.3 numerics) floors the
-  `winningSetSoundness` term (and the convex combination dominates it,
-  `convex ≥ winningSetSoundness` since `winningSetSoundness ≤ 1`)
-  at `≈ 2^(-116.49) ≥ 2^(-117)` (`tab:elias-lowerbound-thresholds`, `.tex`
-  ~2925).
+  `(1-δ)^128 ≥ (0.532)^128 ≈ 2^(-116.54) ≥ 2^(-117)`;
+* for `δ ∈ [δ*, δ_min)` the L6.13 CA attack (`epsCA_le_winningSetSoundness`) floors
+  the `winningSetSoundness` term (and the convex combination dominates it,
+  `convex ≥ winningSetSoundness` since `winningSetSoundness ≤ 1`) at
+  `ε_ca(C, δ) ≥ 2^(-116.49) ≥ 2^(-117)` (`tab:cs25-ca-lowerbound`, `.tex` ~2870).
 
-**Short-length band (owed to Session 3).** At this concrete `n = 4` MDS point
-`δ_min = 3/4` (see `koalaIRS`), so the attack branch must floor
-`winningSetSoundness` across the *whole* `[0.468, 0.75)`, not just up to the
-asymptotic `1 - ρ = 1/2`. As `δ → 3/4` the spot-check term collapses
-(`(1/4)^128 ≈ 2^(-256)`), so on the wide band the `≥ 2^(-117)` bound rests
-*entirely* on `winningSetSoundness ≥ 2^(-117)` (plausible — near `δ_min` the
-winning sets `Ω` are large, so the ratio is near `1` — but it is a distinct
-obligation from the `δ*`-attack the table reports, and is the direct cost of the
-short block length). Session 3 must discharge it, not assume the asymptotic
-window.
+**Faithful at the paper's block length.** With `koalaIRS` now at the paper's
+`|L| = 2^21`, `m = 2^20`, `ρ = 1/2` point, the sweep window is `(0, δ_min)` with
+`δ_min = (2^20+1)/2^21 = 1/2 + 2^{-21}` — the paper's window `(0, 1 - ρ)` up to the
+`2^{-21}` MDS correction. The attack threshold `δ* = 0.468` lies well inside it, and
+the whole large band `(δ*, δ_min)` is genuine attack territory (no short-length
+artefact). Crucially the earlier `RS[4,2]` placeholder was **unsound** here: its
+length-4 MDS list size is `≤ C(4,2) = 6`, so the owed list-size bound
+`2^(-117) ≤ N/(|F|+2N)` was false by ~66 bits (extreme review 2026-07-02). At
+`|L| = 2^21` the asymptotic attack numbers actually hold.
+
+**Why the CA route (not the list-size route).** Past the Elias capacity
+`δ_E ≈ 0.4667` the interleaved list `N := |Λ(C^{≡2}, δ)|` *exceeds* `|F| = q^6 ≈
+2^186` (it blows up as `δ → δ_min`), so the list-decoding hook
+`listDecoding_le_winningSetSoundness` — which requires `N < |F|` — does **not** apply
+across most of `(δ*, δ_min)`. The CS25 correlated-agreement lower bound has no such
+restriction: `ε_ca(C, δ) ≥ 2^(-116.49)` already at `δ* = 0.468` and increases toward
+`δ_min`, so the proven hook `epsCA_le_winningSetSoundness` floors the winning-set
+soundness across the *whole* large band with a single owed external.
 
 **Why `bits := 117`, not 116** (2026-06-10 second adversarial review, M2): a
-*ceiling* must round **up**. The certified sweep floor is the spot/attack
-crossing `≈ 2^(-116.6)`, which is `< 2^(-116)`: at `bits := 116` the
-inequality `2^(-116) ≤ bestProvableError` fails on the band
-`δ ∈ (0.46604, 0.468)` where the convex combination reaches neither `2^(-116)`
-(the spot-check term needs `δ ≤ 1 - 2^(-116/128) ≈ 0.46604`; the Elias floor on
-the `winningSetSoundness` term only ignites at `δ* = 0.468`, and the convex's
-extra mass is `≤ winningSetSoundness` which is unfloored on the band) — and no
-Phase-5 sharpening closes that band (the true list size there is exactly what
-the Elias bound says it isn't). At `bits := 117` the sweep is covered. The
-paper's `2^(-116.49)` is the per-δ*
-attack value, not the sweep floor.
+*ceiling* must round **up**. The certified sweep floor is the spot/attack crossing
+`≈ 2^(-116.54)`, which is `< 2^(-116)`: at `bits := 116` the inequality
+`2^(-116) ≤ bestProvableError` fails on the band `δ ∈ (0.46604, 0.468)`. At
+`bits := 117` the sweep is covered by the block-length-independent integer leaf
+`koala_spotcheck_lb`. The paper's tight per-δ* value is `2^(-116.49)`; `117` is the
+honest conservative sweep-floor ceiling (a fractional `bits := 116.49` would break
+the integer-exponent spot-check leaf at the crossover).
 
-**Proof shape (Session 3): a full formalized reduction to owed external list-size
-lower bounds** (no longer an opaque `sorry`, mirroring the lower anchor). The
-infimum-`≥` goal is reduced by `le_bestProvableError` to a universal floor `∀ δ ∈
-(0, 3/4), 2^(-117) ≤ (1-δ)^128 + winningSetSoundness · (1-(1-δ)^128)`, split at
-the crossover `δ* = 117/250`:
+**Proof shape: a full formalized reduction to one owed external CA bound** (mirroring
+the lower anchor). `le_bestProvableError` reduces the infimum-`≥` goal to a universal
+floor `∀ δ ∈ (0, δ_min), 2^(-117) ≤ (1-δ)^128 + winningSetSoundness·(1-(1-δ)^128)`,
+split at the crossover `δ* = 117/250`:
 
 1. **Small-δ half `δ ≤ δ*` — SORRY-FREE.** The convex combination dominates its
-   spot-check term `(1-δ)^128`, which is `≥ (133/250)^128 ≥ 2^(-117)` by
-   monotonicity (`tsub_le_tsub_left`, `gcongr`) and the proven integer inequality
-   `koala_spotcheck_lb`. This is the clean, achievable half.
-2. **Large-δ half `δ ∈ (δ*, 3/4)` — reduced to two owed external bounds.** The
+   spot-check term `(1-δ)^128 ≥ (133/250)^128 ≥ 2^(-117)` by monotonicity and the
+   proven integer inequality `koala_spotcheck_lb` (block-length-independent).
+2. **Large-δ half `δ ∈ (δ*, δ_min)` — reduced to one owed external CA bound.** The
    convex combination dominates `winningSetSoundness` (`w ≤ 1`, proven), which the
-   **proven** L6.12 hook `listDecoding_le_winningSetSoundness` floors at
-   `N/(|F| + 2N)`, `N := |Λ(C^{≡2}, δ)|`. Reaching `2^(-117)` then needs (i) the
-   side condition `N < |F|` (true: list size below field size `|F| = q^6 ≈
-   2^186`), and (ii) the numeric `2^(-117) ≤ N/(|F|+2N)`, i.e. `N ≳ 2^69`. Both
-   are **owed external coding-theory lower bounds** on the interleaved list size:
-   on `[δ*, δ_cross ≈ 0.4695)` the Elias/[KKH26] table
-   (`tab:elias-lowerbound-thresholds`, `N ≈ 2^{186-116.49}`); on the short-length
-   band `[δ_cross, 3/4)` — where the spot-check has collapsed and the table is out
-   of range — the near-`δ_min` list-size blow-up (`|Λ| → ∞` as `δ → δ_min`,
-   cf. 2025/2197 Lemma 4.4). No proven `Lambda` lower bound exists in ArkLib
-   (`ListDecodability.lean` has only `Lambda_le_*` upper bounds), so this is
-   irreducibly external — exactly the status of the lower anchor's `ε_mca`
-   ceiling. **Axiom-clean is infeasible by design** (it is the prize's own
-   coding-theory content); the reduction is full down to these named admits. -/
+   **proven** L6.13 hook `epsCA_le_winningSetSoundness` floors at `ε_ca(C, δ, δ)`.
+   Reaching `2^(-117)` then needs the single numeric `2^(-117) ≤ ε_ca(C, δ, δ)` on
+   `(δ*, δ_min)` — the CS25 correlated-agreement lower bound (`tab:cs25-ca-lowerbound`
+   gives `ε_ca ≥ 2^(-116.49)` at `δ*`, rising to `δ_min`), a **by-design external
+   coding-theory admit** (no proven `ε_ca` lower bound exists in ArkLib; closing it is
+   the prize's own research content). **Axiom-clean is infeasible by design**; the
+   reduction is full down to this single named admit (one fewer than the previous,
+   now-unsound, two-admit list-size route). -/
 noncomputable def listDecodingUpperBoundAttack : SecurityUpperBound koalaIRS where
   bits := 117
   proof := by
-    -- ABF26 §6.4.1, fully formalized **down to owed external list-size bounds**.
+    -- ABF26 §6.4.1, fully formalized **down to one owed external CA bound**.
     -- `le_bestProvableError` reduces to a per-δ floor over the whole window
-    -- `(0, δ_min = 3/4)` (MDS rel-dist of RS[4,2], `koalaIRS_minRelDist`).
+    -- `(0, δ_min = (2^20+1)/2^21)` (MDS rel-dist of RS[2^21,2^20], `koalaIRS_minRelDist`).
     refine le_bestProvableError koalaIRS (fun δ hδ => ?_)
-    have hmin34 : ((minRelHammingDistCode koalaIRS.code : ℚ≥0) : ℝ≥0) = (3 / 4 : ℝ≥0) := by
+    have hmindist : ((minRelHammingDistCode koalaIRS.code : ℚ≥0) : ℝ≥0)
+        = ((2 ^ 20 + 1) / 2 ^ 21 : ℝ≥0) := by
       rw [koalaIRS_minRelDist]; push_cast; norm_num
-    rw [Set.mem_Ioo, hmin34] at hδ
-    obtain ⟨hδpos, hδ34⟩ := hδ
+    rw [Set.mem_Ioo, hmindist] at hδ
+    obtain ⟨hδpos, hδmin⟩ := hδ
     rw [ENNReal.coe_le_coe]
     have ht : koalaIRS.t = 128 := rfl
     rw [ht]
@@ -1002,7 +1022,7 @@ noncomputable def listDecodingUpperBoundAttack : SecurityUpperBound koalaIRS whe
           _ = 1 := by norm_num
       exact le_trans koala_spotcheck_lb (by gcongr)
     · -- Large-δ half: the convex combination dominates `winningSetSoundness`
-      -- (`w ≤ 1`); floor `w` via the PROVEN L6.12 hook + owed external list size.
+      -- (`w ≤ 1`); floor `w` via the PROVEN L6.13 CA hook + one owed external CA bound.
       have ha1 : (1 - δ : ℝ≥0) ^ (128 : ℕ) ≤ 1 := pow_le_one' tsub_le_self _
       have hw1 : winningSetSoundness koalaIRS.enc δ ≤ 1 :=
         winningSetSoundness_le_one koalaIRS.enc δ
@@ -1020,22 +1040,20 @@ noncomputable def listDecodingUpperBoundAttack : SecurityUpperBound koalaIRS whe
           _ = (1 - δ) ^ (128 : ℕ)
                 + winningSetSoundness koalaIRS.enc δ * (1 - (1 - δ) ^ (128 : ℕ)) := add_comm _ _
       refine le_trans ?_ hconvex
-      have hδlt1 : δ < 1 := lt_trans hδ34 (by norm_num)
-      -- ★ Owed external bound (i): the interleaved list size is below the field
-      -- size `|F| = q^6 ≈ 2^186` (true in regime; no proven `Lambda` upper bound
-      -- in ArkLib bridges to the `q^6` numeric — owed external coding-theory).
-      have hF : ((Lambda (interleavedCodeSet (κ := Fin 2) koalaIRS.code) (δ : ℝ)).toNat : ℝ)
-          < Fintype.card koalaIRS.F := by
-        sorry
-      -- The PROVEN L6.12 hook floors `winningSetSoundness` at `N/(|F|+2N)`.
-      refine le_trans ?_ (listDecoding_le_winningSetSoundness (C := koalaIRS.code) δ hδpos hδlt1
-        koalaIRS.enc koalaIRS.enc_injective rfl hF)
-      -- ★ Owed external bound (ii): the interleaved list size lower bound
-      -- `N/(|F|+2N) ≥ 2^(-117)` (`N ≳ 2^69`). On `[δ*, δ_cross)` this is the
-      -- Elias/[KKH26] table (`≈ 2^{186-116.49}`); on the short-length band
-      -- `[δ_cross, 3/4)` it is the near-`δ_min` list-size blow-up (2025/2197 L4.4).
-      -- No proven `Lambda` lower bound exists in ArkLib — irreducibly external,
-      -- exactly as the lower anchor's `ε_mca` ceiling. Phase-5/external-owed.
+      have hδlt1 : δ < 1 := lt_trans hδmin (by norm_num)
+      -- The PROVEN L6.13 CA hook floors `winningSetSoundness` at `ε_ca(C, δ, δ)`
+      -- (no `N < |F|` requirement, so it applies across the whole large band).
+      rw [← ENNReal.coe_le_coe]
+      refine le_trans ?_ (epsCA_le_winningSetSoundness (C := koalaIRS.code) δ hδpos hδlt1
+        koalaIRS.enc koalaIRS.enc_injective rfl)
+      -- ★ THE single owed external CA lower bound on `(δ*, δ_min)`:
+      --   `2^(-117) ≤ ε_ca(C, δ, δ)`.
+      -- CS25 (`thm:base-field-ca-lowerbound`, `tab:cs25-ca-lowerbound`) gives
+      -- `ε_ca(C, δ) ≥ 2^(-116.49)` at `δ* = 0.468`, increasing toward `δ_min`; past
+      -- the Elias capacity `δ_E ≈ 0.4667` correlated agreement fails badly, so the
+      -- bound only strengthens. No proven `ε_ca` lower bound exists in ArkLib —
+      -- irreducibly external, exactly as the lower anchor's `ε_mca` ceiling.
+      -- Cited external / external-owed.
       sorry
 
 /-- **The current leaderboard frontier.** At the KoalaBear-sextic anchor the

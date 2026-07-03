@@ -34,18 +34,17 @@ and the list size of the corresponding interleaved base code.
   `C_B` is `B`-linear). Together they package `extensionCode P C_B` as a
   full `F`-`Submodule` (B-linear closure was always present; the F-scalar
   closure is what the structural refactor delivers).
-- `lambda_extensionCode_eq_lambda_interleaved` (L2.21, [BCFW25 Lem D.3]):
-  `|Λ(C_F, δ)| = |Λ(C_B^≡e, δ)|`. Tagged sorry.
+- `lambda_extensionCode_eq_lambda_interleaved` (L2.21, [BuenzCFW25 Lem D.3]):
+  `|Λ(C_F, δ)| = |Λ(C_B^≡e, δ)|`. Proved in-tree via the coordinate Hamming isometry.
 
 ## References
 
 - [ABF26] Arnon-Boneh-Fenzi. *Open Problems in List Decoding and Correlated Agreement*.
   2026.
-- [BCFW25] Bordage-Chiesa-Fenzi-Wahby. Lemma D.3.
+- [BuenzCFW25] Bünz-Chiesa-Fenzi-Wang. Lemma D.3.
 
 (The distance equality `δ_min(C_F) = δ_min(C_B)`, referenced in the L2.21 paragraph
-context, is from Dao-Petrov 2025 (Theorem 3.2 in their paper). The knowledge-base
-citation key for this paper is not yet registered, so we mention it in prose only.)
+context, is from Diamond-Posen [DiamondP23, Theorem 3.2].)
 -/
 
 set_option linter.unusedFintypeInType false
@@ -305,7 +304,10 @@ linear code and `P` be an extension-field presentation. For every `δ ∈ (0, 1)
   `|Λ(C_F, δ)| = |Λ(C_B^≡e, δ)|`
 
 where `C_F` is the extension code (D2.20) and `C_B^≡e` is the `e`-fold interleaved
-base code (D2.9). Admitted as an external result. -/
+base code (D2.9). Proved in-tree: the coordinate isomorphism `Ψ := φ` (applied
+componentwise) is a Hamming isometry `(ι → F) ≃ (ι → Fin e → B)` carrying `extensionCode`
+onto `interleavedCodeSet`, so it matches the `δ`-close-codeword sets bijectively and the
+supremum defining `Λ` is preserved. -/
 theorem lambda_extensionCode_eq_lambda_interleaved
     {ι : Type} [Fintype ι] [Nonempty ι] [DecidableEq ι]
     {B F : Type} [Field B] [Fintype B] [DecidableEq B]
@@ -315,6 +317,57 @@ theorem lambda_extensionCode_eq_lambda_interleaved
     Lambda (extensionCode P C_B) δ =
       Lambda (Code.interleavedCodeSet (κ := Fin P.e) C_B)
         δ := by
-  sorry -- ABF26-L2.21; external admit [BCFW25 Lem D.3].
+  letI : DecidableEq F := Classical.decEq F
+  letI : DecidableEq (Fin P.e → B) := Classical.decEq _
+  set Ψ : (ι → F) ≃ (ι → Fin P.e → B) :=
+    Equiv.piCongrRight (fun _ => P.φ.toEquiv) with hΨ
+  have hΨ_apply : ∀ (v : ι → F) (i : ι), Ψ v i = P.φ (v i) := fun v i => rfl
+  have hφinj : Function.Injective (P.φ : F → (Fin P.e → B)) := P.φ.injective
+  have hham : ∀ x y : ι → F, hammingDist (Ψ x) (Ψ y) = hammingDist x y := by
+    intro x y
+    have := hammingDist_comp (fun (_ : ι) => (P.φ : F → (Fin P.e → B)))
+      (x := x) (y := y) (fun _ => hφinj)
+    simpa [hΨ_apply] using this
+  have hrelQ : ∀ x y : ι → F,
+      Code.relHammingDist (Ψ x) (Ψ y) = Code.relHammingDist x y := by
+    intro x y; unfold Code.relHammingDist; rw [hham]
+  have hmem : ∀ v : ι → F,
+      (Ψ v ∈ Code.interleavedCodeSet (κ := Fin P.e) C_B) ↔ v ∈ extensionCode P C_B := by
+    intro v
+    simp only [Code.interleavedCodeSet, extensionCode, Set.mem_setOf_eq]
+    constructor
+    · intro h j; convert h j using 1
+    · intro h j; convert h j using 1
+  have hset : ∀ f : ι → F,
+      closeCodewordsRel (Code.interleavedCodeSet (κ := Fin P.e) C_B) (Ψ f) δ
+        = Ψ '' (closeCodewordsRel (extensionCode P C_B) f δ) := by
+    intro f
+    ext c
+    simp only [closeCodewordsRel, relHammingBall, Set.mem_setOf_eq, Set.mem_image]
+    constructor
+    · rintro ⟨hc_mem, hc_ball⟩
+      refine ⟨Ψ.symm c, ⟨?_, ?_⟩, by simp⟩
+      · rw [← hmem]; simpa using hc_mem
+      · have hq : Code.relHammingDist f (Ψ.symm c) = Code.relHammingDist (Ψ f) c := by
+          have := hrelQ f (Ψ.symm c); simpa using this.symm
+        calc (Code.relHammingDist f (Ψ.symm c) : ℝ)
+            = (Code.relHammingDist (Ψ f) c : ℝ) := by exact_mod_cast hq
+          _ ≤ δ := hc_ball
+    · rintro ⟨v, ⟨hv_mem, hv_ball⟩, rfl⟩
+      refine ⟨(hmem v).2 hv_mem, ?_⟩
+      calc (Code.relHammingDist (Ψ f) (Ψ v) : ℝ)
+          = (Code.relHammingDist f v : ℝ) := by exact_mod_cast hrelQ f v
+        _ ≤ δ := hv_ball
+  have hcard : ∀ f : ι → F,
+      (closeCodewordsRel (Code.interleavedCodeSet (κ := Fin P.e) C_B) (Ψ f) δ).ncard
+        = (closeCodewordsRel (extensionCode P C_B) f δ).ncard := by
+    intro f
+    rw [hset f, Set.ncard_image_of_injective _ Ψ.injective]
+  unfold Lambda
+  rw [← Equiv.iSup_comp (g := fun g => ((closeCodewordsRel
+        (Code.interleavedCodeSet (κ := Fin P.e) C_B) g δ).ncard : ℕ∞)) Ψ]
+  apply iSup_congr
+  intro f
+  rw [hcard f]
 
 end CodingTheory

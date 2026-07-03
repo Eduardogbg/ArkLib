@@ -191,7 +191,7 @@ the **attack/upper** anchor `frsUpperBound` (which owes nothing). The
 are **not in ArkLib** — their proofs reduce to the owed τ-subspace-design `ε_mca`
 bound, which is the ABF26 §1 **Grand MCA Challenge** (the explicit prize), so they
 live as the open contest entries in the external
-[`proximity-prize`](../../../proximity-prize) repository (which depends on ArkLib).
+`proximity-prize` repository (which depends on ArkLib).
 ArkLib carries only finished/winning proofs. (Mirrors `Impl/FRS.lean` lines 36–42.)
 
 | Anchor | `bits` | Basis |

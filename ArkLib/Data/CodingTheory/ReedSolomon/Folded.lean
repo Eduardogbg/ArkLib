@@ -59,7 +59,12 @@ distinct `α ≠ β`). Its literal reading therefore does *not* forbid `ω^j = 1
 silently weaken the FRS distance argument downstream (T2.18, T4.14). We add the
 *intra-orbit* conjunct so that `Admissible` is exactly the GR08 injectivity condition
 the paper's results actually rely on. This is a deliberate strengthening, not a verbatim
-transcription. -/
+transcription.
+
+**Boundary cases to be aware of.** The predicate does not require `ω ≠ 0` (downstream
+lemmas take it as a separate hypothesis), and it excludes `0 ∈ L` only *implicitly* and
+only for `s ≥ 2` (the intra-orbit clause fails at `α = 0`); for `s ≤ 1` the intra-orbit
+range is empty and `0 ∈ L` is admissible, so consumers needing `0 ∉ L` must state it. -/
 def Admissible {F : Type} [Field F] [DecidableEq F]
     (L : Finset F) (s : ℕ) (ω : F) : Prop :=
   (∀ α ∈ L, ∀ β ∈ L, α ≠ β → ∀ i : ℕ, i < s → α * ω ^ i ≠ β) ∧
@@ -115,22 +120,6 @@ lemma mem_frsCode_iff {ι : Type} [Fintype ι] [DecidableEq ι]
     ext x j
     exact (hf x j).symm
 
-/-- **Dimension of `frsCode`.** When the FRS encoder is injective on `degreeLT F k` — i.e.
-when `(L, s)`-admissibility plus enough evaluation points (`k ≤ s · |L|`) rule out
-non-trivial polynomial vanishing on the folded orbit — the dimension equals `k`.
-
-The hypothesis `h_encoder_inj` packages exactly this injectivity. The "natural" RS case
-is `h_encoder_inj := Polynomial.degreeLT_eval_inj` (or equivalent); we leave it as a
-hypothesis so this lemma is reusable across regimes. -/
-lemma dim_frsCode {ι : Type} [Fintype ι] [DecidableEq ι]
-    {F : Type} [Field F] [DecidableEq F]
-    (domain : ι ↪ F) (k s : ℕ) (ω : F)
-    (h_encoder_inj : Function.Injective (frsEvalOnPoints domain s ω)) :
-    Module.finrank F (frsCode domain k s ω) = k := by
-  unfold frsCode
-  rw [(Submodule.equivMapOfInjective _ h_encoder_inj _).finrank_eq.symm]
-  exact (Polynomial.degreeLTEquiv F k).finrank_eq.trans (by simp)
-
 /-- **The `s · |ι|` folded evaluation points are pairwise distinct.** This is the
 injective-map reformulation of `Admissible` (its docstring's "every evaluation point
 appears only once across all folds"): given `(L, s)`-admissibility of `ω` on
@@ -179,7 +168,7 @@ analogue of `ReedSolomon.evalOnPoints_domRestrict_injective`). When `ω` is
 evaluation points (`k ≤ s · |ι|`), the FRS evaluation map restricted to `degreeLT F k`
 is injective: a nonzero polynomial of degree `< k ≤ s · |ι|` cannot vanish at all
 `s · |ι|` distinct folded points (`admissible_foldedPoints_injective`). This is the
-in-tree bridge that `dim_frsCode`'s `h_encoder_inj` hypothesis was waiting for. -/
+kernel-triviality fact underlying the FRS dimension formula `dim_frsCode` below. -/
 lemma frsEvalOnPoints_domRestrict_injective {ι : Type} [Fintype ι] [DecidableEq ι]
     {F : Type} [Field F] [DecidableEq F] {k s : ℕ} [NeZero k]
     (domain : ι ↪ F) (ω : F)
@@ -204,6 +193,27 @@ lemma frsEvalOnPoints_domRestrict_injective {ι : Type} [Fintype ι] [DecidableE
         _ = Fintype.card ι * s := Nat.mul_comm _ _
   · intro hp
     simp [hp]
+
+/-- **Dimension of `frsCode`.** Under `(L, s)`-admissibility of `ω` (`L = image domain`),
+`ω ≠ 0`, and enough folded evaluation points (`k ≤ s · |ι|`), the FRS encoder is injective
+on `degreeLT F k` (`frsEvalOnPoints_domRestrict_injective`), so the folded code has
+dimension exactly `k`. This is the rate fact `ρ = k / (s · n)` for FRS codes, the folded
+analogue of `ReedSolomon.dim_eq_deg_of_le'`. -/
+lemma dim_frsCode {ι : Type} [Fintype ι] [DecidableEq ι]
+    {F : Type} [Field F] [DecidableEq F]
+    (domain : ι ↪ F) (k s : ℕ) (ω : F) [NeZero k]
+    (hadm : Admissible (Finset.univ.map domain) s ω) (hω : ω ≠ 0)
+    (hk : k ≤ s * Fintype.card ι) :
+    Module.finrank F (frsCode domain k s ω) = k := by
+  have h_range : (Polynomial.degreeLT F k).map (frsEvalOnPoints domain s ω) =
+      LinearMap.range ((frsEvalOnPoints domain s ω).domRestrict
+        (Polynomial.degreeLT F k)) := by
+    ext
+    simp [Submodule.mem_map]
+  rw [frsCode, h_range,
+    LinearMap.finrank_range_of_inj
+      (frsEvalOnPoints_domRestrict_injective domain ω hadm hω hk),
+    Polynomial.finrank_degreeLT_n]
 
 /-- **Folded-RS minimum (block) distance** — the folded analogue of
 `ReedSolomon.minDist_eq'`. Under `(L, s)`-admissibility of `ω` (`L = image domain`),
