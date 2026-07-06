@@ -114,4 +114,75 @@ lemma generatorSubset [Nonempty S] (G : Generator S ℓ F) (ε_mca : I → ℝ) 
           fun x h => isMCA_projectedGenerator_of_isMCA LC G κ U γ x h)
     (hGMCA (zeroExtend κ U) γ)
 
+/-- Let `G : S → 𝔽^ℓ` be an MCA generator with error `ε_mca` and `G' : S' → 𝔽^ℓ'` be an MCA
+generator with error `ε_mca'`. Then the (explicit) tensor generator `G ⊗ G' : S × S' → 𝔽^(ℓ × ℓ')`
+is an MCA generator.
+
+This is Lemma 4.4 [BCGM25]. The paper obtains the tight error `ε_mca + ε_mca'` by applying the MCA
+property of `G'` to the `ℓ`-fold interleaving of `LC` (an MCA statement over the larger alphabet
+`𝔽^ℓ`). The ArkLib `IsMCAGenerator` predicate is currently fixed to the base alphabet `𝔽`, so here
+we replace that interleaving step by a union bound over the `ℓ` rows, which yields the (weaker but
+self-contained) error `ε_mca + (Fintype.card ℓ) • ε_mca'`. We assume the error functions are
+nonnegative (as MCA errors always are); this is needed to combine the two `ENNReal.ofReal` bounds
+additively. A tight version, matching the paper, is left for a future generalisation of
+`IsMCAGenerator` to arbitrary module alphabets. -/
+lemma tensor_of_MCA_is_MCA [Nonempty S] {S' : Type} [Fintype S'] [Nonempty S'] (LC : LinearCode ι F)
+    (G : Generator S ℓ F) (ε_mca : I → ℝ) (hε_mca : ∀ γ, 0 ≤ ε_mca γ)
+    (hGMCA : IsMCAGenerator G ε_mca LC)
+    (G' : Generator S' ℓ' F) (ε_mca' : I → ℝ) (hε_mca' : ∀ γ, 0 ≤ ε_mca' γ)
+    (hG'MCA : IsMCAGenerator G' ε_mca' LC) :
+    IsMCAGenerator (TensorGenerator_Explicit G G')
+      (ε_mca + (Fintype.card ℓ : ℝ) • ε_mca') LC := by
+  intro U γ
+  -- `W x' i` is the `G'`-combination of the `i`-th "row" `(U (i, ·))` of the word matrix.
+  set W : S' → (ℓ → (ι → F)) := fun x' i => Matrix.vecMul (G' x') (fun j => U (i, j)) with hW
+  -- Key algebraic identity: the tensor combination factors as `G`-combination of the `W`-rows.
+  have key : ∀ (x : S) (x' : S'),
+      Matrix.vecMul (TensorGenerator_Explicit G G' (x, x')) U
+        = Matrix.vecMul (G x) (W x') := by
+    intro x x'
+    funext k
+    simp only [hW, Matrix.vecMul, dotProduct, TensorGenerator_Explicit, Fintype.sum_prod_type]
+    refine Finset.sum_congr rfl fun i _ => ?_
+    rw [Finset.mul_sum]
+    exact Finset.sum_congr rfl fun j _ => by ring
+  -- Pointwise: an MCA violation of the tensor generator forces an MCA violation of `G` (on the
+  -- `W`-rows) or of `G'` (on some individual row).
+  have himp : ∀ p : S × S', IsMCA (TensorGenerator_Explicit G G') LC p U γ →
+      IsMCA G LC p.1 (W p.2) γ ∨ ∃ i, IsMCA G' LC p.2 (fun j => U (i, j)) γ := by
+    rintro ⟨x, x'⟩ hmca
+    obtain ⟨T, hTcard, hTproj, ⟨i₀, j₀⟩, hij⟩ := hmca
+    rw [key x x'] at hTproj
+    by_cases hcase : ∃ i, projectedWord (W x' i) T ∉ projectedCode_submod LC T
+    · exact Or.inl ⟨T, hTcard, hTproj, hcase⟩
+    · simp only [not_exists, not_not] at hcase
+      exact Or.inr ⟨i₀, T, hTcard, hcase i₀, j₀, hij⟩
+  -- Rewrite the target error as the matching sum of `ENNReal.ofReal`s.
+  have hEq : ENNReal.ofReal (ε_mca γ) + (Fintype.card ℓ : ℝ≥0∞) * ENNReal.ofReal (ε_mca' γ)
+      = ENNReal.ofReal ((ε_mca + (Fintype.card ℓ : ℝ) • ε_mca') γ) := by
+    rw [Pi.add_apply, Pi.smul_apply, smul_eq_mul,
+      ENNReal.ofReal_add (hε_mca γ) (mul_nonneg (by positivity) (hε_mca' γ)),
+      ENNReal.ofReal_mul (by positivity), ENNReal.ofReal_natCast]
+  -- `G`-term: reorder so `S'` is sampled first, then apply `hGMCA` for each `x'`.
+  have hA : Pr_{ let p ←$ᵖ (S × S') }[ IsMCA G LC p.1 (W p.2) γ ]
+      ≤ ENNReal.ofReal (ε_mca γ) := by
+    rw [prob_split_uniform_sampling_of_equiv_prod (Equiv.prodComm S S')]
+    simp only [Equiv.prodComm_symm, Equiv.prodComm_apply, Prod.swap_prod_mk]
+    exact Pr_seq_le_of_forall_le ($ᵖ S) ($ᵖ S')
+      (fun x x' => IsMCA G LC x (W x') γ) (fun x' => hGMCA (W x') γ)
+  -- `G'`-term: the event is independent of `x ∈ S`; union bound over the `ℓ` rows.
+  have hB : Pr_{ let p ←$ᵖ (S × S') }[ ∃ i, IsMCA G' LC p.2 (fun j => U (i, j)) γ ]
+      ≤ (Fintype.card ℓ : ℝ≥0∞) * ENNReal.ofReal (ε_mca' γ) := by
+    rw [prob_split_uniform_sampling_of_prod]
+    refine Pr_seq_le_of_forall_le ($ᵖ S') ($ᵖ S)
+      (fun x' _ => ∃ i, IsMCA G' LC x' (fun j => U (i, j)) γ) (fun _ => ?_)
+    refine le_trans (Pr_exists_le _ _) ?_
+    refine le_trans (Finset.sum_le_sum (fun i _ => hG'MCA (fun j => U (i, j)) γ)) ?_
+    exact le_of_eq (by rw [Finset.sum_const, Finset.card_univ, nsmul_eq_mul])
+  -- Combine: the tensor MCA event implies one of the two, then union + additivity.
+  refine le_trans (Pr_le_Pr_of_implies ($ᵖ (S × S')) _ _ himp) ?_
+  refine le_trans (Pr_or_le ($ᵖ (S × S')) _ _) ?_
+  rw [← hEq]
+  exact add_le_add hA hB
+
 end LinearTransformations

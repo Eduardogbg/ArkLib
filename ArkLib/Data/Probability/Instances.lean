@@ -468,6 +468,81 @@ lemma Pr_congr {α : Type} {D : PMF α} {P Q : α → Prop}
   congr 2; funext x;
   congr 1; exact propext (h x)
 
+/--
+**Union Bound (binary form)**
+
+The probability of a disjunction of two events is at most the sum of their individual
+probabilities.
+-/
+theorem Pr_or_le {α : Type} (D : PMF α) (f g : α → Prop) :
+    Pr_{ let r ← D }[ f r ∨ g r ] ≤ Pr_{ let r ← D }[ f r ] + Pr_{ let r ← D }[ g r ] := by
+  classical
+  rw [prob_tsum_form_singleton, prob_tsum_form_singleton, prob_tsum_form_singleton,
+    ← ENNReal.tsum_add]
+  apply ENNReal.tsum_le_tsum
+  intro r
+  rw [← mul_add]
+  refine mul_le_mul_of_nonneg_left ?_ zero_le'
+  by_cases hf : f r <;> by_cases hg : g r <;> simp [hf, hg]
+
+/--
+**Union Bound (over a finite index set)**
+
+The probability that `∃ i, f i r` holds is at most the sum, over `i`, of the probabilities that
+`f i r` holds.
+-/
+theorem Pr_exists_le {α ι : Type} [Fintype ι] (D : PMF α) (f : ι → α → Prop) :
+    Pr_{ let r ← D }[ ∃ i, f i r ] ≤ ∑ i, Pr_{ let r ← D }[ f i r ] := by
+  classical
+  have key : ∀ (s : Finset ι),
+      Pr_{ let r ← D }[ ∃ i ∈ s, f i r ] ≤ ∑ i ∈ s, Pr_{ let r ← D }[ f i r ] := by
+    intro s
+    induction s using Finset.induction with
+    | empty =>
+      have h0 : Pr_{ let r ← D }[ ∃ i ∈ (∅ : Finset ι), f i r ]
+          = Pr_{ let r ← D }[ (False : Prop) ] :=
+        Pr_congr (fun r => by simp)
+      rw [Finset.sum_empty, h0, prob_tsum_form_singleton]
+      simp
+    | insert a s ha ih =>
+      have hcongr : Pr_{ let r ← D }[ ∃ i ∈ insert a s, f i r ] =
+          Pr_{ let r ← D }[ f a r ∨ ∃ i ∈ s, f i r ] :=
+        Pr_congr (fun r => by
+          constructor
+          · rintro ⟨i, hi, hfi⟩
+            rcases Finset.mem_insert.mp hi with rfl | hi
+            · exact Or.inl hfi
+            · exact Or.inr ⟨i, hi, hfi⟩
+          · rintro (hfa | ⟨i, hi, hfi⟩)
+            · exact ⟨a, Finset.mem_insert_self a s, hfa⟩
+            · exact ⟨i, Finset.mem_insert_of_mem hi, hfi⟩)
+      rw [hcongr]
+      calc Pr_{ let r ← D }[ f a r ∨ ∃ i ∈ s, f i r ]
+          ≤ Pr_{ let r ← D }[ f a r ] + Pr_{ let r ← D }[ ∃ i ∈ s, f i r ] := Pr_or_le D _ _
+        _ ≤ Pr_{ let r ← D }[ f a r ] + ∑ i ∈ s, Pr_{ let r ← D }[ f i r ] := by gcongr
+        _ = ∑ i ∈ insert a s, Pr_{ let r ← D }[ f i r ] := by rw [Finset.sum_insert ha]
+  simpa using key Finset.univ
+
+/--
+**Marginal Bound for Sequential Sampling**
+
+If, for every fixed outcome `b` of the second sample, the probability over the first sample is
+bounded by a constant `c` (not depending on `b`), then the same bound holds for the probability
+over the full sequential sample.
+-/
+theorem Pr_seq_le_of_forall_le {α β : Type} (Da : PMF α) (Db : PMF β) (Q : α → β → Prop)
+    {c : ENNReal} (h : ∀ b, Pr_{ let a ← Da}[Q a b] ≤ c) :
+    Pr_{ let b ← Db; let a ← Da }[ Q a b ] ≤ c := by
+  classical
+  let D_rest : β → PMF Prop := fun b => (do let a ← Da; return (Q a b))
+  calc Pr_{ let b ← Db; let a ← Da }[ Q a b ]
+      = ∑' b, Db b * (D_rest b) True := prob_tsum_form_split_first Db D_rest
+    _ ≤ ∑' b, Db b * c := by
+        apply ENNReal.tsum_le_tsum
+        intro b
+        exact mul_le_mul_of_nonneg_left (h b) zero_le'
+    _ = c := by rw [ENNReal.tsum_mul_right, PMF.tsum_coe, one_mul]
+
 /-- **Schwartz-Zippel Lemma** (Probability Form):
 For a non-zero multivariate polynomial `P` of total degree at most `d` over a finite field `L`,
 the probability that `P(r)` evaluates to 0 for a uniformly random `r` is at most `d / |L|`. -/
