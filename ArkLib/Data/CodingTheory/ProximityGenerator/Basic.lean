@@ -61,7 +61,7 @@ def IsZeroEvadingGenerator {S : Type} [Nonempty S] [Fintype S] (G : Generator S 
   (sSup {y | ∃ v : ℓ → F, v ≠ 0 ∧ y = Pr_{let x ←$ᵖ S}[dotProduct (G x) v = 0]})
     ≤ ENNReal.ofReal ε_ze
 
-/-- Let the set `S` be a product of `ℓ` subsets of `F`. A polynomial generator is a generator if
+/-- Let the set `S` be a product of `s` subsets of `F`. A polynomial generator is a generator if
 there exist `ℓ` linearly independent multivariate polynomials, such that the output is an evaluation
 of the seed at each of these polynomials.
 Definition 3.19 [BCGM25]. -/
@@ -72,6 +72,11 @@ def IsPolynomialGenerator {s : ℕ} (S : Fin s → Set F) (G : Generator (∀ i,
 def IsPolynomialGeneratorOf {s : ℕ} (S : Fin s → Set F) (G : Generator (∀ i, S i) ℓ F)
   (P : ℓ → MvPolynomial (Fin s) F) : Prop :=
   LinearIndependent F P ∧ ∀ x : (∀ i, S i), G x = MvPolynomial.eval (fun i ↦ (x i : F)) ∘ P
+
+/-- A polynomial generator where each `S i` is the whole field `F`. -/
+def IsPolynomialGeneratorOfFull {s : ℕ} (G : Generator (Fin s → F) ℓ F)
+    (P : ℓ → MvPolynomial (Fin s) F) : Prop :=
+  LinearIndependent F P ∧ ∀ x : Fin s → F, G x = MvPolynomial.eval x ∘ P
 
 /-- A matrix whose rows are the outputs of the generator function.
 Defined inside Definition 3.12 [BCGM25]. -/
@@ -149,6 +154,11 @@ The affine space generator is a generator of the form `G : F^ℓ → F^(ℓ + 1)
 `x ↦ (1,x)`. -/
 abbrev AffineSpaceGenerator (F : Type) [Field F] (ℓ : ℕ) : Generator (Fin ℓ → F) (Fin (ℓ + 1)) F :=
   fun x => Fin.cons 1 x
+
+/-- Let `F` be a field. The univariate powers generator `G : F → F ^ (d + 1)` is defined by
+`x ↦ (1, x, x², … , x^d)`. -/
+def UnivariatePowers (d : ℕ) : Generator F (Fin (d + 1)) F :=
+  fun x i => x ^ (i : ℕ)
 
 end CoreDefinitions
 
