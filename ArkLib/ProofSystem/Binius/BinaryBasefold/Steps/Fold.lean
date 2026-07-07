@@ -1744,82 +1744,17 @@ theorem foldOracleVerifier_rbrKnowledgeSoundness (i : Fin ℓ) :
       (relOut := foldStepRelOut (mp := mp) 𝔽q β (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate)
         (𝓑 := 𝓑)  i)
       (foldKnowledgeError 𝔽q β (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate) i) := by
-  apply OracleReduction.unroll_rbrKnowledgeSoundness (kSF := foldKnowledgeStateFunction
-    (mp:=mp) (𝓡 := 𝓡) (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (𝓑 := 𝓑) 𝔽q β i)
-  intro stmtOStmtIn witIn prover j initState
-  let P := rbrExtractionFailureEvent
-    (foldKnowledgeStateFunction (mp := mp) (𝓑 := 𝓑) (init := init) (impl := impl) (σ := σ) 𝔽q β i)
-    (foldRbrExtractor (mp := mp) 𝔽q β i)
-    j
-    stmtOStmtIn
-  rw [OracleReduction.probEvent_soundness_goal_unroll_log' (pSpec := pSpecFold
-    (L := L)) (P := P) (impl := impl) (prover := prover) (i := j) (stmt := stmtOStmtIn)
-    (wit := witIn) (s := initState)]
-  have h_j_eq_1 : j = ⟨1, rfl⟩ := by
-    match j with
-    | ⟨0, h0⟩ => nomatch h0
-    | ⟨1, _⟩ => rfl
-  subst h_j_eq_1
-  conv_lhs => simp only [Fin.isValue, Fin.castSucc_one];
-  rw [OracleReduction.soundness_unroll_runToRound_1_P_to_V_pSpec_2
-    (pSpec := pSpecFold (L := L)) (prover := prover) (hDir0 := rfl)]
-  simp only [Fin.isValue, Challenge, Matrix.cons_val_one, Matrix.cons_val_zero, ChallengeIdx,
-    QueryImpl.addLift_def, QueryImpl.liftTarget_self, Message, Fin.succ_zero_eq_one, Nat.reduceAdd,
-    Fin.coe_ofNat_eq_mod, Nat.reduceMod, FullTranscript.mk1_eq_snoc, bind_pure_comp,
-    liftComp_eq_liftM, bind_map_left, simulateQ_bind, simulateQ_map, StateT.run'_eq,
-    StateT.run_bind, StateT.run_map, map_bind, Functor.map_map]
-  rw [probEvent_bind_eq_tsum]
-  apply OracleReduction.ENNReal.tsum_mul_le_of_le_of_sum_le_one
-  · -- Bound the conditional probability for each transcript
-    intro x
-    -- rw [OracleComp.probEvent_map]
-    simp only [Fin.isValue, probEvent_map]
-    let q : OracleQuery [(pSpecFold (L := L)).Challenge]ₒ _ := OracleSpec.query ⟨⟨1, by rfl⟩, ()⟩
-    erw [OracleReduction.probEvent_StateT_run_ignore_state
-      (comp := simulateQ (impl.addLift challengeQueryImpl) (liftM (query q.input)))
-      (s := x.2)
-      (P := fun a => P (FullTranscript.mk1 x.1.1) (q.cont a))]
-    rw [probEvent_eq_tsum_ite]
-    erw [simulateQ_query]
-    simp only [ChallengeIdx, Challenge, Fin.isValue, Nat.reduceAdd, Fin.castSucc_one,
-      Fin.coe_ofNat_eq_mod, Nat.reduceMod, monadLift_self,
-      QueryImpl.addLift_def, QueryImpl.liftTarget_self, StateT.run'_eq, StateT.run_map,
-      Functor.map_map, ge_iff_le]
-    have h_L_inhabited : Inhabited L := ⟨0⟩
-    conv_lhs =>
-      enter [1, x_1, 2, 1, 2]
-      erw [addLift_challengeQueryImpl_input_run_eq_liftM_run (impl := impl) (q := q) (s := x.2)]
-    erw [StateT.run_monadLift, monadLift_self]
-    rw [bind_pure_comp]
-    conv =>
-      enter [1, 1, x_1, 2]
-      erw [Functor.map_map]
-      rw [← probEvent_eq_eq_probOutput]
-      rw [probEvent_map]
-      rw [OracleQuery.cont_apply]
-      dsimp only [MonadLift.monadLift]
-      rw [OracleQuery.cont_apply]
-      dsimp only [q]
-    simp_rw [OracleQuery.input_query, OracleQuery.snd_query]
-    conv_lhs => change (∑' (x_1 : L), _)
-    simp only [id_eq, Function.comp_def]
-    conv =>
-      enter [1, 1, x_1, 2]
-      rw [probEvent_eq_eq_probOutput]
-      change Pr[=x_1 | $ᵗ L]
-      rw [OracleReduction.probOutput_uniformOfFintype_eq_Pr (L := _) (x := x_1)]
-    erw [OracleReduction.tsum_uniform_Pr_eq_Pr
-      (L := L) (P := fun x_1 => P (FullTranscript.mk1 x.1.1) (q.cont x_1))]
-      -- Now the goal is in do-notation form, which is exactly what Pr_ notation expands to
-    -- Make this explicit using change
-    change Pr_{ let y ← $ᵖ L }[ P (FullTranscript.mk1 x.1.1) y ] ≤
-      foldKnowledgeError 𝔽q β i ⟨1, by rfl⟩
-    -- Apply the per-transcript bound
-    exact foldStep_doom_escape_probability_bound 𝔽q β (i := i)
-      (stmtOStmtIn := stmtOStmtIn) (h_i := x.1.1) (init := init) (impl := impl) (mp := mp)
-      (𝓑 := 𝓑) (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate)
-  · -- Prove: ∑' x, [=x|transcript computation] ≤ 1
-    apply tsum_probOutput_le_one
+  -- One-liner via the reusable round-reducer: reduce r.b.r. knowledge soundness to the fold
+  -- step's per-transcript doom bound (Schwartz–Zippel).
+  exact OracleReduction.rbrKnowledgeSoundness_of_2msg_PtoV_uniformChallenge
+    (WitMid := foldWitMid 𝔽q β i)
+    (rbrKnowledgeError := foldKnowledgeError 𝔽q β (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate) i)
+    (kSF := foldKnowledgeStateFunction (mp := mp) (𝓡 := 𝓡) (ϑ := ϑ)
+      (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (𝓑 := 𝓑) 𝔽q β i)
+    (extractor := foldRbrExtractor (mp := mp) 𝔽q β i) (hDir0 := rfl) (hDir1 := rfl)
+    (hbound := fun stmtOStmtIn msg₀ => foldStep_doom_escape_probability_bound 𝔽q β (i := i)
+      (stmtOStmtIn := stmtOStmtIn) (h_i := msg₀) (init := init) (impl := impl) (mp := mp)
+      (𝓑 := 𝓑) (ϑ := ϑ) (h_ℓ_add_R_rate := h_ℓ_add_R_rate))
 
 end FoldStep
 end SingleIteratedSteps

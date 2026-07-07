@@ -107,11 +107,13 @@ instance : ∀ i, OracleInterface ((fullPspec κ (L:=L) (K:=K) P (ℓ':=ℓ') ml
 
 /-! ## SampleableType instances -/
 
+-- The `⟨1, _⟩` arms are written as direct `inferInstanceAs` terms (not tactic proofs) so that
+-- `instance ⟨1, rfl⟩` is *definitionally* the `Fin κ → L` instance. This lets the reusable
+-- round-reducer's `$ᵖ (Challenge ⟨1,_⟩)` unify cheaply with a doom bound's `$ᵖ (Fin κ → L)`
+-- (a tactic proof would bury the instance under `simp`/`change` casts, making that defeq diverge).
 instance : ∀ j, SampleableType ((pSpecBatching κ L K P).Challenge j)
   | ⟨0, h0⟩ => by nomatch h0
-  | ⟨1, _⟩ => by
-    simp only [Challenge, Fin.isValue, Matrix.cons_val_one, Matrix.cons_val_fin_one]
-    exact instSampleableTypeFinFunc (α := L)
+  | ⟨1, _⟩ => inferInstanceAs (SampleableType (Fin κ → L))
 
 instance instOracleInterfacePSpecBatchingChallenge :
     ∀ j, OracleInterface ((pSpecBatching κ L K P).Challenge j) :=
@@ -122,10 +124,7 @@ lemma `probEvent_soundness_goal_unroll_log'` (which takes `[∀ i, Fintype (pSpe
 instance instFintypePSpecBatchingChallengeIdx :
     ∀ j, Fintype ((pSpecBatching κ L K P).Challenge j)
   | ⟨0, h0⟩ => by nomatch h0
-  | ⟨1, _⟩ => by
-    simp only [Challenge, Fin.isValue, Matrix.cons_val_one, Matrix.cons_val_fin_one]
-    change Fintype (Fin κ → L)
-    infer_instance
+  | ⟨1, _⟩ => inferInstanceAs (Fintype (Fin κ → L))
 
 /-- Per-index `Inhabited` for the batching reduction's challenges, needed by the soundness-unrolling
 lemma `probEvent_soundness_goal_unroll_log'` (which takes `[∀ i, Inhabited (pSpec.Challenge i)]`). -/

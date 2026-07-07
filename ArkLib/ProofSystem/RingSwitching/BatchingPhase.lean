@@ -1302,95 +1302,17 @@ theorem batchingOracleVerifier_rbrKnowledgeSoundness [IsDomain K] [IsDomain L] :
     (relOut := sumcheckRoundRelation κ L K P ℓ ℓ' h_l aOStmtIn 0)
     (rbrKnowledgeError := batchingRBRKnowledgeError (κ:=κ) (L:=L) (K:=K) (P:=P)) := by
   classical
-  -- `KState 1 = (t' = packMLE t) ∧ (ŝ := φ₁(t')(φ₀(r_κ), ..., φ₀(r_{ℓ-1})))`
-    -- `∧ (s ?= Σ_{v ∈ {0,1}^κ} eqTilde(v, r_{0..κ-1}) ⋅ ŝ_v.`
-  -- `KState 2 = (s ?= Σ_{v ∈ {0,1}^κ} eqTilde(v, r_{0..κ-1}) ⋅ ŝ_v) ∧`
-    -- `h = projectSumcheckPoly t' 0 r r' ∧ s_0 = Σ_{w ∈ {0,1}^{ℓ'}} h(w)`
-  -- ⊢ `Pr[KState(2, witMidSucc) ∧ ¬KState(1, extractMid(iChal, witMidSucc))] ≤ (κ/|L|)`
-  apply OracleReduction.unroll_rbrKnowledgeSoundness
+  -- One-liner via the reusable round-reducer (same lemma as the fold and sumcheck steps).
+  exact OracleReduction.rbrKnowledgeSoundness_of_2msg_PtoV_uniformChallenge
+    (WitMid := batchingWitMid L K ℓ ℓ')
+    (rbrKnowledgeError := batchingRBRKnowledgeError (κ:=κ) (L:=L) (K:=K) (P:=P))
     (kSF := batchingKnowledgeStateFunction κ L K P ℓ ℓ' h_l (aOStmtIn:=aOStmtIn)
-    (init:=init) (impl:=impl))
-  intro stmtOStmtIn witIn prover j initState
-  let failEvent := rbrExtractionFailureEvent
-    (kSF := batchingKnowledgeStateFunction κ L K P ℓ ℓ' h_l (aOStmtIn:=aOStmtIn)
-    (init:=init) (impl:=impl))
+      (init:=init) (impl:=impl))
     (extractor := batchingRbrExtractor κ L K P ℓ ℓ' h_l (aOStmtIn:=aOStmtIn))
-    (i := j) (stmtIn := stmtOStmtIn)
-  rw [@OracleReduction.probEvent_soundness_goal_unroll_log'
-    PEmpty ([]ₒ : OracleSpec PEmpty)
-    (BatchingStmtIn L ℓ × ((i : aOStmtIn.ιₛᵢ) → aOStmtIn.OStmtIn i)) (BatchingWitIn L K ℓ ℓ')
-    (Statement (RingSwitchingBaseContext κ L K ℓ P) 0 × ((i : aOStmtIn.ιₛᵢ) → aOStmtIn.OStmtIn i))
-    (SumcheckWitness L ℓ' 0) 2 (pSpecBatching κ L K P) _ σ _ _
-    _ impl prover j stmtOStmtIn witIn initState failEvent _ _]
-  have h_j_eq_1 : j = ⟨1, rfl⟩ := by
-    match j with
-    | ⟨0, h0⟩ => nomatch h0
-    | ⟨1, _⟩ => rfl
-  subst h_j_eq_1
-  conv_lhs => simp only [Fin.isValue, Fin.castSucc_one];
-  rw [OracleReduction.soundness_unroll_runToRound_1_P_to_V_pSpec_2
-    (pSpec := pSpecBatching (κ:=κ) (L:=L) (K:=K) (P:=P)) (prover := prover) (hDir0 := by rfl)]
-  simp only [Fin.isValue, Challenge, Matrix.cons_val_one, Matrix.cons_val_zero, ChallengeIdx,
-    QueryImpl.addLift_def, QueryImpl.liftTarget_self, Message, Fin.succ_zero_eq_one, Nat.reduceAdd,
-    Fin.coe_ofNat_eq_mod, Nat.reduceMod, FullTranscript.mk1_eq_snoc, bind_pure_comp,
-    liftComp_eq_liftM, bind_map_left, simulateQ_bind, simulateQ_map, StateT.run'_eq,
-    StateT.run_bind, StateT.run_map, map_bind, Functor.map_map]
-  rw [probEvent_bind_eq_tsum]
-  apply OracleReduction.ENNReal.tsum_mul_le_of_le_of_sum_le_one
-  · -- Bound the conditional probability for each transcript
-    intro x
-    simp only [Fin.isValue, probEvent_map]
-    let q : OracleQuery [(pSpecBatching (κ := κ) (L := L) (K := K) (P := P)).Challenge]ₒ
-        ((pSpecBatching (κ := κ) (L := L) (K := K) (P := P)).Challenge ⟨1, by rfl⟩)
-      := query (spec := [(pSpecBatching (κ := κ) (L := L) (K := K) (P := P)).Challenge]ₒ)
-        ⟨⟨1, by rfl⟩, ()⟩
-    erw [OracleReduction.probEvent_StateT_run_ignore_state
-      (comp := simulateQ (impl.addLift challengeQueryImpl)
-        (liftM ((pSpecBatching κ L K P).getChallenge ⟨1, rfl⟩)))
-      (s := x.2)
-      (P := fun a => failEvent (FullTranscript.mk1 x.1.1) (q.cont a))]
-    rw [probEvent_eq_tsum_ite]
-    erw [simulateQ_query]
-    simp only [ChallengeIdx, Challenge, Fin.isValue, Nat.reduceAdd, Fin.castSucc_one,
-      Fin.coe_ofNat_eq_mod, Nat.reduceMod, monadLift_self,
-      QueryImpl.addLift_def, QueryImpl.liftTarget_self, StateT.run'_eq, StateT.run_map,
-      Functor.map_map, ge_iff_le]
-    have h_L_inhabited : Inhabited L := ⟨0⟩
-    conv_lhs =>
-      enter [1, x_1, 2, 1, 2]
-      erw [addLift_challengeQueryImpl_input_run_eq_liftM_run (impl := impl) (q := q) (s := x.2)]
-    erw [StateT.run_monadLift, monadLift_self]
-    rw [bind_pure_comp]
-    conv =>
-      enter [1, 1, x_1, 2]
-      erw [Functor.map_map]
-      rw [← probEvent_eq_eq_probOutput]
-      rw [probEvent_map]
-      rw [OracleQuery.cont_apply]
-      dsimp only [MonadLift.monadLift]
-      rw [OracleQuery.cont_apply]
-      dsimp only [q]
-    simp_rw [OracleQuery.input_query, OracleQuery.snd_query]
-    conv_lhs => change (∑' (x_1 : (Fin κ → L)), _)
-    simp only [Function.comp_def, id_eq]
-    conv =>
-      enter [1, 1, x_1, 2]
-      erw [probEvent_eq_eq_probOutput]
-      change Pr[=x_1 | $ᵗ (Fin κ → L)]
-      rw [OracleReduction.probOutput_uniformOfFintype_eq_Pr (L := _) (x := x_1)]
-    erw [OracleReduction.tsum_uniform_Pr_eq_Pr (L := (Fin κ → L))
-      (P := fun x_1 => failEvent (FullTranscript.mk1 x.1.1) (q.cont x_1))]
-      -- Now the goal is in do-notation form, which is exactly what Pr_ notation expands to
-    -- Make this explicit using change
-    -- Convert the sum domain from [pSpecFold.Challenge]ₒ.range to L using h_L_eq
-    conv_lhs => change (∑' (x_1 : (Fin κ → L)), _)
-    -- Apply the per-transcript bound
-    exact batching_doom_escape_probability_bound (κ := κ) (L := L) (K := K)
-      (P := P) (ℓ := ℓ) (ℓ' := ℓ') (h_l := h_l) (aOStmtIn := aOStmtIn)
-      (stmtOStmtIn := stmtOStmtIn) (msg0 := x.1.1)
-      (impl := impl) (init := init)
-  · -- Prove: ∑' x, [=x|transcript computation] ≤ 1
-    apply tsum_probOutput_le_one
+    (hDir0 := rfl) (hDir1 := rfl)
+    (hbound := fun stmtOStmtIn msg₀ => batching_doom_escape_probability_bound (κ := κ) (L := L)
+      (K := K) (P := P) (ℓ := ℓ) (ℓ' := ℓ') (h_l := h_l) (aOStmtIn := aOStmtIn) (init := init)
+      (impl := impl) (stmtOStmtIn := stmtOStmtIn) (msg0 := msg₀))
 
 end BatchingPhase
 end RingSwitching
