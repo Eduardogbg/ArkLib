@@ -97,16 +97,35 @@ that collapses the anchor).
 - [`Recombine.lean`](../../../ArkLib/ProofSystem/RingSwitching/Generic/Recombine.lean) —
   `recombine_bijective`/`recombine_injective`: the packing-basis recombination `s ↦ ∑ᵢ sᵢ•bᵢ^P`
   is `packBasis.equivFun.symm`, hence bijective — Flock Remark 5's fix-side property ("naive
-  recombination is complete but not sound").
+  recombination is complete but not sound") — plus `openingDecomposition_injective`, Remark 5's
+  opening half (uniqueness of `B`-coordinates in `openBasis`). Both are one-liners over the
+  reusable `Module.Basis.sum_smul_bijective`
+  ([`ArkLib/Data/Module/Basis.lean`](../../../ArkLib/Data/Module/Basis.lean)).
+- [`Relations.lean`](../../../ArkLib/ProofSystem/RingSwitching/Generic/Relations.lean) — the
+  framework-fixed relation chain (pillar 4): the input anchor `openingClaimRel` (step 2, with a
+  non-vacuity witness), the middle `sliceRel` (step 4) and `sumcheckClaimRel` (steps 5–6), and
+  the chain-coherence proof `sumcheckClaim_of_slices` (batching honest slices *is* the sumcheck
+  claim, via `bridge_eqTilde`). Plus the PCS interface (pillar 2): `PackedCommitment` whose
+  `commitsTo` carries the **functionality law** plus a `Nonempty` well-formedness guard
+  (`commitsTo_ne_top`: the `True` hook of the legacy `initialCompatibility` is *unstatable*),
+  and `DenseMLPCS` — the `MLIOPCS`-shaped bundle whose completeness/RBR-knowledge fields are
+  stated against the fixed anchored `evalRel`: the round-0 knowledge state function must track
+  `commitsTo` bidirectionally and completeness must cover every `commitsTo`-satisfying input
+  (a bogus-but-functional predicate survives locally and is caught at S6 composition
+  completeness). The Binius codeword-consistency predicate is re-expressed in `commitsTo`
+  orientation (`Binius.FRIBinius.biniusCommitsTo`, definitionally equal to the legacy hook).
 
 **The honest fork**: field-like instances get the (future) generic Schwartz–Zippel soundness
-theorem under `[IsDomain P]`; non-domain rings (Hachi `R_q`) can still *state* a carrier and a
-`BatchingStrategy` but are forced into a sibling theorem with their own proven gap — the fork
-lives at the theorem, not the vocabulary.
+theorem under `[IsDomain P]`; non-domain rings (Hachi `R_q`) can still *state* a carrier, a
+`BatchingStrategy`, and a `DenseMLPCS` but are forced into a sibling theorem with their own
+proven gap — the fork lives at the theorem, not the vocabulary.
 
-**Not yet built**: the anchored relation chain + `DenseMLPCS.commitsTo` interface, the assembled
-`ringSwitch` reduction and its soundness statement (gated on the upstream composition/sumcheck
-sorries), the Binius migration, and the MBP-`B̂` efficiency layer ([HJRRR25] §4).
+**Not yet built**: the assembled `ringSwitch` reduction and its soundness statement (gated on
+the upstream composition/sumcheck sorries), the Binius migration (incl. fixing the upstream
+`firstOracleWitnessConsistencyProp` coercion — as spelled it reads `t`'s *diagonal* evaluations,
+so `t ↦ P₀` is non-injective and `biniusCommitsTo` functionality is unprovable until fixed, see
+its docstring — then the functionality proof, and retirement of the legacy
+`initialCompatibility` hook), and the MBP-`B̂` efficiency layer ([HJRRR25] §4).
 
 ## Core References
 

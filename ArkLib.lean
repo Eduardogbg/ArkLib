@@ -141,6 +141,7 @@ import ArkLib.Data.Matrix.Basic
 import ArkLib.Data.Matrix.Sparse
 import ArkLib.Data.Matrix.Vandermonde
 import ArkLib.Data.Misc.Basic
+import ArkLib.Data.Module.Basis
 import ArkLib.Data.MvPolynomial.Degrees
 import ArkLib.Data.MvPolynomial.Interpolation
 import ArkLib.Data.MvPolynomial.LinearMvExtension
@@ -234,6 +235,7 @@ import ArkLib.ProofSystem.RingSwitching.Generic.Batching
 import ArkLib.ProofSystem.RingSwitching.Generic.Carrier
 import ArkLib.ProofSystem.RingSwitching.Generic.Packing
 import ArkLib.ProofSystem.RingSwitching.Generic.Recombine
+import ArkLib.ProofSystem.RingSwitching.Generic.Relations
 import ArkLib.ProofSystem.RingSwitching.Prelude
 import ArkLib.ProofSystem.RingSwitching.Profile
 import ArkLib.ProofSystem.RingSwitching.Spec
