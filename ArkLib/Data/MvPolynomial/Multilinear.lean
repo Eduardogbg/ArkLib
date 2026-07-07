@@ -27,6 +27,15 @@ variable {σ : Type*} {R : Type*}
 instance coeFunctionFin2 [NatCast R] : Coe (σ → Fin 2) (σ → R) where
   coe := fun vec i => vec i
 
+/-- The Boolean-point coercion above agrees with the if-then-else spellings used elsewhere
+(`if · = 1 then 1 else 0` as in `RingSwitchCarrier.boolToE`, or the propositionally identical
+`if · == 1` as in `RingSwitching.compute_s0`); this is the bridge between them. -/
+theorem coe_boolFun_eq_ite [AddMonoidWithOne R] (u : σ → Fin 2) :
+    (u : σ → R) = fun i => if u i = 1 then 1 else 0 := by
+  funext i
+  have h : u i = 0 ∨ u i = 1 := by fin_omega
+  rcases h with h | h <;> simp [h]
+
 variable [CommRing R]
 
 def toEvalsZeroOne (p : MvPolynomial σ R) : (σ → Fin 2) → R :=
@@ -143,6 +152,12 @@ theorem eval_zeroOne_eq_MLE_toEvalsZeroOne (p : MvPolynomial σ R) (x : σ → F
     eval (x : σ → R) p = eval (x : σ → R) (MLE p.toEvalsZeroOne) := by
   simp only [MLE_eval_zeroOne, toEvalsZeroOne]
 
+/-- Evaluating a multilinear extension at an **arbitrary** point expands over the hypercube
+against the eq-indicator: `(MLE g)(r) = ∑_x eq̃(x, r) · g(x)`. -/
+theorem MLE_eval_eq_sum_eqTilde (evals : (σ → Fin 2) → R) (r : σ → R) :
+    MvPolynomial.eval r (MLE evals) = ∑ x : σ → Fin 2, eqTilde (x : σ → R) r * evals x := by
+  simp only [MLE, map_sum, map_mul, eval_C, eqTilde]
+
 section DegreeOf
 
 omit [Fintype σ] in
@@ -209,6 +224,11 @@ theorem MLE_mem_restrictDegree (evals : (σ → Fin 2) → R) : (MLE evals) ∈ 
 theorem MLE_degreeOf (evals : (σ → Fin 2) → R) (i : σ) : degreeOf i (MLE evals) ≤ 1 := by
   apply (mem_restrictDegree_iff_degreeOf_le _ _).mp
   exact MLE_mem_restrictDegree evals
+
+/-- A multilinear extension over `σ` variables has total degree at most `|σ|`. -/
+theorem MLE_totalDegree_le (evals : (σ → Fin 2) → R) :
+    (MLE evals).totalDegree ≤ Fintype.card σ :=
+  totalDegree_le_card_of_degreeOf_le_one _ (fun i => MLE_degreeOf evals i)
 
 end DegreeOf
 

@@ -230,6 +230,10 @@ import ArkLib.ProofSystem.Fri.Spec.SingleRound
 import ArkLib.ProofSystem.Plonk.Basic
 import ArkLib.ProofSystem.RingSwitching.BatchingPhase
 import ArkLib.ProofSystem.RingSwitching.General
+import ArkLib.ProofSystem.RingSwitching.Generic.Batching
+import ArkLib.ProofSystem.RingSwitching.Generic.Carrier
+import ArkLib.ProofSystem.RingSwitching.Generic.Packing
+import ArkLib.ProofSystem.RingSwitching.Generic.Recombine
 import ArkLib.ProofSystem.RingSwitching.Prelude
 import ArkLib.ProofSystem.RingSwitching.Profile
 import ArkLib.ProofSystem.RingSwitching.Spec
