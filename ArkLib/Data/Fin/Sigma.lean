@@ -19,6 +19,10 @@ universe u v w
 
 open Finset
 
+-- Non-terminal `simp` in the `dflatten`/`embedSum` inductions is intentional here.
+set_option linter.style.setOption false
+set_option linter.flexible false
+
 namespace Fin
 
 def addCast {n : ℕ} (m : ℕ) (i : Fin n) : Fin (m + n) := ⟨i, Nat.lt_add_left m i.2⟩
@@ -211,6 +215,7 @@ theorem dflatten_two_eq_append {n : Fin 2 → ℕ} {motive : (k : Fin (vsum n)) 
 --   | succ m ih => sorry
 
 set_option maxHeartbeats 200000 in
+-- The dependent `dflatten`/`embedSum` induction over `Fin (vsum n)` is heartbeat-heavy.
 @[simp]
 theorem dflatten_splitSum {m : ℕ} {n : Fin m → ℕ} {motive : (k : Fin (vsum n)) → Sort*}
     (v : (k : Fin (vsum n)) → motive k) (k : Fin (vsum n)) :

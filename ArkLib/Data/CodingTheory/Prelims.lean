@@ -34,7 +34,7 @@ lemma multilinearWeight_succ {ϑ : ℕ} (r : Fin (ϑ + 1) → F) (i : Fin (2 ^ (
     (if i.val.testBit (ϑ) then (r (Fin.last ϑ)) else (1 - r (Fin.last ϑ))) := by
   simp only [multilinearWeight, Fin.prod_univ_castSucc]
   simp_rw [Nat.testBit_eq_getBit, Nat.getBit_of_lowBits]
-  simp only [Fin.coe_castSucc, Fin.val_last, mul_ite, Fin.is_lt, ↓reduceIte]
+  simp only [Fin.val_castSucc, Fin.val_last, mul_ite, Fin.is_lt, ↓reduceIte]
   rfl
 
 omit [Fintype F] [DecidableEq F] in

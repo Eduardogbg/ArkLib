@@ -19,6 +19,9 @@ open NNReal Finset Function
 open scoped BigOperators ProbabilityTheory Polynomial MvPolynomial
 open Real
 
+-- Several probability lemmas below use long `Pr_{ … }[ … ]` calc steps that read best unwrapped.
+set_option linter.style.longLine false
+
 -- TODO(dtumad): Move most of the stuff in this file to VCV and generalize as possible
 
 section
@@ -375,8 +378,9 @@ alias prob_mono := Pr_le_Pr_of_implies
 
 /-- **Union bound**: Pr[A ∨ B] ≤ Pr[A] + Pr[B]. -/
 theorem Pr_or_le {α : Type} (D : PMF α)
-    (f g : α → Prop) [DecidablePred f] [DecidablePred g] [DecidablePred (fun r => f r ∨ g r)] :
+    (f g : α → Prop) :
     Pr_{ let r ← D }[ f r ∨ g r ] ≤ Pr_{ let r ← D }[ f r ] + Pr_{ let r ← D }[ g r ] := by
+  classical
   rw [prob_tsum_form_singleton D (fun r => f r ∨ g r),
     prob_tsum_form_singleton D f, prob_tsum_form_singleton D g]
   trans ∑' r, (D r * (if f r then 1 else 0) + D r * (if g r then 1 else 0))
@@ -386,9 +390,11 @@ theorem Pr_or_le {α : Type} (D : PMF α)
     · by_cases hg : g r
       · simp only [hf, hg, or_true, ↓reduceIte, mul_one]
         exact le_add_of_nonneg_right (bot_le (a := D r))
-      · simp only [hf, hg, or_true, true_or, ↓reduceIte, mul_one, mul_zero, add_zero]; exact le_refl (D r)
+      · simp only [hf, hg, true_or, ↓reduceIte, mul_one, mul_zero, add_zero]
+        exact le_refl (D r)
     · by_cases hg : g r
-      · simp only [hf, hg, true_or, or_true, ↓reduceIte, mul_one, mul_zero, zero_add]; exact le_refl (D r)
+      · simp only [hf, hg, or_true, ↓reduceIte, mul_one, mul_zero, zero_add]
+        exact le_refl (D r)
       · simp only [hf, hg, false_or, ↓reduceIte, mul_zero, zero_add]; exact le_refl 0
   · rw [ENNReal.tsum_add];
 
@@ -482,10 +488,10 @@ over each index, the probability equals the product of individual probabilities.
 
 This is the key lemma for showing that independent repetitions multiply their error rates. -/
 theorem prob_pow_of_forall_finFun
-    (n : ℕ) (P : A → Prop) [DecidablePred P]
-    [DecidablePred (fun (f : Fin n → A) => ∀ i, P (f i))] :
+    (n : ℕ) (P : A → Prop) :
     Pr_{ let f ← $ᵖ (Fin n → A) }[ ∀ i, P (f i) ] =
     (Pr_{ let a ← $ᵖ A }[ P a ])^n := by
+  classical
   induction n with
   | zero =>
     simp only [IsEmpty.forall_iff, PMF.monad_pure_eq_pure, PMF.monad_bind_eq_bind, PMF.bind_const,
@@ -551,8 +557,7 @@ theorem prob_pow_of_forall_finFun
 When each repetition independently bounds bad events by ε, running n repetitions
 has cumulative bound ε^n (product rule for independent events). -/
 theorem prob_pow_bound_of_forall
-    (n : ℕ) (P : A → Prop) [DecidablePred P]
-    [DecidablePred (fun (f : Fin n → A) => ∀ i, P (f i))]
+    (n : ℕ) (P : A → Prop)
     (ε : ENNReal) (h_bound : Pr_{ let a ← $ᵖ A}[P a] ≤ ε) :
     Pr_{ let f ← $ᵖ (Fin n → A) }[ ∀ i, P (f i) ] ≤ ε^n := by
   calc Pr_{ let f ← $ᵖ (Fin n → A) }[ ∀ i, P (f i) ]
@@ -636,7 +641,7 @@ lemma prob_schwartz_zippel_univariate_deg {R : Type} [CommRing R] [IsDomain R] [
     / (Fintype.card R : ENNReal) ≤ (d : ENNReal) / (Fintype.card R : ENNReal) := by
     simp_rw [ENNReal.coe_Nat_coe_NNRat]
     conv_lhs => rw [ENNReal.coe_div_of_NNRat (hb := by
-      simp only [pow_one, ne_eq, Nat.cast_eq_zero, Fintype.card_ne_zero, not_false_eq_true])]
+      simp only [ne_eq, Nat.cast_eq_zero, Fintype.card_ne_zero, not_false_eq_true])]
     conv_rhs => rw [ENNReal.coe_div_of_NNRat (hb := by simp only [ne_eq, Nat.cast_eq_zero,
       Fintype.card_ne_zero, not_false_eq_true])]
     rw [ENNReal.coe_le_of_NNRat]

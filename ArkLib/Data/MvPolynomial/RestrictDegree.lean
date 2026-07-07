@@ -82,7 +82,8 @@ theorem fixFirstVariablesOfMQP_zero_eq (H : MvPolynomial (Fin ℓ) L) :
       rw [MvPolynomial.rename_X]
       have hj : (((finCongr (show ℓ = ((0 : Fin (ℓ + 1)) : ℕ) + (ℓ - ((0 : Fin (ℓ + 1)) : ℕ)) by
               simp)).trans
-            (finSumFinEquiv.symm.trans (Equiv.sumComm _ _))) j) = Sum.inl (Fin.cast (by simp) j) := by
+            (finSumFinEquiv.symm.trans (Equiv.sumComm _ _))) j) =
+              Sum.inl (Fin.cast (by simp) j) := by
         simp [Equiv.sumComm, finCongr, finSumFinEquiv, Fin.addCases]; rfl
       rw [hj, MvPolynomial.sumAlgEquiv_apply, MvPolynomial.sumToIter_Xl, MvPolynomial.map_X]
       congr 1
