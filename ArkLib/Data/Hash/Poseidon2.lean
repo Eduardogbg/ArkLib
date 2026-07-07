@@ -35,6 +35,7 @@ namespace Poseidon2
 /-- The constants for Poseidon2 with 16 rounds
 (total of 8 * 16 + 20 = 148 constants) -/
 def rawConstants16 : Vector KoalaBear.Field 148 := #v[
+    -- External initial (4 rounds × 16 = 64 constants)
     2128964168,
     288780357,
     316938561,
@@ -99,6 +100,28 @@ def rawConstants16 : Vector KoalaBear.Field 148 := #v[
     64412292,
     1936878279,
     1980661727,
+    -- Internal (20 constants)
+    2102596038,
+    1533193853,
+    1436311464,
+    2012303432,
+    839997195,
+    1225781098,
+    2011967775,
+    575084315,
+    1309329169,
+    786393545,
+    995788880,
+    1702925345,
+    1444525226,
+    908073383,
+    1811535085,
+    1531002367,
+    1635653662,
+    1585100155,
+    867006515,
+    879151050,
+    -- External final (4 rounds × 16 = 64 constants)
     1423960925,
     2101391318,
     1915532054,
@@ -163,31 +186,12 @@ def rawConstants16 : Vector KoalaBear.Field 148 := #v[
     582892981,
     1337064375,
     1199354861,
-    2102596038,
-    1533193853,
-    1436311464,
-    2012303432,
-    839997195,
-    1225781098,
-    2011967775,
-    575084315,
-    1309329169,
-    786393545,
-    995788880,
-    1702925345,
-    1444525226,
-    908073383,
-    1811535085,
-    1531002367,
-    1635653662,
-    1585100155,
-    867006515,
-    879151050,
 ]
 
 /-- The constants for Poseidon2 with width 24
 (total of 8 * 24 + 23 = 215 constants) -/
 def RAW_CONSTANTS_24 : Vector KoalaBear.Field 215 := #v[
+    -- External initial (4 rounds × 24 = 96 constants)
     487143900,
     1829048205,
     1652578477,
@@ -284,6 +288,31 @@ def RAW_CONSTANTS_24 : Vector KoalaBear.Field 215 := #v[
     1608418116,
     1083269213,
     691256798,
+    -- Internal (23 constants)
+    893435011,
+    403879071,
+    1363789863,
+    1662900517,
+    2043370,
+    2109755796,
+    931751726,
+    2091644718,
+    606977583,
+    185050397,
+    946157136,
+    1350065230,
+    1625860064,
+    122045240,
+    880989921,
+    145137438,
+    1059782436,
+    1477755661,
+    335465138,
+    1640704282,
+    1757946479,
+    1551204074,
+    681266718,
+    -- External final (4 rounds × 24 = 96 constants)
     328586442,
     1572520009,
     1375479591,
@@ -380,29 +409,6 @@ def RAW_CONSTANTS_24 : Vector KoalaBear.Field 215 := #v[
     1613277964,
     793223662,
     648443918,
-    893435011,
-    403879071,
-    1363789863,
-    1662900517,
-    2043370,
-    2109755796,
-    931751726,
-    2091644718,
-    606977583,
-    185050397,
-    946157136,
-    1350065230,
-    1625860064,
-    122045240,
-    880989921,
-    145137438,
-    1059782436,
-    1477755661,
-    335465138,
-    1640704282,
-    1757946479,
-    1551204074,
-    681266718,
 ]
 
 /-- The degree of the S-Box for Poseidon2 over the KoalaBear field -/
@@ -616,16 +622,15 @@ def partialRound (state : Vector KoalaBear.Field params.width) (roundConstant : 
 
 private lemma firstHalfRoundConstants_extract_length (params : Params)
     (rc_idx : Fin params.halfNumFullRounds) :
-    min (↑rc_idx + params.width) (params.numFullRounds * params.width + params.numPartialRounds) -
-      ↑rc_idx = params.width := by
+    min (↑rc_idx * params.width + params.width)
+        (params.numFullRounds * params.width + params.numPartialRounds) -
+      ↑rc_idx * params.width = params.width := by
   simp only [Params.halfNumFullRounds] at rc_idx
-  have hw := params.width_pos
   have hrc := rc_idx.isLt
-  have h1 : ↑rc_idx + params.width ≤ (↑rc_idx + 1) * params.width := by
+  have h1 : ↑rc_idx * params.width + params.width ≤
+      (params.numFullRounds / 2) * params.width := by
     nlinarith
-  have h2 : (↑rc_idx + 1) * params.width ≤ (params.numFullRounds / 2) * params.width := by
-    nlinarith
-  have h3 := Nat.mul_le_mul_right params.width (Nat.div_le_self params.numFullRounds 2)
+  have h2 := Nat.mul_le_mul_right params.width (Nat.div_le_self params.numFullRounds 2)
   rw [Nat.min_eq_left (by omega)]
   omega
 
@@ -639,12 +644,11 @@ private lemma partialRoundConstant_index_lt (params : Params)
 
 private lemma secondHalfRoundConstants_extract_length (params : Params)
     (rc_idx : Fin params.halfNumFullRounds) :
-    min (↑rc_idx + params.width)
+    min (↑rc_idx * params.width + params.width)
         (params.numFullRounds * params.width + params.numPartialRounds -
           params.halfNumFullRounds * params.width - params.numPartialRounds) -
-      ↑rc_idx = params.width := by
+      ↑rc_idx * params.width = params.width := by
   simp only [Params.halfNumFullRounds] at rc_idx ⊢
-  have hw := params.width_pos
   have hrc := rc_idx.isLt
   have h0 := Nat.mul_le_mul_right params.width (Nat.div_le_self params.numFullRounds 2)
   have hsub : params.numFullRounds * params.width + params.numPartialRounds -
@@ -653,9 +657,8 @@ private lemma secondHalfRoundConstants_extract_length (params : Params)
     rw [Nat.sub_mul]
     omega
   rw [hsub]
-  have h1 : ↑rc_idx + params.width ≤ (↑rc_idx + 1) * params.width := by
-    nlinarith
-  have h2 : (↑rc_idx + 1) * params.width ≤ (params.numFullRounds / 2) * params.width := by
+  have h1 : ↑rc_idx * params.width + params.width ≤
+      (params.numFullRounds / 2) * params.width := by
     nlinarith
   have hd : params.numFullRounds / 2 ≤ params.numFullRounds - params.numFullRounds / 2 := by
     omega
@@ -672,7 +675,8 @@ def permute (params : Params) (state : Vector KoalaBear.Field params.width) :
   -- First half of full rounds
   let st1 : Vector KoalaBear.Field params.width :=
     Fin.foldl params.halfNumFullRounds (fun st_acc rc_idx =>
-      let rc_chunk := (rcs.extract rc_idx (rc_idx + params.width)).cast
+      let rc_chunk := (rcs.extract (rc_idx * params.width)
+          (rc_idx * params.width + params.width)).cast
         (firstHalfRoundConstants_extract_length params rc_idx)
       let st_new := fullRound params st_acc rc_chunk
       st_new) st0
@@ -687,10 +691,48 @@ def permute (params : Params) (state : Vector KoalaBear.Field params.width) :
   let rcs := rcs.drop params.numPartialRounds
   -- Second half of full rounds
   let st3 := Fin.foldl params.halfNumFullRounds (fun st_acc rc_idx =>
-    let rc_chunk := (rcs.extract rc_idx (rc_idx + params.width)).cast
+    let rc_chunk := (rcs.extract (rc_idx * params.width)
+        (rc_idx * params.width + params.width)).cast
       (secondHalfRoundConstants_extract_length params rc_idx)
     let st_new := fullRound params st_acc rc_chunk
     st_new) st2
   st3
+
+/-! ## Known-answer tests
+
+Permutation vectors from the reference Python implementation's test suite
+(`leanEthereum/leanSpec`, `tests/lean_spec/subspecs/poseidon2/test_permutation.py`
+at commit `7d16d183`, the last revision carrying the Poseidon2 subspec; the vectors
+agree with Plonky3's KoalaBear Poseidon2). They pin the full round-constant
+schedule: any drift in the constant table order or the per-round constant windows
+perturbs the output. -/
+
+example :
+    permute params16 #v[
+      894848333, 1437655012, 1200606629, 1690012884,
+      71131202, 1749206695, 1717947831, 120589055,
+      19776022, 42382981, 1831865506, 724844064,
+      171220207, 1299207443, 227047920, 1783754913] = #v[
+      190453639, 458899855, 383789123, 1958965770,
+      1470307143, 135446903, 1980271247, 26609194,
+      337889870, 543343594, 900082402, 1267415354,
+      1018710090, 902823573, 1161524658, 1483653556] := by
+  native_decide
+
+example :
+    permute params24 #v[
+      886409618, 1327899896, 1902407911, 591953491,
+      648428576, 1844789031, 1198336108, 355597330,
+      1799586834, 59617783, 790334801, 1968791836,
+      559272107, 31054313, 1042221543, 474748436,
+      135686258, 263665994, 1962340735, 1741539604,
+      2026927696, 449439011, 1131357108, 50869465] = #v[
+      556605495, 885256863, 899046610, 1365261647,
+      799824470, 1363091631, 588658632, 173515151,
+      783308499, 1346358755, 1865380489, 1166148328,
+      1402826941, 434428806, 928050984, 1402941053,
+      201160368, 1850628943, 651578331, 12196116,
+      759351756, 948448587, 1529251366, 456048743] := by
+  native_decide
 
 end Poseidon2
