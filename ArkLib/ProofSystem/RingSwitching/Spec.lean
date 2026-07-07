@@ -4,32 +4,13 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Chung Thai Nguyen, Quang Dao
 -/
 import ArkLib.ProofSystem.RingSwitching.Prelude
-import ArkLib.ProofSystem.Binius.BinaryBasefold.Spec
+import ArkLib.ProofSystem.Sumcheck.Structured.SingleRound
 
-namespace Binius.RingSwitching
-open Binius.BinaryBasefold
+namespace RingSwitching
 
 /-! ## Protocol Specs for Ring-Switching
-
-This module defines the protocol specs, and the following instance types:
-
-- **Protocol specs**: `pSpecBatching`, `pSpecSumcheckRound`, `pSpecSumcheckLoop`,
-  `pSpecFinalSumcheck`, `pSpecCoreInteraction`, `pSpecLargeFieldReduction`, `fullPspec`.
-
-- **OracleInterface**: For every `(pSpec ...).Message j` and `(pSpec ...).Challenge j` in the
-  protocol. Challenge oracles should use `ProtocolSpec.challengeOracleInterface`.
-
-- **SampleableType**: For all challenge types in batching, sumcheck, core interaction,
-  large-field reduction, and full protocol.
-
-- **OracleSpec.Inhabited**: For `[]ₒ` and for `[(pSpec ...).Message]ₒ` for every pSpec above.
-
-- **OracleSpec.Fintype**: For `[]ₒ`, and for various `[pSpec.Challenge]ₒ` specs.
-
-- **Fintype / Inhabited**: For individual `(pSpec ...).Challenge i` types where needed.
-
-**NOTE**: For `∀ i, OracleInterface ((pSpec ...).Challenge i)`, use
-  `ProtocolSpec.challengeOracleInterface` to avoid conflict.
+This module contains the protocol specs, oracle index bounds,
+instances of OracleInterface and SampleableType for the Ring Switching protocol.
 -/
 
 noncomputable section
@@ -38,235 +19,188 @@ open scoped NNReal
 open Sumcheck.Structured
 
 variable (κ : ℕ) [NeZero κ]
-variable (L : Type) [Field L] [Fintype L] [DecidableEq L]
+variable (L : Type) [CommRing L] [Fintype L] [DecidableEq L]
   [SampleableType L]
-variable (K : Type) [Field K] [Fintype K] [DecidableEq K]
+variable (K : Type) [CommRing K] [Fintype K] [DecidableEq K]
 variable [Algebra K L]
-variable (β : Fin κ → L) [hβ_lin_indep : Fact (LinearIndependent K β)]
-variable (h_dim : Module.finrank K L = κ)
+variable (P : RingSwitchingProfile K L κ)
 variable (ℓ ℓ' : ℕ) [NeZero ℓ] [NeZero ℓ']
 variable (h_l : ℓ = ℓ' + κ)
 variable (mlIOPCS : MLIOPCS L ℓ')
+
 section Pspec
 
 @[reducible]
 def pSpecBatching : ProtocolSpec 2 :=
   ⟨![Direction.P_to_V, Direction.V_to_P],
-   ![TensorAlgebra K L, Fin κ → L]⟩
+   ![P.A, Fin κ → L]⟩
+
+-- `pSpecSumcheckRound` was lifted to `ArkLib.ProofSystem.Sumcheck.Structured.SingleRound` as a
+-- degree-neutral spec. The `WithDegree` names expose the reusable protocol shape; the historical
+-- Binius ring-switching names below pin `d := 2`.
+abbrev pSpecSumcheckRoundWithDegree (L : Type) [Semiring L] (d : ℕ) : ProtocolSpec 2 :=
+  Sumcheck.Structured.pSpecSumcheckRound L d
+
+abbrev pSpecSumcheckRound (L : Type) [Semiring L] : ProtocolSpec 2 :=
+  pSpecSumcheckRoundWithDegree L 2
 
 @[reducible]
--- Note, this one is same as pSpecFold in BinaryBasefold
-def pSpecSumcheckRound : ProtocolSpec 2 := ⟨![Direction.P_to_V, Direction.V_to_P], ![L⦃≤ 2⦄[X], L]⟩
-
-def pSpecSumcheckLoop := ProtocolSpec.seqCompose (fun (_: Fin ℓ') => pSpecSumcheckRound L)
+def pSpecSumcheckLoopWithDegree (d : ℕ) :=
+  ProtocolSpec.seqCompose (fun (_: Fin ℓ') => pSpecSumcheckRoundWithDegree L d)
 
 @[reducible]
-def pSpecFinalSumcheck := pSpecFinalSumcheckStep (L := L)
+def pSpecSumcheckLoop := pSpecSumcheckLoopWithDegree L ℓ' 2
+
+def pSpecFinalSumcheck : ProtocolSpec 1 := ⟨![Direction.P_to_V], ![L]⟩
 
 @[reducible]
-def pSpecCoreInteraction := (pSpecSumcheckLoop L ℓ') ++ₚ (pSpecFinalSumcheck L)
+def pSpecCoreInteractionWithDegree (d : ℕ) :=
+  (pSpecSumcheckLoopWithDegree L ℓ' d) ++ₚ (pSpecFinalSumcheck L)
 
 @[reducible]
-def pSpecLargeFieldReduction := (pSpecBatching κ L K) ++ₚ (pSpecCoreInteraction (L:=L) (ℓ':=ℓ'))
+def pSpecCoreInteraction := pSpecCoreInteractionWithDegree L ℓ' 2
 
 @[reducible]
-def fullPspec := (pSpecLargeFieldReduction κ (L:=L) (K:=K) (ℓ':=ℓ')) ++ₚ (mlIOPCS.pSpec)
+def pSpecLargeFieldReduction :=
+  (pSpecBatching κ L K P) ++ₚ (pSpecCoreInteraction (L:=L) (ℓ':=ℓ'))
+
+@[reducible]
+def fullPspec := (pSpecLargeFieldReduction κ (L:=L) (K:=K) P (ℓ':=ℓ')) ++ₚ (mlIOPCS.pSpec)
 
 /-! ## Oracle Interface instances for Messages-/
 
-instance : OracleInterface (TensorAlgebra K L) := OracleInterface.instDefault
+instance : OracleInterface P.A := OracleInterface.instDefault
 instance : OracleInterface (Fin κ → L) := OracleInterface.instDefault
 
-instance : ∀ j, OracleInterface ((pSpecBatching κ L K).Message j)
+instance : ∀ j, OracleInterface ((pSpecBatching κ L K P).Message j)
   | ⟨0, _⟩ => OracleInterface.instDefault -- ŝ ∈ A
   | ⟨1, _⟩ => OracleInterface.instDefault -- r'' ∈ L^κ
 
-instance : ∀ j, OracleInterface ((pSpecBatching κ L K).Challenge j) :=
-  fun _ => OracleInterface.instDefault
-  -- NOTE: this is same as ProtocolSpec.challengeOracleInterface (pSpec := pSpecBatching κ L K)
+-- The `OracleInterface` instance for `pSpecSumcheckRound.Message` was lifted to
+-- `ArkLib.ProofSystem.Sumcheck.Structured.SingleRound` along with the spec itself.
+-- Anonymous instances are looked up globally regardless of namespace, so no shim is needed.
 
-instance instOracleInterfaceMessagePSpecSumcheckRound :
-  ∀ j, OracleInterface ((pSpecSumcheckRound (L:=L)).Message j) :=
-  fun _ => OracleInterface.instDefault
-
-instance : ∀ j, OracleInterface ((pSpecSumcheckRound (L:=L)).Challenge j) :=
-  ProtocolSpec.challengeOracleInterface
+instance {d : ℕ} : ∀ j, OracleInterface ((pSpecSumcheckLoopWithDegree (L:=L) ℓ' d).Message j)
+  := instOracleInterfaceMessageSeqCompose
 
 instance : ∀ j, OracleInterface ((pSpecSumcheckLoop (L:=L) ℓ').Message j)
   := instOracleInterfaceMessageSeqCompose
 
+instance : ∀ i, OracleInterface ((pSpecFinalSumcheck (L:=L)).Message i)
+  | ⟨0, _⟩ => OracleInterface.instDefault -- final constant c
+
+instance {d : ℕ} : ∀ i,
+    OracleInterface ((pSpecCoreInteractionWithDegree (L:=L) (ℓ':=ℓ') d).Message i) :=
+  instOracleInterfaceMessageAppend
+
 instance : ∀ i, OracleInterface ((pSpecCoreInteraction (L:=L) (ℓ':=ℓ')).Message i) :=
   instOracleInterfaceMessageAppend
 
-instance : ∀ i, OracleInterface ((pSpecLargeFieldReduction κ (L:=L) (K:=K) (ℓ':=ℓ')).Message i) :=
+instance : ∀ i, OracleInterface
+    ((pSpecLargeFieldReduction κ (L:=L) (K:=K) P (ℓ':=ℓ')).Message i) :=
   instOracleInterfaceMessageAppend
 
 instance : ∀ i, OracleInterface (mlIOPCS.pSpec.Message i) := fun i => mlIOPCS.Oₘ i
 
-instance : ∀ i, OracleInterface ((fullPspec κ (L:=L) (K:=K) (ℓ':=ℓ') mlIOPCS).Message i) :=
+instance : ∀ i, OracleInterface ((fullPspec κ (L:=L) (K:=K) P (ℓ':=ℓ') mlIOPCS).Message i) :=
   instOracleInterfaceMessageAppend
 
 /-! ## SampleableType instances -/
 
-instance : ∀ j, SampleableType ((pSpecBatching κ L K).Challenge j)
+instance : ∀ j, SampleableType ((pSpecBatching κ L K P).Challenge j)
   | ⟨0, h0⟩ => by nomatch h0
   | ⟨1, _⟩ => by
     simp only [Challenge, Fin.isValue, Matrix.cons_val_one, Matrix.cons_val_fin_one]
     exact instSampleableTypeFinFunc (α := L)
 
+instance instOracleInterfacePSpecBatchingChallenge :
+    ∀ j, OracleInterface ((pSpecBatching κ L K P).Challenge j) :=
+  ProtocolSpec.challengeOracleInterface
+
+/-- Per-index `Fintype` for the batching reduction's challenges, needed by the soundness-unrolling
+lemma `probEvent_soundness_goal_unroll_log'` (which takes `[∀ i, Fintype (pSpec.Challenge i)]`). -/
+instance instFintypePSpecBatchingChallengeIdx :
+    ∀ j, Fintype ((pSpecBatching κ L K P).Challenge j)
+  | ⟨0, h0⟩ => by nomatch h0
+  | ⟨1, _⟩ => by
+    simp only [Challenge, Fin.isValue, Matrix.cons_val_one, Matrix.cons_val_fin_one]
+    change Fintype (Fin κ → L)
+    infer_instance
+
+/-- Per-index `Inhabited` for the batching reduction's challenges, needed by the soundness-unrolling
+lemma `probEvent_soundness_goal_unroll_log'` (which takes `[∀ i, Inhabited (pSpec.Challenge i)]`). -/
+instance instInhabitedPSpecBatchingChallengeIdx :
+    ∀ j, Inhabited ((pSpecBatching κ L K P).Challenge j)
+  | ⟨0, h0⟩ => by nomatch h0
+  | ⟨1, _⟩ => by
+    simp only [Challenge, Fin.isValue, Matrix.cons_val_one, Matrix.cons_val_fin_one]
+    change Inhabited (Fin κ → L)
+    exact ⟨fun _ => 0⟩
+
+/-- Fintype/Inhabited for the challenge oracle spec so `unroll_*_reduction_perfectCompleteness`
+can use `Pr[...]`. -/
+instance instFintypePSpecBatchingChallenge :
+    [(pSpecBatching κ L K P).Challenge]ₒ.Fintype := by
+  refine { fintype_B := ?_ }
+  intro x
+  rcases x with ⟨⟨i, hi⟩, q⟩
+  have h0 : i = 1 := by
+    match i with
+    | ⟨0, _⟩ => simp at hi -- contradiction
+    | ⟨1, _⟩ => simp only [Fin.mk_one, Fin.isValue]
+  subst h0
+  cases q
+  change _root_.Fintype (Fin κ → L)
+  infer_instance
+
+instance instInhabitedPSpecBatchingChallenge :
+    [(pSpecBatching κ L K P).Challenge]ₒ.Inhabited := by
+  refine { inhabited_B := ?_ }
+  intro x
+  rcases x with ⟨⟨i, hi⟩, q⟩
+  match i with
+  | ⟨0, _⟩ =>
+      change Direction.P_to_V = Direction.V_to_P at hi
+      cases hi
+  | ⟨1, _⟩ =>
+      cases q
+      change Inhabited (Fin κ → L)
+      exact ⟨fun _ => 0⟩
+
+/-- `IsUniformSpec` (VCVio v4.30 opt-in) for the batching challenge oracle spec, needed by
+`unroll_2_message_reduction_perfectCompleteness` and related completeness lemmas. -/
+noncomputable instance instIsUniformSpecPSpecBatchingChallenge :
+    IsUniformSpec [(pSpecBatching κ L K P).Challenge]ₒ := IsUniformSpec.ofFintypeInhabited _
+
 -- The `SampleableType` instance for `pSpecSumcheckRound.Challenge` was lifted to
 -- `ArkLib.ProofSystem.Sumcheck.Structured.SingleRound`. Anonymous instances are looked up
 -- globally, so no shim is needed.
 
+instance {d : ℕ} : ∀ j,
+    SampleableType ((pSpecSumcheckLoopWithDegree (L:=L) ℓ' d).Challenge j)
+  := instSampleableTypeChallengeSeqCompose
+
 instance : ∀ j, SampleableType ((pSpecSumcheckLoop (L:=L) ℓ').Challenge j)
   := instSampleableTypeChallengeSeqCompose
+
+instance : ∀ i, SampleableType ((pSpecFinalSumcheck (L:=L)).Challenge i)
+  | ⟨0, h0⟩ => by nomatch h0 -- P->V message has no challenge
+
+instance {d : ℕ} : ∀ i,
+    SampleableType ((pSpecCoreInteractionWithDegree (L:=L) (ℓ':=ℓ') d).Challenge i) :=
+  instSampleableTypeChallengeAppend
 
 instance : ∀ i, SampleableType ((pSpecCoreInteraction (L:=L) (ℓ':=ℓ')).Challenge i) :=
   instSampleableTypeChallengeAppend
 
-instance : ∀ i, SampleableType ((pSpecLargeFieldReduction κ (L:=L) (K:=K) (ℓ':=ℓ')).Challenge i) :=
+instance : ∀ i, SampleableType
+    ((pSpecLargeFieldReduction κ (L:=L) (K:=K) P (ℓ':=ℓ')).Challenge i) :=
   instSampleableTypeChallengeAppend
 
 instance : ∀ i, SampleableType (mlIOPCS.pSpec.Challenge i) := mlIOPCS.O_challenges
 
-instance : ∀ i, SampleableType ((fullPspec κ (L:=L) (K:=K) (ℓ':=ℓ') mlIOPCS).Challenge i) :=
+instance : ∀ i, SampleableType ((fullPspec κ (L:=L) (K:=K) P (ℓ':=ℓ') mlIOPCS).Challenge i) :=
   instSampleableTypeChallengeAppend
-
-/-! ## Fintype & Inhabited instances for oracle specifications -/
-
-instance instInhabitedOracleSpecEmpty : (([]ₒ : OracleSpec PEmpty).Inhabited) where
-  inhabited_B i := nomatch i
-
-instance instFintypeOracleSpecEmpty : (([]ₒ : OracleSpec PEmpty).Fintype) where
-  fintype_B i := nomatch i
-
-/-! ## OracleSpec.Inhabited for all pSpec.Message -/
-
-instance instInhabitedPSpecBatchingMessage : [(pSpecBatching κ L K).Message]ₒ.Inhabited := by
-  refine { inhabited_B := ?_ }
-  intro x
-  rcases x with ⟨⟨i, hi⟩, q⟩
-  have h0 : i = 0 := by
-    fin_cases i
-    · rfl
-    · simp [pSpecBatching] at hi
-  subst h0
-  cases q
-  change Inhabited (TensorAlgebra K L)
-  exact ⟨0⟩
-
-instance instInhabitedPSpecSumcheckRoundMessage :
-    [(pSpecSumcheckRound (L:=L)).Message]ₒ.Inhabited := by
-  letI : Inhabited L := ⟨0⟩
-  refine { inhabited_B := ?_ }
-  intro x
-  rcases x with ⟨⟨i, hi⟩, q⟩
-  have h0 : i = 0 := by
-    fin_cases i
-    · rfl
-    · simp [pSpecSumcheckRound] at hi
-  subst h0
-  cases q
-  change Inhabited (L⦃≤ 2⦄[X])
-  infer_instance
-
-instance instInhabitedPSpecFinalSumcheckMessage :
-    [(pSpecFinalSumcheck (L:=L)).Message]ₒ.Inhabited := by
-  letI : Inhabited L := ⟨0⟩
-  refine { inhabited_B := ?_ }
-  intro x
-  rcases x with ⟨⟨i, hi⟩, q⟩
-  have h0 : i = 0 := Fin.eq_zero i
-  subst h0
-  cases q
-  change Inhabited L
-  infer_instance
-
-/-! ## OracleSpec.Fintype for challenge specs -/
-
-instance instFintypePSpecSumcheckRoundChallenge :
-    ([(pSpecSumcheckRound (L:=L)).Challenge]ₒ).Fintype := by
-  refine { fintype_B := ?_ }
-  intro x
-  rcases x with ⟨⟨i, hi⟩, q⟩
-  have h1 : i = 1 := by
-    fin_cases i
-    · simp [pSpecSumcheckRound] at hi
-    · rfl
-  subst h1
-  cases q
-  change Fintype L
-  infer_instance
-
-instance instInhabitedPSpecSumcheckRoundChallenge :
-    ([(pSpecSumcheckRound (L:=L)).Challenge]ₒ).Inhabited := by
-  refine { inhabited_B := ?_ }
-  intro x
-  rcases x with ⟨⟨i, hi⟩, q⟩
-  have h1 : i = 1 := by
-    fin_cases i
-    · simp [pSpecSumcheckRound] at hi
-    · rfl
-  subst h1
-  cases q
-  change Inhabited L
-  exact ⟨0⟩
-
-instance instFintypePSpecBatching_AllChallenges :
-    ∀ i, Fintype ((pSpecBatching (κ := κ) (L := L) (K := K)).Challenge i)
-  | ⟨0, h0⟩ => nomatch h0
-  | ⟨1, _⟩ => by
-    simp only [Challenge, Fin.isValue, Matrix.cons_val_one, Matrix.cons_val_fin_one]
-    infer_instance
-
-instance instInhabitedPSpecBatching_AllChallenges :
-    ∀ i, Inhabited ((pSpecBatching (κ := κ) (L := L) (K := K)).Challenge i)
-  | ⟨0, h0⟩ => nomatch h0
-  | ⟨1, _⟩ => ⟨fun _ => 0⟩
-
-instance instFintypePSpecBatchingChallenge :
-    ([(pSpecBatching κ L K).Challenge]ₒ).Fintype := by
-  refine { fintype_B := ?_ }
-  intro x
-  rcases x with ⟨⟨i, hi⟩, q⟩
-  have h1 : i = 1 := by
-    fin_cases i
-    · simp [pSpecBatching] at hi
-    · rfl
-  subst h1
-  cases q
-  change Fintype (Fin κ → L)
-  infer_instance
-
-instance instInhabitedPSpecBatchingChallenge :
-    ([(pSpecBatching κ L K).Challenge]ₒ).Inhabited := by
-  refine { inhabited_B := ?_ }
-  intro x
-  rcases x with ⟨⟨i, hi⟩, q⟩
-  have h1 : i = 1 := by
-    fin_cases i
-    · simp [pSpecBatching] at hi
-    · rfl
-  subst h1
-  cases q
-  change Inhabited (Fin κ → L)
-  exact ⟨fun _ => 0⟩
-
-
-
-instance instFintypePSpecFinalSumcheck_AllChallenges : ∀ i, Fintype ((pSpecFinalSumcheck (L:=L)).Challenge i)
-  | ⟨0, h0⟩ => nomatch h0
-
-instance instInhabitedPSpecFinalSumcheck_AllChallenges : ∀ i, Inhabited ((pSpecFinalSumcheck (L:=L)).Challenge i)
-  | ⟨0, h0⟩ => nomatch h0
-
-instance instFintypePSpecFinalSumcheckChallenge :
-    ([(pSpecFinalSumcheck (L:=L)).Challenge]ₒ).Fintype := by
-  infer_instance
-
-instance instInhabitedPSpecFinalSumcheckChallenge :
-    ([(pSpecFinalSumcheck (L:=L)).Challenge]ₒ).Inhabited := by
-  infer_instance
 
 end Pspec
 

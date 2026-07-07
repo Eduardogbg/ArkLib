@@ -8,6 +8,7 @@ import CompPoly.Fields.Binary.AdditiveNTT.NovelPolynomialBasis
 import Mathlib.Tactic
 import Mathlib.Data.Finsupp.Defs
 import Mathlib.LinearAlgebra.LinearIndependent.Defs
+import ArkLib.Data.Fin.BigOperators
 
 /-!
 # Additive NTT Algorithm (Algorithm 2, LCH14)
@@ -1564,7 +1565,6 @@ lemma degree_intermediateNovelBasisX (i : Fin r) (h_i : i ≤ ℓ) (j : Fin (2 ^
       have h_get_bit_lt_2 := Nat.getBit_lt_2 (k:=k.val) (n:=j.val)
       by_cases h: Nat.getBit (k := k.val) (n := j.val) = 1
       · simp only [h, Nat.cast_one, one_mul, ↓reduceIte]
-        rfl
       · simp only [h, ↓reduceIte, mul_eq_zero, Nat.cast_eq_zero, pow_eq_zero_iff',
         OfNat.ofNat_ne_zero, ne_eq, false_and, or_false]
         omega
@@ -1580,7 +1580,6 @@ lemma degree_intermediateNovelBasisX (i : Fin r) (h_i : i ≤ ℓ) (j : Fin (2 ^
     have h_getBit_lt_2 := Nat.getBit_lt_2 (k:=x) (n:=j.val)
     by_cases h: Nat.getBit (k := x) (n := j.val) = 1
     · simp only [h, ↓reduceIte, WithBot.coe_one, one_mul]
-      rfl
     · simp only [h, ↓reduceIte, zero_eq_mul, WithBot.coe_eq_zero, pow_eq_zero_iff',
       OfNat.ofNat_ne_zero, ne_eq, false_and, or_false]; omega
 
@@ -2024,21 +2023,12 @@ theorem evaluation_poly_split_identity (i : Fin r) (h_i : i < ℓ)
       enter [2, 2, x]
       rw [←h_x_3 x]
     -- ⊢ ∑ x, f1 ↑x = ∑ x, f1 (↑x * 2) + ∑ x, f1 (↑x * 2 + 1)
-    have h_1: ∑ i ∈ Finset.range (2 ^ (ℓ - ↑i)), f1 i
-      = ∑ i ∈ Finset.range (2 ^ (ℓ - ↑i - 1 + 1)), f1 i := by
-      congr
-      omega
     have res := Fin.sum_univ_odd_even (f:=f1) (n:=(ℓ - ↑i - 1))
-    conv_rhs at res =>
-      rw [Fin.sum_univ_eq_sum_range]
-      rw [←h_1]
-      rw [←Fin.sum_univ_eq_sum_range]
-    rw [←res]
-    congr
-    · funext i
-      rw [mul_comm]
-    · funext i
-      rw [mul_comm]
+    rw [show (2:ℕ) ^ (ℓ - ↑i) = 2 ^ (ℓ - ↑i - 1 + 1) from by congr 1; omega]
+    rw [res]
+    congr 1
+    · exact Finset.sum_congr rfl (fun x _ => by rw [mul_comm])
+    · exact Finset.sum_congr rfl (fun x _ => by rw [mul_comm])
   conv_lhs => rw [h_split_P_i]
   set rightEvenTerm := ∑ ⟨j, hj⟩ : Fin (2 ^ (ℓ - ↑i - 1)),
       C (coeffs ⟨j * 2, by

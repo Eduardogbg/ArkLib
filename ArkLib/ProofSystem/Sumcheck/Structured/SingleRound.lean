@@ -22,7 +22,8 @@ This file collects single-round primitives for the structured (witness-mode) sum
   `roundOracleReduction` — the per-round prover / verifier / reduction, generic in a protocol
   `Context : Type` and external oracle statements `OStmtIn : ιₛᵢ → Type`. The outer protocol
   iterates these via `seqCompose`.
-- `roundKnowledgeError` — the `2 / |L|` Schwartz–Zippel round error.
+- `roundKnowledgeError` — the `d / |L|` Schwartz–Zippel round error for the explicit round
+  polynomial degree bound `d`.
 
 These were originally housed in `Binius.BinaryBasefold.Prelude`,
 `RingSwitching.Spec`, and `RingSwitching.SumcheckPhase`. They are fully
@@ -131,8 +132,9 @@ The state machine has three states per round:
 - `1`: after P sends `h_i(X)` — adds the univariate.
 - `2`: after V samples `r'_i` — adds the challenge.
 
-The error bound `roundKnowledgeError` is the standard `2 / |L|`
-Schwartz–Zippel bound; it doesn't depend on `Context` or `OStmtIn`. -/
+The error bound `roundKnowledgeError` is the standard `d / |L|`
+Schwartz–Zippel bound for the explicit round degree `d`; it doesn't depend on `Context` or
+`OStmtIn`. -/
 
 section SingleRound
 

@@ -9,7 +9,9 @@ universe u v w
 variable {ι : Type u} {spec : OracleSpec ι} {α β γ ω : Type u}
 
 variable {m : Type u → Type v} [Monad m]
-variable [HasEvalSPMF m] {mx : m α} {p q : α → Prop}
+variable [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
+    [EvalDistCompatible m]
+  {mx : m α} {p q : α → Prop}
 
 -- probFailure_bind_eq_zero_iff and loggingOracle.probFailure_simulateQ are in VCVio
 
@@ -52,7 +54,8 @@ lemma probOutput_none_pure_some_eq_zero
 namespace OptionT
 
 @[simp]
-lemma probOutput_none_pure_eq_zero {m : Type u → Type v} [Monad m] [HasEvalSPMF m]
+lemma probOutput_none_pure_eq_zero {m : Type u → Type v} [Monad m] [MonadLiftT m SPMF]
+    [LawfulMonadLiftT m SPMF] [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
     {α : Type u} (x : α) :
     Pr[=none | OptionT.run (OptionT.pure x : OptionT m α)] = 0 := by
   change Pr[=(none : Option α) | (pure (some x) : m (Option α))] = 0
@@ -60,16 +63,18 @@ lemma probOutput_none_pure_eq_zero {m : Type u → Type v} [Monad m] [HasEvalSPM
 
 /-- Bridge `OptionT` failure-freeness to run-level zero probability of `none`. -/
 lemma probOutput_none_run_eq_zero_of_probFailure_eq_zero
-    {m : Type u → Type v} [Monad m] [HasEvalPMF m]
+    {m : Type u → Type v} [Monad m] [MonadLiftT m PMF] [LawfulMonadLiftT m PMF]
+    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
     {α : Type u} {mx : OptionT m α} (hfail : Pr[⊥ | mx] = 0) :
     Pr[=none | OptionT.run mx] = 0 := by
   have hfail_run : Pr[⊥ | OptionT.run mx] + Pr[=none | OptionT.run mx] = 0 := by
     simpa [OptionT.probFailure_eq] using hfail
-  simpa [HasEvalPMF.probFailure_eq_zero] using hfail_run
+  simpa [probFailure_of_liftM_PMF] using hfail_run
 
 /-- OptionT run-level support form of failure-freeness. -/
 lemma not_mem_support_run_none_of_probFailure_eq_zero
-    {m : Type u → Type v} [Monad m] [HasEvalPMF m]
+    {m : Type u → Type v} [Monad m] [MonadLiftT m PMF] [LawfulMonadLiftT m PMF]
+    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
     {α : Type u} (mx : OptionT m α) (hfail : Pr[⊥ | mx] = 0) :
     (none : Option α) ∉ support (m := m) (α := Option α) (OptionT.run mx) := by
   have hnone : Pr[=none | OptionT.run mx] = 0 :=
@@ -77,46 +82,53 @@ lemma not_mem_support_run_none_of_probFailure_eq_zero
   exact _root_.not_mem_support_none_of_probOutput_none_eq_zero
     (oa := OptionT.run mx) hnone
 
-lemma probFailure_mk {m : Type u → Type v} [Monad m] [HasEvalSPMF m]
+lemma probFailure_mk {m : Type u → Type v} [Monad m] [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
+    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
     {α : Type u} (mx : m (Option α)) :
     Pr[⊥ | (OptionT.mk mx : OptionT m α)] = Pr[⊥ | mx] + Pr[= none | mx] := by
   simpa using (OptionT.probFailure_eq (m := m) (mx := (OptionT.mk mx : OptionT m α)))
 
-lemma probEvent_mk {m : Type u → Type v} [Monad m] [HasEvalSPMF m]
+lemma probEvent_mk {m : Type u → Type v} [Monad m] [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
+    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
     {α : Type u} (p : α → Prop) [DecidablePred p] (mx : m (Option α)) :
     Pr[p | (OptionT.mk mx : OptionT m α)] + Pr[= none | mx] = Pr[fun o => o.all p | mx] := by
   simpa using (OptionT.probEvent_eq (m := m) (mx := (OptionT.mk mx : OptionT m α)) (p := p))
 
 @[simp]
-lemma support_mk {m : Type u → Type v} [Monad m] [HasEvalSPMF m]
+lemma support_mk {m : Type u → Type v} [Monad m] [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
+    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
     {α : Type u} (mx : m (Option α)) :
     support (OptionT.mk mx : OptionT m α) = {x | some x ∈ support mx} := by
   ext x
   simp [OptionT.mem_support_iff]
 
 @[simp]
-lemma mem_support_mk {m : Type u → Type v} [Monad m] [HasEvalSPMF m]
+lemma mem_support_mk {m : Type u → Type v} [Monad m] [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
+    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
     {α : Type u} (mx : m (Option α)) (x : α) :
     x ∈ support (OptionT.mk mx : OptionT m α) ↔ some x ∈ support mx := by
   simp [support_mk]
 
 /-- Support of `OptionT.run (OptionT.mk mx)` is the same as support of the underlying `mx`. -/
 @[simp]
-lemma support_run {m : Type u → Type v} [Monad m] [HasEvalSPMF m]
+lemma support_run {m : Type u → Type v} [Monad m] [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
+    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
     {α : Type u} (mx : m (Option α)) :
     support (m := m) (α := Option α) (OptionT.run mx) = support mx :=
   rfl
 
 /-- Membership form of `support_run_mk`. -/
 @[simp]
-lemma mem_support_run_mk_iff {m : Type u → Type v} [Monad m] [HasEvalSPMF m]
+lemma mem_support_run_mk_iff {m : Type u → Type v} [Monad m] [MonadLiftT m SPMF]
+    [LawfulMonadLiftT m SPMF] [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
     {α : Type u} (mx : m (Option α)) (x : Option α) :
     x ∈ support (m := m) (α := Option α) (OptionT.run mx) ↔ x ∈ support mx := by
   simp
 
 /-- Convenience alias of `mem_support_run_mk_iff` with a standard name. -/
 @[simp]
-lemma mem_support_run_iff {m : Type u → Type v} [Monad m] [HasEvalSPMF m]
+lemma mem_support_run_iff {m : Type u → Type v} [Monad m] [MonadLiftT m SPMF]
+    [LawfulMonadLiftT m SPMF] [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
     {α : Type u} (mx : m (Option α)) (x : Option α) :
     x ∈ support (m := m) (α := Option α) (OptionT.run mx) ↔
       x ∈ support (m := m) (α := Option α) mx := by
@@ -124,7 +136,8 @@ lemma mem_support_run_iff {m : Type u → Type v} [Monad m] [HasEvalSPMF m]
 
 /-- Equality transport through `OptionT.run` at base-monad support level. -/
 @[simp]
-lemma support_run_eq_iff {m : Type u → Type v} [Monad m] [HasEvalSPMF m]
+lemma support_run_eq_iff {m : Type u → Type v} [Monad m] [MonadLiftT m SPMF]
+    [LawfulMonadLiftT m SPMF] [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
     {α : Type u} (mx my : m (Option α)) :
     support (m := m) (α := Option α) (OptionT.run mx) =
       support (m := m) (α := Option α) (OptionT.run my) ↔
@@ -133,7 +146,8 @@ lemma support_run_eq_iff {m : Type u → Type v} [Monad m] [HasEvalSPMF m]
 
 /-- Convenience name for support of `OptionT.pure`. -/
 @[simp]
-lemma support_OptionT_pure {m : Type u → Type v} [Monad m] [HasEvalSPMF m]
+lemma support_OptionT_pure {m : Type u → Type v} [Monad m] [MonadLiftT m SPMF]
+    [LawfulMonadLiftT m SPMF] [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
     {α : Type u} (x : α) :
     support (OptionT.pure x : OptionT m α) = {x} := by
   change support (pure x : OptionT m α) = {x}
@@ -141,7 +155,8 @@ lemma support_OptionT_pure {m : Type u → Type v} [Monad m] [HasEvalSPMF m]
 
 /-- Run-level support form of `OptionT.pure` (output is `some x`). -/
 @[simp]
-lemma support_OptionT_pure_run {m : Type u → Type v} [Monad m] [HasEvalSPMF m]
+lemma support_OptionT_pure_run {m : Type u → Type v} [Monad m] [MonadLiftT m SPMF]
+    [LawfulMonadLiftT m SPMF] [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
     {α : Type u} (x : α) :
     support (m := m) (α := Option α) (OptionT.pure x) = {some x} := by
   change support (pure (some x) : m (Option α)) = {some x}
@@ -149,7 +164,8 @@ lemma support_OptionT_pure_run {m : Type u → Type v} [Monad m] [HasEvalSPMF m]
 
 /-- Run-level `some` membership form for `OptionT.pure`. -/
 @[simp]
-lemma mem_support_OptionT_pure_run_some_iff {m : Type u → Type v} [Monad m] [HasEvalSPMF m]
+lemma mem_support_OptionT_pure_run_some_iff {m : Type u → Type v} [Monad m] [MonadLiftT m SPMF]
+    [LawfulMonadLiftT m SPMF] [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
     {α : Type u} (x y : α) :
     some y ∈ support (m := m) (α := Option α) (OptionT.pure x) ↔ y = x := by
   simp [support_OptionT_pure_run]
@@ -157,7 +173,8 @@ lemma mem_support_OptionT_pure_run_some_iff {m : Type u → Type v} [Monad m] [H
 /-- OptionT run-level specialization: if `mx` has zero failure probability,
 every run-support element is `some _`. -/
 lemma exists_eq_some_of_mem_support_run_of_probFailure_eq_zero
-    {m : Type u → Type v} [Monad m] [HasEvalPMF m]
+    {m : Type u → Type v} [Monad m] [MonadLiftT m PMF] [LawfulMonadLiftT m PMF]
+    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
     {α : Type u} (mx : OptionT m α) {x : Option α}
     (hx : x ∈ support (m := m) (α := Option α) (OptionT.run mx))
     (hfail : Pr[⊥ | mx] = 0) :
@@ -169,7 +186,8 @@ lemma exists_eq_some_of_mem_support_run_of_probFailure_eq_zero
 
 /-- OptionT-native alias of generic `probFailure_pure`. -/
 @[simp]
-lemma probFailure_OptionT_pure {m : Type u → Type v} [Monad m] [HasEvalSPMF m]
+lemma probFailure_OptionT_pure {m : Type u → Type v} [Monad m] [MonadLiftT m SPMF]
+    [LawfulMonadLiftT m SPMF] [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
     {α : Type u} (x : α) :
     Pr[⊥ | (OptionT.pure x : OptionT m α)] = 0 := by
   change Pr[⊥ | (pure x : OptionT m α)] = 0
@@ -177,20 +195,23 @@ lemma probFailure_OptionT_pure {m : Type u → Type v} [Monad m] [HasEvalSPMF m]
 
 /-- OptionT-native alias of generic `support_bind`. -/
 @[simp]
-lemma support_bind {m : Type u → Type v} [Monad m] [HasEvalSPMF m]
+lemma support_bind {m : Type u → Type v} [Monad m] [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
+    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
     {α β : Type u} (mx : OptionT m α) (my : α → OptionT m β) :
     support (mx >>= my) = ⋃ x ∈ support mx, support (my x) := by
   simp only [_root_.support_bind]
 
 /-- OptionT-native alias of generic `mem_support_bind_iff`. -/
-lemma mem_support_bind_iff {m : Type u → Type v} [Monad m] [HasEvalSPMF m]
+lemma mem_support_bind_iff {m : Type u → Type v} [Monad m] [MonadLiftT m SPMF]
+    [LawfulMonadLiftT m SPMF] [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
     {α β : Type u} (mx : OptionT m α) (my : α → OptionT m β) (y : β) :
     y ∈ support (mx >>= my) ↔ ∃ x ∈ support mx, y ∈ support (my x) := by
   simp only [_root_.support_bind, Set.mem_iUnion, exists_prop]
 
 /-- Bridge lemma to reason about failure of `OptionT.mk` over a monadic bind. -/
 @[simp]
-lemma probFailure_mk_bind_eq_zero_iff {m : Type u → Type v} [Monad m] [HasEvalSPMF m]
+lemma probFailure_mk_bind_eq_zero_iff {m : Type u → Type v} [Monad m] [MonadLiftT m SPMF]
+    [LawfulMonadLiftT m SPMF] [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
     [LawfulMonad m]
     {α β : Type u} (mx : m α) (my : α → m (Option β)) :
     Pr[⊥ | (OptionT.mk (mx >>= my) : OptionT m β)] = 0 ↔
@@ -220,7 +241,8 @@ lemma probFailure_mk_bind_eq_zero_iff {m : Type u → Type v} [Monad m] [HasEval
 
 /-- `do`-notation variant of `probFailure_mk_bind_eq_zero_iff`. -/
 @[simp]
-lemma probFailure_mk_do_bind_eq_zero_iff {m : Type u → Type v} [Monad m] [HasEvalSPMF m]
+lemma probFailure_mk_do_bind_eq_zero_iff {m : Type u → Type v} [Monad m] [MonadLiftT m SPMF]
+    [LawfulMonadLiftT m SPMF] [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
     [LawfulMonad m]
     {α β : Type u} (mx : m α) (my : α → m (Option β)) :
     Pr[⊥ | (OptionT.mk (do
@@ -231,7 +253,8 @@ lemma probFailure_mk_do_bind_eq_zero_iff {m : Type u → Type v} [Monad m] [HasE
 
 /-- Two-bind `do`-notation variant for easier rewriting of chained programs. -/
 @[simp]
-lemma probFailure_mk_do_bind_bind_eq_zero_iff {m : Type u → Type v} [Monad m] [HasEvalSPMF m]
+lemma probFailure_mk_do_bind_bind_eq_zero_iff {m : Type u → Type v} [Monad m] [MonadLiftT m SPMF]
+    [LawfulMonadLiftT m SPMF] [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
     [LawfulMonad m]
     {α β γ : Type u} (mx : m α) (my : α → m β) (mz : α → β → m (Option γ)) :
     Pr[⊥ | (OptionT.mk (do
@@ -245,7 +268,8 @@ lemma probFailure_mk_do_bind_bind_eq_zero_iff {m : Type u → Type v} [Monad m] 
   simp only [mk_bind, probFailure_bind_eq_zero_iff, probFailure_liftM, support_liftM]
 
 /-- `OptionT`-do-bind variant: use when the `do` block under `OptionT.mk` is in `OptionT`. -/
-lemma probFailure_mk_do_bindT_eq_zero_iff {m : Type u → Type v} [Monad m] [HasEvalSPMF m]
+lemma probFailure_mk_do_bindT_eq_zero_iff {m : Type u → Type v} [Monad m] [MonadLiftT m SPMF]
+    [LawfulMonadLiftT m SPMF] [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
     {α β : Type u} (mx : OptionT m α) (my : α → OptionT m β) :
     Pr[⊥ | (OptionT.mk ((do
       let x ← mx
@@ -258,7 +282,8 @@ lemma probFailure_mk_do_bindT_eq_zero_iff {m : Type u → Type v} [Monad m] [Has
   exact (probFailure_bind_eq_zero_iff (mx := mx) (my := my))
 
 /-- Two-bind `OptionT`-do variant for chained programs under `OptionT.mk`. -/
-lemma probFailure_mk_do_bind_bindT_eq_zero_iff {m : Type u → Type v} [Monad m] [HasEvalSPMF m]
+lemma probFailure_mk_do_bind_bindT_eq_zero_iff {m : Type u → Type v} [Monad m] [MonadLiftT m SPMF]
+    [LawfulMonadLiftT m SPMF] [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
     {α β γ : Type u} (mx : OptionT m α) (my : α → OptionT m β) (mz : α → β → OptionT m γ) :
     Pr[⊥ | (OptionT.mk ((do
       let x ← mx
@@ -282,7 +307,8 @@ lemma probFailure_mk_do_bind_bindT_eq_zero_iff {m : Type u → Type v} [Monad m]
 
 /-- Binding into `OptionT.pure` preserves failure-freedom (`= 0`). -/
 @[simp]
-lemma probFailure_bind_pure_comp_eq_zero_iff {m : Type u → Type v} [Monad m] [HasEvalSPMF m]
+lemma probFailure_bind_pure_comp_eq_zero_iff {m : Type u → Type v} [Monad m] [MonadLiftT m SPMF]
+    [LawfulMonadLiftT m SPMF] [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
     {α β : Type u} (mx : OptionT m α) (f : α → β) :
     Pr[⊥ | OptionT.bind mx (OptionT.pure ∘ f)] = 0 ↔ Pr[⊥ | mx] = 0 := by
   change Pr[⊥ | mx >>= (OptionT.pure ∘ f)] = 0 ↔ Pr[⊥ | mx] = 0
@@ -302,8 +328,8 @@ lemma probFailure_bind_pure_comp_eq_zero_iff {m : Type u → Type v} [Monad m] [
 @[simp]
 lemma probFailure_simulateQ_liftQuery_eq
     {ι' : Type w} {spec : OracleSpec ι} {superSpec : OracleSpec ι'}
-    [spec.Fintype] [spec.Inhabited]
-    [superSpec.Fintype] [superSpec.Inhabited]
+    [IsUniformSpec spec]
+    [IsUniformSpec superSpec]
     [MonadLift (OracleQuery spec) (OracleQuery superSpec)]
     {α : Type u} (oa : OptionT (OracleComp spec) α) :
     Pr[⊥ | (liftM oa : OptionT (OracleComp superSpec) α)] =
@@ -320,8 +346,8 @@ lemma probFailure_simulateQ_liftQuery_eq
 @[simp]
 lemma probFailure_simulateQ_liftQuery_add_none_eq
     {ι' : Type w} {spec : OracleSpec ι} {superSpec : OracleSpec ι'}
-    [spec.Fintype] [spec.Inhabited]
-    [superSpec.Fintype] [superSpec.Inhabited]
+    [IsUniformSpec spec]
+    [IsUniformSpec superSpec]
     [MonadLift (OracleQuery spec) (OracleQuery superSpec)]
     {α : Type u} (oa : OptionT (OracleComp spec) α) :
     Pr[⊥ | simulateQ (fun (t : spec.Domain) ↦
@@ -339,8 +365,8 @@ lemma probFailure_simulateQ_liftQuery_add_none_eq
 @[simp]
 lemma probFailure_simulateQ_liftQuery_eq_zero_iff
     {ι' : Type w} {spec : OracleSpec ι} {superSpec : OracleSpec ι'}
-    [spec.Fintype] [spec.Inhabited]
-    [superSpec.Fintype] [superSpec.Inhabited]
+    [IsUniformSpec spec]
+    [IsUniformSpec superSpec]
     [MonadLift (OracleQuery spec) (OracleQuery superSpec)]
     {α : Type u} (oa : OptionT (OracleComp spec) α) :
     Pr[⊥ | (liftM oa : OptionT (OracleComp superSpec) α)] = 0 ↔
@@ -357,36 +383,36 @@ lemma probFailure_simulateQ_liftQuery_eq_zero_iff
 @[simp]
 lemma probFailure_run_simulateQ_liftQuery_eq
     {ι' : Type w} {spec : OracleSpec ι} {superSpec : OracleSpec ι'}
-    [spec.Fintype] [spec.Inhabited]
-    [superSpec.Fintype] [superSpec.Inhabited]
+    [IsUniformSpec spec]
+    [IsUniformSpec superSpec]
     [MonadLift (OracleQuery spec) (OracleQuery superSpec)]
     {α : Type u} (oa : OptionT (OracleComp spec) α) :
     Pr[⊥ | simulateQ (fun (t : spec.Domain) ↦
       (liftM (query t : OracleQuery spec (spec.Range t))
         : OracleComp superSpec (spec.Range t))) oa] =
     Pr[⊥ | OptionT.run (liftM oa : OptionT (OracleComp superSpec) α)] := by
-  simp only [HasEvalPMF.probFailure_eq_zero, liftM_OptionT_eq]
+  simp only [probFailure_of_liftM_PMF, liftM_OptionT_eq]
 
 /-- `= 0` form of `probFailure_run_simulateQ_liftQuery_eq`. -/
 @[simp]
 lemma probFailure_run_simulateQ_liftQuery_eq_zero_iff
     {ι' : Type w} {spec : OracleSpec ι} {superSpec : OracleSpec ι'}
-    [spec.Fintype] [spec.Inhabited]
-    [superSpec.Fintype] [superSpec.Inhabited]
+    [IsUniformSpec spec]
+    [IsUniformSpec superSpec]
     [MonadLift (OracleQuery spec) (OracleQuery superSpec)]
     {α : Type u} (oa : OptionT (OracleComp spec) α) :
     Pr[⊥ | simulateQ (fun (t : spec.Domain) ↦
       (liftM (query t : OracleQuery spec (spec.Range t))
         : OracleComp superSpec (spec.Range t))) oa] = 0 ↔
     Pr[⊥ | OptionT.run (liftM oa : OptionT (OracleComp superSpec) α)] = 0 := by
-  simp only [HasEvalPMF.probFailure_eq_zero, liftM_OptionT_eq]
+  simp only [probFailure_of_liftM_PMF, liftM_OptionT_eq]
 
 /-- Run-level support membership bridge for `simulateQ ...` vs `liftM` on `OptionT` computations. -/
 @[simp]
 lemma mem_support_simulateQ_liftQuery_iff
     {ι' : Type w} {spec : OracleSpec ι} {superSpec : OracleSpec ι'}
-    [spec.Fintype] [spec.Inhabited]
-    [superSpec.Fintype] [superSpec.Inhabited]
+    [IsUniformSpec spec]
+    [IsUniformSpec superSpec]
     [MonadLift (OracleQuery spec) (OracleQuery superSpec)]
     {α : Type u} (oa : OptionT (OracleComp spec) α) (x : Option α) :
     x ∈ support (m := OracleComp superSpec) (α := Option α)
@@ -406,8 +432,8 @@ lemma mem_support_simulateQ_liftQuery_iff
 @[simp]
 lemma mem_support_simulateQ_liftQuery_some_iff
     {ι' : Type w} {spec : OracleSpec ι} {superSpec : OracleSpec ι'}
-    [spec.Fintype] [spec.Inhabited]
-    [superSpec.Fintype] [superSpec.Inhabited]
+    [IsUniformSpec spec]
+    [IsUniformSpec superSpec]
     [MonadLift (OracleQuery spec) (OracleQuery superSpec)]
     {α : Type u} (oa : OptionT (OracleComp spec) α) (x : α) :
     some x ∈ support (m := OracleComp superSpec) (α := Option α)
@@ -426,8 +452,8 @@ lemma mem_support_simulateQ_liftQuery_some_iff
 /-! this lemma makes goal more friendly to `OracleComp.probOutput_liftComp` -/
 @[simp 1100]
 lemma run_liftComp_eq {ι' : Type w} {spec : OracleSpec ι} {superSpec : OracleSpec ι'}
-    [spec.Fintype] [spec.Inhabited]
-    [superSpec.Fintype] [superSpec.Inhabited]
+    [IsUniformSpec spec]
+    [IsUniformSpec superSpec]
     [MonadLift (OracleQuery spec) (OracleQuery superSpec)]
     {α : Type u} (oa : OptionT (OracleComp spec) α) :
     OptionT.run (liftComp oa superSpec) = ((oa.run).liftComp superSpec) := by
@@ -441,8 +467,8 @@ lemma run_liftComp_eq {ι' : Type w} {spec : OracleSpec ι} {superSpec : OracleS
   `OptionT (OracleComp superSpec)`. -/
 @[simp]
 lemma probFailure_liftComp_of_OracleComp_Option {ι' : Type w} {spec : OracleSpec ι}
-    {superSpec : OracleSpec ι'} [spec.Fintype] [spec.Inhabited]
-    [superSpec.Fintype] [superSpec.Inhabited]
+    {superSpec : OracleSpec ι'} [IsUniformSpec spec]
+    [IsUniformSpec superSpec]
     [spec ⊂ₒ superSpec] [LawfulSubSpec spec superSpec]
     {α : Type u} (oa : OptionT (OracleComp spec) α) :
     probFailure (m := (OptionT (OracleComp superSpec))) (mx :=
@@ -451,7 +477,7 @@ lemma probFailure_liftComp_of_OracleComp_Option {ι' : Type w} {spec : OracleSpe
     + probOutput (m := OracleComp spec) (mx := oa.run) (x := none) := by
   conv_lhs => -- MUST BE explicit about `m` like this
     rw [OptionT.probFailure_eq (m := (OracleComp superSpec))]
-  simp only [HasEvalPMF.probFailure_eq_zero, zero_add]
+  simp only [probFailure_of_liftM_PMF, zero_add]
   conv_lhs => erw [run_liftComp_eq]
   rw [OracleComp.probOutput_liftComp (spec := spec)
     (superSpec := superSpec) (mx := oa.run) (x := none)]
@@ -460,60 +486,41 @@ end OptionT
 
 @[simp]
 lemma probFailure_liftComp {ι' : Type w} {superSpec : OracleSpec ι'}
-    [spec.Fintype] [spec.Inhabited] [superSpec.Fintype] [superSpec.Inhabited]
+    [IsUniformSpec spec] [IsUniformSpec superSpec]
     [MonadLift (OracleQuery spec) (OracleQuery superSpec)]
     (oa : OracleComp spec α) : Pr[⊥ | liftComp oa superSpec] = Pr[⊥ | oa] := by
-  rw [liftComp_eq_liftM]; simp only [HasEvalPMF.probFailure_eq_zero]
+  rw [liftComp_eq_liftM]; simp only [probFailure_of_liftM_PMF]
 
 /-- Monad-lifting preserves the failure probability. -/
 @[simp]
 lemma probFailure_liftM {ι' : Type w} {superSpec : OracleSpec ι'}
-    [spec.Fintype] [spec.Inhabited] [superSpec.Fintype] [superSpec.Inhabited]
+    [IsUniformSpec spec] [IsUniformSpec superSpec]
     [MonadLift (OracleQuery spec) (OracleQuery superSpec)]
     (oa : OracleComp spec α) :
     Pr[⊥ | (liftM oa : OracleComp superSpec α)] = Pr[⊥ | oa] := by
-  simp only [HasEvalPMF.probFailure_eq_zero]
+  simp only [probFailure_of_liftM_PMF]
 
 /-- Spec-lifting preserves the failure probability. -/
 @[simp]
 lemma probFailure_liftComp_eq {ι' : Type} {superSpec : OracleSpec ι'}
-    [spec.Fintype] [spec.Inhabited] [superSpec.Fintype] [superSpec.Inhabited]
+    [IsUniformSpec spec] [IsUniformSpec superSpec]
     [MonadLift (OracleQuery spec) (OracleQuery superSpec)]
     (oa : OracleComp spec α) : Pr[⊥ | liftComp oa superSpec] = Pr[⊥ | oa] := by
-  rw [liftComp_eq_liftM]; simp only [HasEvalPMF.probFailure_eq_zero]
+  rw [liftComp_eq_liftM]; simp only [probFailure_of_liftM_PMF]
 
-@[simp]
-lemma support_liftComp {ι' : Type w} {superSpec : OracleSpec ι'}
-    [spec.Fintype] [spec.Inhabited] [superSpec.Fintype] [superSpec.Inhabited]
-    [spec ⊂ₒ superSpec] [LawfulSubSpec spec superSpec]
-    (oa : OracleComp spec α) : support (liftComp oa superSpec) = support oa := by
-  induction oa using OracleComp.inductionOn with
-  | pure a => simp
-  | query_bind t oa ih =>
-    rw [liftComp_bind, support_bind, support_bind]
-    have hq : support (liftComp (query t : OracleComp spec _) superSpec) = Set.univ := by
-      rw [liftComp_eq_liftM]
-      calc support (liftM (query t : OracleQuery spec (spec.Range t)) : OracleComp superSpec _)
-        _ =
-            Set.range
-              ((MonadLift.monadLift (query t : OracleQuery spec _)
-                : OracleQuery superSpec _)).cont := support_liftM _
-        _ = Set.univ := by
-          apply Set.range_eq_univ.mpr
-          erw [SubSpec.liftM_eq_lift]
-          exact (LawfulSubSpec.onResponse_bijective t).surjective
-    have hq' : support (query t : OracleComp spec _) = Set.univ := OracleComp.support_query t
-    erw [hq, hq', Set.biUnion_univ, Set.biUnion_univ]
-    simp_rw [ih]
-
-alias liftComp_support := support_liftComp
+-- `support_liftComp` (and `mem_support_liftComp_iff`, `probFailure_liftComp`,
+-- `probOutput_liftComp`) are now provided upstream by VCVio itself, in the `OracleComp`
+-- namespace (`ArkLib/OracleComp/Coercions/SubSpec.lean`), with the same statement but weaker
+-- hypotheses (just `[spec ⊂ₒ superSpec] [LawfulSubSpec spec superSpec]`, no `IsUniformSpec`
+-- needed). The local duplicate that used to live here was dropped to avoid an ambiguous
+-- identifier with `OracleComp.support_liftComp` (both are visible unqualified via the
+-- `open OracleComp` at the top of this file).
 
 /-- `OptionT` analogue of `support_liftComp`: lifting an `OptionT (OracleComp spec)` computation to
 a larger spec (via the sub-spec lift on the underlying `OracleComp`) preserves support. This is the
 bridging lemma the RBR-soundness/verifier-extraction proofs need after the VCVio bump replaced the
 old `liftComp`-based support lemmas. -/
 lemma support_liftM_optionT {ι' : Type w} {superSpec : OracleSpec ι'}
-    [spec.Fintype] [spec.Inhabited] [superSpec.Fintype] [superSpec.Inhabited]
     [spec ⊂ₒ superSpec] [LawfulSubSpec spec superSpec]
     (x : OptionT (OracleComp spec) α) :
     support (liftM x : OptionT (OracleComp superSpec) α) = support x := by
@@ -525,7 +532,7 @@ lemma support_liftM_optionT {ι' : Type w} {superSpec : OracleSpec ι'}
 
 @[simp]
 lemma liftComp_id
-    [spec.Fintype] [spec.Inhabited]
+    [IsUniformSpec spec]
     (oa : OracleComp spec α) : liftComp oa spec = oa := by
   change simulateQ (fun (t : spec.Domain) => (liftM (query t : OracleQuery spec (spec.Range t))
     : OracleComp spec (spec.Range t))) oa = oa
@@ -536,22 +543,22 @@ lemma liftComp_id
     rfl
   rw [heq, simulateQ_id']
 
-abbrev liftComp_self [spec.Fintype] [spec.Inhabited]
+abbrev liftComp_self [IsUniformSpec spec]
   (oa : OracleComp spec α) : liftComp oa spec = oa := liftComp_id oa
 
 /-- Identity spec-lifting does not change support. -/
 @[simp]
 lemma support_liftComp_id
-    [spec.Fintype] [spec.Inhabited]
+    [IsUniformSpec spec]
     (oa : OracleComp spec α) :
     support (liftComp oa spec) = support oa := by
   rw [liftComp_id]
 
 /-- Map preserves NeverFail. -/
-lemma neverFail_map_iff' [spec.Fintype] [spec.Inhabited]
+lemma neverFail_map_iff' [IsUniformSpec spec]
     (oa : OracleComp spec α) (f : α → β) :
     NeverFail (f <$> oa) ↔ NeverFail oa :=
-  HasEvalSPMF.neverFail_map_iff oa f
+  neverFail_map_iff oa f
 
 /-- Bridge between monadic support and deterministic results for pure ProbComp. -/
 @[simp]
@@ -607,7 +614,9 @@ lemma mem_support_bind_bind_map_iff [LawfulMonad m]
 
 /-- Generic 1-step map support extraction. -/
 @[simp]
-lemma mem_support_map_iff_generic {m : Type u → Type v} [Monad m] [HasEvalSPMF m] [LawfulMonad m]
+lemma mem_support_map_iff_generic {m : Type u → Type v} [Monad m] [MonadLiftT m SPMF]
+    [LawfulMonadLiftT m SPMF] [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+    [LawfulMonad m]
     {α β : Type u} (mx : m α) (f : α → β) (y : β) :
     y ∈ support (f <$> mx) ↔ ∃ x ∈ support mx, f x = y := by
   simp only [support_map, Set.mem_image]
@@ -730,7 +739,9 @@ lemma mem_support_run_map_some_iff [LawfulMonad m] {α β : Type u}
 
 /-- Extract a successful path natively from an OptionT bind. -/
 @[simp]
-lemma mem_support_OptionT_bind_some {m : Type u → Type v} [Monad m] [HasEvalSPMF m] [LawfulMonad m]
+lemma mem_support_OptionT_bind_some {m : Type u → Type v} [Monad m] [MonadLiftT m SPMF]
+    [LawfulMonadLiftT m SPMF] [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+    [LawfulMonad m]
     {α β : Type u} (ma : OptionT m α) (mb : α → OptionT m β) (y : β) :
     y ∈ support (ma >>= mb) ↔
       ∃ x ∈ support ma, y ∈ support (mb x) := by
@@ -739,7 +750,8 @@ lemma mem_support_OptionT_bind_some {m : Type u → Type v} [Monad m] [HasEvalSP
 /-- Successful-path decomposition for bind at `OptionT.run` level. -/
 @[simp]
 lemma mem_support_OptionT_run_bind_some
-    {m : Type u → Type v} [Monad m] [HasEvalSPMF m] [LawfulMonad m]
+    {m : Type u → Type v} [Monad m] [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
+        [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m] [LawfulMonad m]
     {α β : Type u} (ma : OptionT m α) (mb : α → OptionT m β) (y : β) :
     some y ∈ support (OptionT.run (ma >>= mb)) ↔
       ∃ x ∈ support ma, some y ∈ support (OptionT.run (mb x)) := by
@@ -747,7 +759,9 @@ lemma mem_support_OptionT_run_bind_some
 
 /-- Extract a mapped successful value natively from an OptionT map. -/
 @[simp]
-lemma mem_support_OptionT_map_some {m : Type u → Type v} [Monad m] [HasEvalSPMF m] [LawfulMonad m]
+lemma mem_support_OptionT_map_some {m : Type u → Type v} [Monad m] [MonadLiftT m SPMF]
+    [LawfulMonadLiftT m SPMF] [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+    [LawfulMonad m]
     {α β : Type u} (ma : OptionT m α) (f : α → β) (y : β) :
     y ∈ support (f <$> ma) ↔
       ∃ x ∈ support ma, f x = y := by
@@ -756,7 +770,8 @@ lemma mem_support_OptionT_map_some {m : Type u → Type v} [Monad m] [HasEvalSPM
 /-- Successful-value decomposition for map at `OptionT.run` level. -/
 @[simp]
 lemma mem_support_OptionT_run_map_some
-    {m : Type u → Type v} [Monad m] [HasEvalSPMF m] [LawfulMonad m]
+    {m : Type u → Type v} [Monad m] [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
+        [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m] [LawfulMonad m]
     {α β : Type u} (ma : OptionT m α) (f : α → β) (y : β) :
     some y ∈ support (OptionT.run (f <$> ma)) ↔
       ∃ x ∈ support ma, f x = y := by
@@ -773,7 +788,7 @@ theorem imp_comm {P Q R : Prop} : (P → Q → R) ↔ (Q → P → R) := by
 @[simp]
 lemma probEvent_pure_iff {α : Type} (p : α → Prop) (x : α) :
     Pr[p | (pure x : ProbComp α)] = 1 ↔ p x := by
-  simp only [probEvent_eq_one_iff, HasEvalPMF.probFailure_eq_zero, support_pure,
+  simp only [probEvent_eq_one_iff, probFailure_of_liftM_PMF, support_pure,
     Set.mem_singleton_iff, forall_eq, true_and]
 
 alias probEvent_eq_one_pure_iff := probEvent_pure_iff

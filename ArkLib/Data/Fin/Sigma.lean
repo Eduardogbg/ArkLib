@@ -133,9 +133,9 @@ theorem embedSum_splitSum {m : ℕ} {n : Fin m → ℕ} (k : Fin (vsum n)) :
   | zero => exact Fin.elim0 k
   | succ m ih =>
     induction k using Fin.addCases with
-    | left j => rw [splitSum_succ]; erw [Fin.dappend_left]; rfl
-    | right j =>
-      rw [splitSum_succ]; erw [Fin.dappend_right]
+    | left k₀ => rw [splitSum_succ]; erw [dappend_left]; rfl
+    | right k₁ =>
+      rw [splitSum_succ]; erw [dappend_right]
       simp only [embedSum_succ_succ, ih]
       rfl
 
@@ -146,15 +146,10 @@ theorem splitSum_embedSum {m : ℕ} {n : Fin m → ℕ} (i : Fin m) (j : Fin (n 
   | zero => exact Fin.elim0 i
   | succ m ih =>
     induction i using Fin.cases with
-    | zero => rw [embedSum_succ_zero, splitSum_succ]; erw [Fin.dappend_left]
-    | succ i =>
-      rw [embedSum_succ_succ, splitSum_succ]; erw [Fin.dappend_right]
+    | zero => rw [embedSum_succ_zero, splitSum_succ]; erw [dappend_left]
+    | succ i' =>
+      rw [embedSum_succ_succ, splitSum_succ]; erw [dappend_right]
       rw [ih]
-
-@[simp]
-theorem splitSum_embedSum_fst {m : ℕ} {n : Fin m → ℕ} (i : Fin m) (j : Fin (n i)) :
-    (splitSum (embedSum i j)).1 = i :=
-  congr_arg Sigma.fst (splitSum_embedSum i j)
 
 def finSum'FinEquiv' {m : ℕ} {n : Fin m → ℕ} : (i : Fin m) × Fin (n i) ≃ Fin (vsum n) where
   toFun := fun ij => embedSum ij.1 ij.2
@@ -223,7 +218,7 @@ theorem dflatten_splitSum {m : ℕ} {n : Fin m → ℕ} {motive : (k : Fin (vsum
   induction m with
   | zero => exact Fin.elim0 k
   | succ m ih =>
-induction k using Fin.addCases with
+    induction k using Fin.addCases with
     | left j =>
       simp [dflatten_succ, embedSum_succ_zero]
     | right j =>

@@ -369,7 +369,7 @@ theorem Pr_le_Pr_of_implies {α : Type} (D : PMF α)
     · simp only [hf, ↓reduceIte, h_imp, le_refl]
     · simp only [hf, ↓reduceIte, zero_le]
   -- 5. Prove the factor `D r` is non-negative
-  · exact zero_le (D r) -- Probabilities are always non-negative
+  · exact zero_le -- Probabilities are always non-negative
 
 alias prob_mono := Pr_le_Pr_of_implies
 
@@ -384,7 +384,8 @@ theorem Pr_or_le {α : Type} (D : PMF α)
     intro r
     by_cases hf : f r
     · by_cases hg : g r
-      · simp only [hf, hg, or_true, ↓reduceIte, mul_one]; exact le_add_of_nonneg_right (zero_le (D r))
+      · simp only [hf, hg, or_true, ↓reduceIte, mul_one]
+        exact le_add_of_nonneg_right (bot_le (a := D r))
       · simp only [hf, hg, or_true, true_or, ↓reduceIte, mul_one, mul_zero, add_zero]; exact le_refl (D r)
     · by_cases hg : g r
       · simp only [hf, hg, true_or, or_true, ↓reduceIte, mul_one, mul_zero, zero_add]; exact le_refl (D r)

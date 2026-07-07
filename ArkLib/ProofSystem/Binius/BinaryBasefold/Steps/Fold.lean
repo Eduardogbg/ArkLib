@@ -190,7 +190,7 @@ theorem foldOracleReduction_perfectCompleteness (hInit : NeverFail init) (i : Fi
     conv_lhs =>
       simp only [liftM, monadLift, MonadLift.monadLift]
       simp only [ChallengeIdx, Challenge, Fin.isValue, Matrix.cons_val_one, Matrix.cons_val_zero,
-        liftComp_eq_liftM, OptionT.probFailure_lift, HasEvalPMF.probFailure_eq_zero]
+        liftComp_eq_liftM, OptionT.probFailure_lift, probFailure_eq_zero]
     rw [true_and]
     intro r_i' h_r_i'_mem_query_1_support
     conv =>
@@ -199,7 +199,7 @@ theorem foldOracleReduction_perfectCompleteness (hInit : NeverFail init) (i : Fi
       simp only [liftM, monadLift, MonadLift.monadLift]
       simp only [ChallengeIdx, Challenge, Fin.isValue, Matrix.cons_val_one, Matrix.cons_val_zero,
         Fin.succ_one_eq_two, Message, Fin.succ_zero_eq_one, Fin.castSucc_one, liftComp_eq_liftM,
-        OptionT.probFailure_lift, HasEvalPMF.probFailure_eq_zero]
+        OptionT.probFailure_lift, probFailure_eq_zero]
     rw [true_and]
     intro h_receive_challenge_fn h_receive_challenge_fn_mem_support
     conv =>
@@ -208,7 +208,7 @@ theorem foldOracleReduction_perfectCompleteness (hInit : NeverFail init) (i : Fi
       simp only [liftM, monadLift, MonadLift.monadLift]
       simp only [ChallengeIdx, Challenge, Fin.isValue, Matrix.cons_val_one, Matrix.cons_val_zero,
         Fin.succ_one_eq_two, Message, Fin.succ_zero_eq_one, Fin.castSucc_one, liftComp_eq_liftM,
-        OptionT.probFailure_lift, HasEvalPMF.probFailure_eq_zero]
+        OptionT.probFailure_lift, probFailure_eq_zero]
     rw [true_and]
     -- ⊢ ∀ x ∈ .. support, ... ∧ ... ∧ ...
     intro h_prover_final_output h_prover_final_output_support
@@ -221,7 +221,7 @@ theorem foldOracleReduction_perfectCompleteness (hInit : NeverFail init) (i : Fi
     conv_lhs =>
       enter [1]
       simp only [MessageIdx, Fin.isValue, Message, Matrix.cons_val_zero, Fin.succ_zero_eq_one,
-        id_eq, bind_pure_comp, OptionT.run_map, HasEvalPMF.probFailure_eq_zero]
+        id_eq, bind_pure_comp, OptionT.run_map, probFailure_eq_zero]
     rw [zero_add]
     simp only [probOutput_eq_zero_iff]
     rw [OptionT.support_run_eq]
@@ -573,7 +573,7 @@ def foldKnowledgeStateFunction (i : Fin ℓ) :
       rw [if_pos h_V_check] at h_output_mem_V_run_support
       erw [simulateQ_pure] at h_output_mem_V_run_support
       simp only [OptionT.run_pure, simulateQ_pure, Fin.isValue,
-        Function.comp_apply, map_pure, pure_bind] at h_output_mem_V_run_support
+        Function.comp_apply, _root_.map_pure, pure_bind] at h_output_mem_V_run_support
       erw [support_pure] at h_output_mem_V_run_support
       simp only [Fin.isValue, Set.mem_singleton_iff, Prod.mk.injEq, exists_eq_right,
         exists_eq_left] at h_output_mem_V_run_support

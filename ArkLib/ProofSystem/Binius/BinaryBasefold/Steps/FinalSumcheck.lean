@@ -164,7 +164,7 @@ theorem finalSumcheckOracleReduction_perfectCompleteness {σ : Type}
     conv_lhs =>
       simp only [liftM, monadLift, MonadLift.monadLift]
       simp only [ChallengeIdx, Challenge, Fin.isValue, Matrix.cons_val_one, Matrix.cons_val_zero,
-        liftComp_eq_liftM, OptionT.probFailure_lift, HasEvalPMF.probFailure_eq_zero]
+        liftComp_eq_liftM, OptionT.probFailure_lift, probFailure_eq_zero]
     rw [true_and]
     -- ⊢ ∀ x ∈ .. support, ... ∧ ... ∧ ...
     intro h_prover_final_output h_prover_final_output_support
@@ -178,7 +178,7 @@ theorem finalSumcheckOracleReduction_perfectCompleteness {σ : Type}
     conv_lhs =>
       enter [1]
       simp only [MessageIdx, Fin.isValue, Message, Matrix.cons_val_zero, Fin.succ_zero_eq_one,
-        id_eq, bind_pure_comp, OptionT.run_map, HasEvalPMF.probFailure_eq_zero]
+        id_eq, bind_pure_comp, OptionT.run_map, probFailure_eq_zero]
     rw [zero_add]
     simp only [probOutput_eq_zero_iff]
     rw [OptionT.support_run_eq]
@@ -263,7 +263,7 @@ theorem finalSumcheckOracleReduction_perfectCompleteness {σ : Type}
       erw [OptionT.simulateQ_ite]
       simp only [Fin.isValue, Message, Matrix.cons_val_zero, id_eq, MessageIdx,
         toPFunctor_emptySpec, Function.comp_apply, OptionT.simulateQ_pure,
-        OptionT.simulateQ_failure, map_pure, support_ite, support_pure]
+        OptionT.simulateQ_failure, _root_.map_pure, support_ite, support_pure]
     set V_check := step.verifierCheck stmtIn
       (FullTranscript.mk1
         (msg0 := _))with h_V_check_def

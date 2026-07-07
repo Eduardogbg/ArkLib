@@ -388,7 +388,7 @@ lemma Matrix.det_map_ringHom {n : Type*} [Fintype n] [DecidableEq n] {R S : Type
   simp only [det_apply', map_apply, map_sum, map_mul, map_intCast, map_prod]
 
 /-- Mapping a Ring Homomorphism over a negated matrix is the negation of the mapped matrix. -/
-lemma Matrix.map_neg {m n : Type*} {R S : Type*} [Ring R] [Ring S]
+lemma Matrix.map_neg_ringHom {m n : Type*} {R S : Type*} [Ring R] [Ring S]
     (M : Matrix m n R) (f : R →+* S) :
     (-M).map f = -(M.map f) := by
   ext i j
@@ -463,7 +463,7 @@ lemma Matrix.det_fromBlocks_of_squareSubblocks_commute {n : ℕ} {R : Type*} [Co
       unfold D_poly
       congr
       · -- ⊢ D' = -(-D).map ⇑Polynomial.C
-        erw [Matrix.map_neg (M := D) (f := Polynomial.C), neg_neg]
+        erw [Matrix.map_neg_ringHom (M := D) (f := Polynomial.C), neg_neg]
       · rw [Matrix.smul_one_eq_diagonal]
     -- 2. Substitute and apply the standard theorem
     rw [h_eq]
@@ -532,3 +532,21 @@ lemma Matrix.det_from4Blocks_of_squareSubblocks_commute {n : ℕ} {R : Type*}
 end MatrixFrom4BlocksHelpers
 
 end MatrixHelpers
+
+/-- Splitting a sum over `Fin (2 ^ (n + 1))` into the even- and odd-indexed halves, each a sum
+over `Fin (2 ^ n)`. -/
+theorem Fin.sum_univ_odd_even {M : Type*} [AddCommMonoid M] (n : ℕ) (f : ℕ → M) :
+    ∑ x : Fin (2 ^ (n + 1)), f x =
+      ∑ x : Fin (2 ^ n), f (2 * x) + ∑ x : Fin (2 ^ n), f (2 * x + 1) := by
+  rw [_root_.Fin.sum_univ_eq_sum_range (f := f), _root_.Fin.sum_univ_eq_sum_range
+    (f := fun x => f (2 * x)), _root_.Fin.sum_univ_eq_sum_range (f := fun x => f (2 * x + 1))]
+  rw [pow_succ]
+  induction (2 ^ n) with
+  | zero => simp
+  | succ m ih =>
+    rw [show (m + 1) * 2 = m * 2 + 1 + 1 from by omega]
+    rw [Finset.sum_range_succ, Finset.sum_range_succ, ih]
+    rw [Finset.sum_range_succ (f := fun x => f (2 * x)),
+      Finset.sum_range_succ (f := fun x => f (2 * x + 1))]
+    simp only [mul_comm 2, add_comm 1]
+    abel

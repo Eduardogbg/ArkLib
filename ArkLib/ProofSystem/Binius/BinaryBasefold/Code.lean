@@ -244,7 +244,6 @@ lemma pair_fiberwiseDistance_steps_zero_eq_hammingDist
   rw [pair_fiberwiseDistance, fiberwiseDisagreementSet_steps_zero_eq_disagreementSet 𝔽q β
     (h_ℓ_add_R_rate := h_ℓ_add_R_rate) (i := i) (destIdx := i) (h_destIdx := by omega) (h_destIdx_le := by omega) f g]
   simp only [disagreementSet, cast_eq, ne_eq, card_filter, ite_not, hammingDist]
-  exact Finset.sum_congr rfl fun x _ => by split_ifs <;> simp_all
 
 omit [CharP L 2] [DecidableEq 𝔽q] hF₂ [NeZero 𝓡] in
 /-- When `steps = 0`, fiberwise closeness coincides with UDR closeness. -/

@@ -89,12 +89,12 @@ theorem forall_eq_lift_mem_2 {α β γ} {S : Set α} {T : α → Set β}
   · intro h a ha b hb; exact h (f a b) a ha b hb rfl
   · intro h c a ha b hb heq; rw [heq]; exact h a ha b hb
 
-variable {oSpec : OracleSpec ι} [oSpec.Fintype] [oSpec.Inhabited]
+variable {oSpec : OracleSpec ι} [IsUniformSpec oSpec]
   {StmtIn WitIn StmtOut WitOut : Type}
   {ιₛᵢ ιₛₒ : Type} {OStmtIn : ιₛᵢ → Type} {OStmtOut : ιₛₒ → Type}
   [∀ i, OracleInterface (OStmtIn i)]
   {n : ℕ} {pSpec : ProtocolSpec n} [∀ i, SampleableType (pSpec.Challenge i)]
-  [[pSpec.Challenge]ₒ.Fintype] [[pSpec.Challenge]ₒ.Inhabited]
+  [IsUniformSpec [pSpec.Challenge]ₒ]
   [∀ i, OracleInterface (pSpec.Message i)]
 
 /-- Helper to lift a query object to a computation -/
@@ -335,12 +335,12 @@ end GenericProtocol
 
 section ZeroMessageProtocol
 
-variable {oSpec : OracleSpec ι} [oSpec.Fintype] [oSpec.Inhabited]
+variable {oSpec : OracleSpec ι} [IsUniformSpec oSpec]
 {StmtIn WitIn StmtOut WitOut : Type}
 {ιₛᵢ ιₛₒ : Type} {OStmtIn : ιₛᵢ → Type} {OStmtOut : ιₛₒ → Type}
 [∀ i, OracleInterface (OStmtIn i)]
 {pSpec : ProtocolSpec 0} [∀ i, SampleableType (pSpec.Challenge i)]
-[[pSpec.Challenge]ₒ.Fintype] [[pSpec.Challenge]ₒ.Inhabited]
+[IsUniformSpec [pSpec.Challenge]ₒ]
 [∀ i, OracleInterface (pSpec.Message i)]
 
 /-- **Derive 0-message version from generic n-message theorem**
@@ -392,12 +392,12 @@ end ZeroMessageProtocol
 
 section OneMessageProtocol
 
-variable {oSpec : OracleSpec ι} [oSpec.Fintype] [oSpec.Inhabited]
+variable {oSpec : OracleSpec ι} [IsUniformSpec oSpec]
 {StmtIn WitIn StmtOut WitOut : Type}
 {ιₛᵢ ιₛₒ : Type} {OStmtIn : ιₛᵢ → Type} {OStmtOut : ιₛₒ → Type}
 [∀ i, OracleInterface (OStmtIn i)]
 {pSpec : ProtocolSpec 1} [∀ i, SampleableType (pSpec.Challenge i)]
-[[pSpec.Challenge]ₒ.Fintype] [[pSpec.Challenge]ₒ.Inhabited]
+[IsUniformSpec [pSpec.Challenge]ₒ]
 [∀ i, OracleInterface (pSpec.Message i)]
 
 /-- **Derive 1-message version from generic n-message theorem**
@@ -535,12 +535,12 @@ end OneMessageProtocol
 
 section TwoMessageProtocol
 
-variable {oSpec : OracleSpec ι} [oSpec.Fintype] [oSpec.Inhabited]
+variable {oSpec : OracleSpec ι} [IsUniformSpec oSpec]
   {StmtIn WitIn StmtOut WitOut : Type}
   {ιₛᵢ ιₛₒ : Type} {OStmtIn : ιₛᵢ → Type} {OStmtOut : ιₛₒ → Type}
   [∀ i, OracleInterface (OStmtIn i)]
   {pSpec : ProtocolSpec 2} [∀ i, SampleableType (pSpec.Challenge i)]
-  [[pSpec.Challenge]ₒ.Fintype] [[pSpec.Challenge]ₒ.Inhabited]
+  [IsUniformSpec [pSpec.Challenge]ₒ]
   [∀ i, OracleInterface (pSpec.Message i)]
 
 /-- **Derive 2-message version from generic n-message theorem**: [P->V, V->P]
@@ -633,7 +633,7 @@ section RoundByRoundKnowledgeSoundness
 
 open NNReal ENNReal
 
-variable {ι : Type} {oSpec : OracleSpec ι} [oSpec.Fintype]
+variable {ι : Type} {oSpec : OracleSpec ι} [IsUniformSpec oSpec]
   {StmtIn WitIn StmtOut WitOut : Type} {n : ℕ} {pSpec : ProtocolSpec n}
   [∀ i, SampleableType (pSpec.Challenge i)]
   {σ : Type} (init : ProbComp σ) (impl : QueryImpl oSpec (StateT σ ProbComp))
@@ -650,15 +650,15 @@ lemma tsum_mul_le_of_le_of_sum_le_one_nnreal {α : Type*}
   -- 2. Establish that the target series (f x * g x) is summable by comparison
   have h_fg_summable : Summable (fun x ↦ f x * g x) := by
     refine NNReal.summable_of_le (fun x ↦ ?_) h_mul_summable
-    exact mul_le_mul_of_nonneg_left (hg x) (zero_le (f x))
+    exact mul_le_mul_of_nonneg_left (hg x) (bot_le (a := f x))
   -- 3. The calculation
   calc ∑' x, f x * g x
     _ ≤ ∑' x, f x * ε := by
       apply Summable.tsum_le_tsum _ h_fg_summable h_mul_summable
       intro x
-      exact mul_le_mul_of_nonneg_left (hg x) (zero_le _)
+      exact mul_le_mul_of_nonneg_left (hg x) bot_le
     _ = (∑' x, f x) * ε := tsum_mul_right f ε
-    _ ≤ 1 * ε := mul_le_mul_of_nonneg_right hf (zero_le _)
+    _ ≤ 1 * ε := mul_le_mul_of_nonneg_right hf bot_le
     _ = ε := one_mul ε
 
 lemma ENNReal.tsum_mul_le_of_le_of_sum_le_one {α : Type*} {f g : α → ℝ≥0∞} {ε : ℝ≥0∞}
@@ -672,7 +672,7 @@ lemma ENNReal.tsum_mul_le_of_le_of_sum_le_one {α : Type*} {f g : α → ℝ≥0
     _ ≤ 1 * ε := mul_le_mul_right' hf ε
     _ = ε := one_mul ε
 
-omit [oSpec.Fintype] in
+omit [IsUniformSpec oSpec] in
 /-- **Unroll lemma for round-by-round knowledge soundness (uniform bound form)**
 
 This is the preferred formulation for proving round-by-round knowledge soundness.
@@ -761,7 +761,7 @@ section ProbEventSimplification
 
 open NNReal ENNReal
 
-variable {ι : Type} {oSpec : OracleSpec ι} [oSpec.Fintype]
+variable {ι : Type} {oSpec : OracleSpec ι} [IsUniformSpec oSpec]
   {StmtIn WitIn StmtOut WitOut : Type} {n : ℕ} {pSpec : ProtocolSpec n}
   [∀ i, SampleableType (pSpec.Challenge i)]
   {σ : Type}
@@ -779,7 +779,7 @@ theorem probEvent_StateT_run_ignore_state {α : Type}
   simp only [StateT.run'_eq, probEvent_map]
   congr 1
 
-omit [oSpec.Fintype] in
+omit [IsUniformSpec oSpec] in
 /-- Version for `simulateQ` with stateful implementation. -/
 theorem probEvent_simulateQ_run_ignore_state {α : Type}
     (impl : QueryImpl oSpec (StateT σ ProbComp))
@@ -795,12 +795,11 @@ theorem probEvent_simulateQ_run_ignore_state {α : Type}
 When the predicate ignores the query log from `runWithLogToRound`, we can
 eliminate the logging layer entirely using `runToRound`. -/
 
-omit [oSpec.Fintype] [(i : pSpec.ChallengeIdx) → SampleableType (pSpec.Challenge i)] in
+omit [IsUniformSpec oSpec] [(i : pSpec.ChallengeIdx) → SampleableType (pSpec.Challenge i)] in
 /-- When the predicate ignores the query log, `runWithLogToRound` can be replaced
     with `runToRound`. This is the fundamental query log elimination lemma. -/
 theorem probEvent_runWithLogToRound_ignore_log
-    [(oSpec + [pSpec.Challenge]ₒ).Fintype]
-    [(oSpec + [pSpec.Challenge]ₒ).Inhabited]
+    [IsUniformSpec (oSpec + [pSpec.Challenge]ₒ)]
     (prover : Prover oSpec StmtIn WitIn StmtOut WitOut pSpec)
     (i : Fin (n + 1)) (stmt : StmtIn) (wit : WitIn)
     (P : pSpec.Transcript i × prover.PrvState i → Prop)
@@ -853,7 +852,7 @@ theorem probEvent_proj_transcript_challenge
 The ultimate lemmas that handle the full pattern appearing in `unroll_rbrKnowledgeSoundness`,
 eliminating both the query log and state when the predicate doesn't use them. -/
 
-omit [oSpec.Fintype] in
+omit [IsUniformSpec oSpec] in
 /-- **Master log unrolling lemma for soundness bounds.**
 
 This transforms the complex goal shape from `unroll_rbrKnowledgeSoundness`:
@@ -881,7 +880,7 @@ out the challenge for Schwartz-Zippel-style probability bounds.
 -/
 theorem probEvent_soundness_goal_unroll_log
     [∀ i, Fintype (pSpec.Challenge i)] [∀ i, Inhabited (pSpec.Challenge i)]
-    [(oSpec + [pSpec.Challenge]ₒ).Fintype]
+    [IsUniformSpec (oSpec + [pSpec.Challenge]ₒ)]
     (impl : QueryImpl oSpec (StateT σ ProbComp))
     (prover : Prover oSpec StmtIn WitIn StmtOut WitOut pSpec)
     (i : pSpec.ChallengeIdx) (stmt : StmtIn) (wit : WitIn) (s : σ)
@@ -919,12 +918,12 @@ theorem probEvent_soundness_goal_unroll_log
     simulateQ_query, StateT.run_map, map_bind, Functor.map_map]
   rw [bind_map_left]
 
-omit [oSpec.Fintype] in
+omit [IsUniformSpec oSpec] in
 /-- Variant of `probEvent_soundness_goal_unroll_log` with explicit predicate matching
     the exact shape in `unroll_rbrKnowledgeSoundness`. -/
 theorem probEvent_soundness_goal_unroll_log'
     [∀ i, Fintype (pSpec.Challenge i)] [∀ i, Inhabited (pSpec.Challenge i)]
-    [(oSpec + [pSpec.Challenge]ₒ).Fintype]
+    [IsUniformSpec (oSpec + [pSpec.Challenge]ₒ)]
     (impl : QueryImpl oSpec (StateT σ ProbComp))
     (prover : Prover oSpec StmtIn WitIn StmtOut WitOut pSpec)
     (i : pSpec.ChallengeIdx) (stmt : StmtIn) (wit : WitIn) (s : σ)
@@ -1106,7 +1105,7 @@ If `evalDist oa = OptionT.lift pmf` for some `pmf : PMF α`, then `[= x | oa] = 
 This is useful when an `OracleComp` evaluates to a pure `PMF` (no failure probability).
 -/
 theorem probOutput_eq_PMF_apply
-    {ι : Type} {spec : OracleSpec ι} [spec.Fintype] [spec.Inhabited]
+    {ι : Type} {spec : OracleSpec ι} [IsUniformSpec spec]
     {α : Type} (oa : OracleComp spec α) (pmf : PMF α) (x : α)
     (h : evalDist oa = OptionT.lift pmf) :
     Pr[= x | oa] = pmf x := by
@@ -1123,7 +1122,7 @@ then `[= x | oa]` equals the uniform probability `1/|L|` for any `x : L`.
 This can be converted to `Pr_` notation: `[= x | oa] = Pr_{ let y ← $ᵖ L }[y = x]`.
 -/
 theorem probOutput_uniform_eq_Pr
-    {ι : Type} {spec : OracleSpec ι} [spec.Fintype] [spec.Inhabited]
+    {ι : Type} {spec : OracleSpec ι} [IsUniformSpec spec]
     {L : Type} [Fintype L] [Nonempty L] [DecidableEq L]
     (oa : OracleComp spec L) (x : L)
     (h : evalDist oa = OptionT.lift (PMF.uniformOfFintype L)) :
