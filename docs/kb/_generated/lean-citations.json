@@ -219,7 +219,7 @@
     "ArkLib/ProofSystem/Binius/FRIBinius/General.lean": [
       "DP24"
     ],
-    "ArkLib/ProofSystem/RingSwitching/General.lean": [
+    "ArkLib/ProofSystem/Binius/RingSwitching/General.lean": [
       "DP24"
     ],
     "ArkLib/ProofSystem/Fri/Spec/SingleRound.lean": [
@@ -339,7 +339,7 @@
     "DP24": [
       "ArkLib/ProofSystem/Binius/BinaryBasefold/General.lean",
       "ArkLib/ProofSystem/Binius/FRIBinius/General.lean",
-      "ArkLib/ProofSystem/RingSwitching/General.lean"
+      "ArkLib/ProofSystem/Binius/RingSwitching/General.lean"
     ],
     "FRI1216": [
       "ArkLib/ProofSystem/Fri/Spec/SingleRound.lean"
