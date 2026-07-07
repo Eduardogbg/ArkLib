@@ -51,9 +51,10 @@ import ArkLib.OracleReduction.Security.Basic
     language with probability one.
   - `Extractor.TreeBased` — the deterministic tree-consuming extractor shared by all tree-based
     notions.
-  - `Verifier.treeSpecialSound` — the shape-generic tree-soundness predicate: a tree-based extractor
-    that, on every `S`-structured accepting tree, recovers a witness. Plain special soundness
-    (`Security.SpecialSoundness`) and coordinate-wise special soundness
+  - `Verifier.treeSpecialSoundWith` / `Verifier.treeSpecialSound` — the shape-generic
+    tree-soundness predicate, in pinned-extractor form (a *given* tree-based extractor recovers,
+    on every `S`-structured accepting tree, a witness) and as its existential closure. Plain
+    special soundness (`Security.SpecialSoundness`) and coordinate-wise special soundness
     (`Security.CoordinateWiseSpecialSoundness`) are both instances, for different shapes.
 
   ## Caveat
@@ -289,14 +290,33 @@ variable {ι : Type} {oSpec : OracleSpec ι}
   [∀ i, SampleableType (pSpec.Challenge i)]
   {σ : Type} (init : ProbComp σ) (impl : QueryImpl oSpec (StateT σ ProbComp))
 
-/-- A verifier is **tree special sound** with respect to a generic challenge-tree shape `S`, an
-  input relation `relIn` and an output relation `relOut` if there is a tree-based extractor `E`
-  such that: for every input statement `stmtIn` and every tree of transcripts that is
+/-- A verifier is **tree special sound with** a given tree-based extractor `E`, with respect to a
+  generic challenge-tree shape `S`, an input relation `relIn` and an output relation `relOut`, if
+  for every input statement `stmtIn` and every tree of transcripts that is
 
   - `S`-structured (its sibling challenges satisfy the shape's `nodeOk` predicate), and
   - accepting (the verifier accepts every root-to-leaf transcript, landing in `relOut.language`),
 
   the extracted witness `E stmtIn tree` satisfies `(stmtIn, E stmtIn tree) ∈ relIn`.
+
+  This *pinned-extractor* form is the one downstream analyses consume: a rewinding
+  knowledge-soundness reduction must *run* one concrete extractor on the trees it produces, so it
+  needs the extractor as data rather than under an existential. `Verifier.treeSpecialSound` is the
+  existential closure of this predicate (see `treeSpecialSound_iff`). -/
+def treeSpecialSoundWith (S : ChallengeTreeShape pSpec)
+    (relIn : Set (StmtIn × WitIn)) (relOut : Set (StmtOut × WitOut))
+    (verifier : Verifier oSpec StmtIn StmtOut pSpec)
+    (E : Extractor.TreeBased StmtIn WitIn pSpec S.arity) : Prop :=
+  ∀ stmtIn : StmtIn,
+  ∀ tree : ChallengeTree pSpec S.arity 0,
+    tree.IsStructured S →
+    tree.IsAccepting init impl verifier stmtIn relOut.language →
+      (stmtIn, E stmtIn tree) ∈ relIn
+
+/-- A verifier is **tree special sound** with respect to a generic challenge-tree shape `S`, an
+  input relation `relIn` and an output relation `relOut` if there is a tree-based extractor `E`
+  that is `treeSpecialSoundWith` for `S`, `relIn` and `relOut`: on every `S`-structured accepting
+  tree, `E` recovers a valid input witness.
 
   This is the shape-generic core of tree-based knowledge extraction: every concrete special-
   soundness-style notion is an instance obtained by supplying a shape. Plain `k`-special soundness
@@ -304,15 +324,30 @@ variable {ι : Type} {oSpec : OracleSpec ι}
   coordinate-wise special soundness (`Verifier.coordinateWiseSpecialSound`,
   `Security.CoordinateWiseSpecialSoundness`) supplies the CWSS shape `D.toShape`. Phrasing the
   notion over an arbitrary `ChallengeTreeShape` is what lets the composition theory be proved once
-  generically (see `Verifier.append_treeSpecialSound`) and reused by each concrete notion. -/
+  generically (see `Verifier.append_treeSpecialSound`) and reused by each concrete notion.
+
+  To *establish* the notion, or to *consume* it in an analysis that must run the extractor, use
+  the pinned form `treeSpecialSoundWith`; this existential closure is the property-style
+  statement. -/
 def treeSpecialSound (S : ChallengeTreeShape pSpec)
     (relIn : Set (StmtIn × WitIn)) (relOut : Set (StmtOut × WitOut))
     (verifier : Verifier oSpec StmtIn StmtOut pSpec) : Prop :=
   ∃ E : Extractor.TreeBased StmtIn WitIn pSpec S.arity,
-  ∀ stmtIn : StmtIn,
-  ∀ tree : ChallengeTree pSpec S.arity 0,
-    tree.IsStructured S →
-    tree.IsAccepting init impl verifier stmtIn relOut.language →
-      (stmtIn, E stmtIn tree) ∈ relIn
+    verifier.treeSpecialSoundWith init impl S relIn relOut E
+
+omit [∀ i, SampleableType (pSpec.Challenge i)] in
+/-- Compatibility: `treeSpecialSound` unfolds to exactly its pre-`treeSpecialSoundWith` inline
+  form, so no consumer of the existential statement is affected by the refactor. -/
+theorem treeSpecialSound_iff (S : ChallengeTreeShape pSpec)
+    (relIn : Set (StmtIn × WitIn)) (relOut : Set (StmtOut × WitOut))
+    (verifier : Verifier oSpec StmtIn StmtOut pSpec) :
+    verifier.treeSpecialSound init impl S relIn relOut ↔
+      ∃ E : Extractor.TreeBased StmtIn WitIn pSpec S.arity,
+      ∀ stmtIn : StmtIn,
+      ∀ tree : ChallengeTree pSpec S.arity 0,
+        tree.IsStructured S →
+        tree.IsAccepting init impl verifier stmtIn relOut.language →
+          (stmtIn, E stmtIn tree) ∈ relIn :=
+  Iff.rfl
 
 end Verifier
