@@ -147,8 +147,6 @@ theorem IsSound.bound_terminalProb
     Pr[fun z => tree.terminalGood z.1 (tree.follow z.1 claim)
       | TwoParty.run spec roles prover
           (randomChallenger sample spec roles)] ≤ tree.maxPathError := by
-  sorry
-/-
   classical
   induction tree with
   | done good =>
@@ -304,11 +302,9 @@ theorem IsSound.bound_terminalProb
             sample _ >>= my := by
         simp [my, randomChallenger, TwoParty.run_receiver]
       simpa [ClaimTree.maxPathError, hrun] using hbind
--/
 
 end ClaimTree
 
 end Interaction
 
 end
-
