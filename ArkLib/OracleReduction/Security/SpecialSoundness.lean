@@ -39,9 +39,17 @@ variable {n : ℕ} {pSpec : ProtocolSpec n}
   arity `kᵢ` whose node predicate requires the `kᵢ` sibling challenges at each challenge round to be
   pairwise distinct (`Function.Injective`). It is the `ℓ = 1` special case of
   `CWSSStructure.toShape` (`Security.CoordinateWiseSpecialSoundness`), and supplying it to
-  `Verifier.treeSpecialSound` yields plain special soundness (`Verifier.specialSound`). -/
-def distinctShape (k : pSpec.ChallengeIdx → ℕ) : ChallengeTreeShape pSpec where
-  arity := k
+  `Verifier.treeSpecialSound` yields plain special soundness (`Verifier.specialSound`).
+
+  The parameters carry `2 ≤ kᵢ`, mirroring `CWSSStructure.soundnessParam`. This rules out the
+  degenerate arity `kᵢ = 0`, under which a challenge node has no children, every tree is vacuously
+  structured *and* vacuously accepting (its `fullTranscripts` list is empty), and
+  `treeSpecialSound` becomes unsatisfiable for any relation whose language is not everything.
+  `kᵢ = 1` would already exclude that vacuity, but `2` is the smallest arity at which special
+  soundness has extraction content (a single transcript per round pins down no witness), and is
+  the classical convention. -/
+def distinctShape (k : pSpec.ChallengeIdx → {k : ℕ // 2 ≤ k}) : ChallengeTreeShape pSpec where
+  arity := fun i => (k i).val
   nodeOk := fun _ challenges => Function.Injective challenges
 
 /-! ## The special-soundness predicate -/
@@ -64,8 +72,12 @@ variable {ι : Type} {oSpec : OracleSpec ι}
     distinct), and
   - accepting (the verifier accepts every root-to-leaf transcript, landing in `relOut.language`),
 
-  the extracted witness `E stmtIn tree` satisfies `(stmtIn, E stmtIn tree) ∈ relIn`. -/
-def specialSound (k : pSpec.ChallengeIdx → ℕ)
+  the extracted witness `E stmtIn tree` satisfies `(stmtIn, E stmtIn tree) ∈ relIn`.
+
+  As for `distinctShape`, the parameters carry `2 ≤ kᵢ` (the CWSS convention,
+  `CWSSStructure.soundnessParam`), so the degenerate arity-`0` instance — for which the notion is
+  unsatisfiable for nontrivial relations — cannot be stated. -/
+def specialSound (k : pSpec.ChallengeIdx → {k : ℕ // 2 ≤ k})
     (relIn : Set (StmtIn × WitIn)) (relOut : Set (StmtOut × WitOut))
     (verifier : Verifier oSpec StmtIn StmtOut pSpec) : Prop :=
   verifier.treeSpecialSound init impl (distinctShape k) relIn relOut
@@ -86,7 +98,7 @@ variable {ι : Type} {oSpec : OracleSpec ι}
 
 /-- Special soundness of an oracle reduction, via its underlying non-oracle verifier on the combined
   (oracle + non-oracle) statements. -/
-def specialSound (k : pSpec.ChallengeIdx → ℕ)
+def specialSound (k : pSpec.ChallengeIdx → {k : ℕ // 2 ≤ k})
     (relIn : Set ((StmtIn × ∀ i, OStmtIn i) × WitIn))
     (relOut : Set ((StmtOut × ∀ i, OStmtOut i) × WitOut))
     (verifier : OracleVerifier oSpec StmtIn OStmtIn StmtOut OStmtOut pSpec) : Prop :=
