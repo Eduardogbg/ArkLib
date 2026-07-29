@@ -8,7 +8,8 @@
 - The first two diagnostic rows in the triangulation table below were established while
   preparing the fix and were not rerun in this wave. This wave re-elaborated the two
   current in-tree KATs.
-- Upstream CI and style/lint CI were not run. Fork CI starts when this branch is pushed.
+- Upstream CI and style/lint CI were not run. The split branch was pushed to the fork,
+  but no fork CI run is visible because it does not have a pull request.
 
 ## Summary
 

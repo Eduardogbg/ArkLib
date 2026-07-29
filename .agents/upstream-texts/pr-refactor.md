@@ -11,7 +11,9 @@
   `hashWithIV?`). This PR does not claim a warning-free build.
 - The first two diagnostic rows in the KAT triangulation table below were established
   while preparing the schedule fix and were not rerun in this wave.
-- Upstream CI and style/lint CI were not run. Fork CI starts when this branch is pushed.
+- Upstream CI was not run. The bundled fork PR #2 triggered
+  [fork CI](https://github.com/Eduardogbg/ArkLib/actions/runs/30479384529) at
+  `91f7929a`; it was queued when this text was refreshed.
 
 ## Summary
 
