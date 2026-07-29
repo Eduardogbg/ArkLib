@@ -37,7 +37,6 @@ def OracleSpec.proverOracle (StmtIn : Type) {n : ℕ} (pSpec : ProtocolSpec n) :
 
 Handles, rather than prover states or coins, are exposed to an extractor.  The
 checkpoint-restore implementation allocates them and keeps their meaning private. -/
-@[reducible]
 def RunId : Type := ℕ
 
 namespace RunId
@@ -68,7 +67,6 @@ inductive ProverRunQuery (StmtIn : Type) {n : ℕ} (pSpec : ProtocolSpec n) : Ty
 
 Its domain is prover-independent: indices contain only public protocol data and an
 opaque natural-number handle.  Fresh handles are returned by the oracle itself. -/
-@[reducible]
 def OracleSpec.seededProverOracle (StmtIn : Type) {n : ℕ} (pSpec : ProtocolSpec n) :
     OracleSpec (ProverRunQuery StmtIn pSpec)
   | .start _ => RunId
