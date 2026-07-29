@@ -37,6 +37,7 @@ def OracleSpec.proverOracle (StmtIn : Type) {n : ℕ} (pSpec : ProtocolSpec n) :
 
 Handles, rather than prover states or coins, are exposed to an extractor.  The
 checkpoint-restore implementation allocates them and keeps their meaning private. -/
+@[reducible]
 def RunId : Type := ℕ
 
 namespace RunId
@@ -67,6 +68,7 @@ inductive ProverRunQuery (StmtIn : Type) {n : ℕ} (pSpec : ProtocolSpec n) : Ty
 
 Its domain is prover-independent: indices contain only public protocol data and an
 opaque natural-number handle.  Fresh handles are returned by the oracle itself. -/
+@[reducible]
 def OracleSpec.seededProverOracle (StmtIn : Type) {n : ℕ} (pSpec : ProtocolSpec n) :
     OracleSpec (ProverRunQuery StmtIn pSpec)
   | .start _ => RunId
@@ -190,6 +192,102 @@ theorem seededImpl_feedChal_pure [∀ i, Inhabited (pSpec.Message i)]
   · rfl
   · contradiction
 
+/-- The canonical no-fork program up to round `i`.  It allocates one initial
+handle and then advances only the most recently returned handle, recording exactly the
+messages and caller-supplied challenges in the transcript. -/
+def straightlineScriptTo (stmt : StmtIn) (chals : pSpec.Challenges)
+    (i : Fin (n + 1)) :
+    OracleComp (OracleSpec.seededProverOracle StmtIn pSpec)
+      (pSpec.Transcript i × RunId) :=
+  Fin.induction
+    (do
+      let h ← query (spec := OracleSpec.seededProverOracle StmtIn pSpec) (.start stmt)
+      pure (default, h))
+    (fun j prev => do
+      let ⟨transcript, h⟩ ← prev
+      match hDir : pSpec.dir j with
+      | .V_to_P =>
+          let c := chals ⟨j, hDir⟩
+          let child ← query
+            (spec := OracleSpec.seededProverOracle StmtIn pSpec)
+            (.feedChal h ⟨j, hDir⟩ c)
+          pure (transcript.concat c, child)
+      | .P_to_V => do
+          let ⟨msg, child⟩ ← query
+            (spec := OracleSpec.seededProverOracle StmtIn pSpec)
+            (.sendMsg h ⟨j, hDir⟩)
+          pure (transcript.concat msg, child))
+    i
+
+/-- The complete canonical no-fork prover-oracle program. -/
+def straightlineScript (stmt : StmtIn) (chals : pSpec.Challenges) :
+    OracleComp (OracleSpec.seededProverOracle StmtIn pSpec)
+      (pSpec.FullTranscript × RunId) :=
+  straightlineScriptTo stmt chals (Fin.last n)
+
+/-- Direct flat execution with a fixed public challenge at every verifier round.
+
+This is the fixed-challenge specialization of `Prover.runToRound`, stated for
+`ProverInteraction`, whose initial state is already part of the structure. -/
+def runToRoundFixed (P : ProverInteraction oSpec pSpec) (chals : pSpec.Challenges)
+    (i : Fin (n + 1)) :
+    OracleComp oSpec (pSpec.Transcript i × P.PrvState i) :=
+  Fin.induction
+    (pure (default, P.init))
+    (fun j prev => do
+      let ⟨transcript, state⟩ ← prev
+      match hDir : pSpec.dir j with
+      | .V_to_P => do
+          let k ← P.receiveChallenge ⟨j, hDir⟩ state
+          pure (transcript.concat (chals ⟨j, hDir⟩), k (chals ⟨j, hDir⟩))
+      | .P_to_V => do
+          let ⟨msg, state'⟩ ← P.sendMessage ⟨j, hDir⟩ state
+          pure (transcript.concat msg, state'))
+    i
+
+/-- Two forks of the same valid handle apply one shared realized continuation.
+The equations differ only in the challenge supplied to that same `k`. -/
+theorem seededImpl_fork_shares_prefix [∀ i, Inhabited (pSpec.Message i)]
+    (P : ProverInteraction oSpec pSpec) (h : RunId) (i : pSpec.ChallengeIdx)
+    (c₁ c₂ : pSpec.Challenge i) (store : RunStore P)
+    (k : pSpec.Challenge i → P.PrvState i.1.succ)
+    (hstore :
+      (show List (Prover.Checkpoint P) from store)[h.toNat]? =
+        some (.pendingChal i k)) :
+    (seededImpl (StmtIn := StmtIn) P (.feedChal h i c₁)).run store =
+        (do
+          let cp ← normalizeCheckpoint P ⟨i.1.succ, k c₁⟩
+          pure (appendCheckpoint P store cp)) ∧
+      (seededImpl (StmtIn := StmtIn) P (.feedChal h i c₂)).run store =
+        (do
+          let cp ← normalizeCheckpoint P ⟨i.1.succ, k c₂⟩
+          pure (appendCheckpoint P store cp)) :=
+  ⟨seededImpl_feedChal_pure P h i c₁ store k hstore,
+    seededImpl_feedChal_pure P h i c₂ store k hstore⟩
+
+/-- Advancing a valid send checkpoint runs exactly `P.sendMessage` and normalizes the
+returned state.  This is the send-round unfolding used by the direct
+`runToRoundFixed` execution. -/
+theorem seededImpl_sendMsg_eq_processRound [∀ i, Inhabited (pSpec.Message i)]
+    (P : ProverInteraction oSpec pSpec) (h : RunId) (i : pSpec.MessageIdx)
+    (store : RunStore P) (s : P.PrvState i.1.castSucc)
+    (hstore :
+      (show List (Prover.Checkpoint P) from store)[h.toNat]? =
+        some (.atRound i.1.castSucc s)) :
+    (seededImpl (StmtIn := StmtIn) P (.sendMsg h i)).run store =
+      (do
+        let ⟨msg, s'⟩ ← P.sendMessage i s
+        let cp ← normalizeCheckpoint P ⟨i.1.succ, s'⟩
+        let ⟨child, store'⟩ := appendCheckpoint P store cp
+        pure ((msg, child), store')) := by
+  unfold seededImpl
+  simp only [StateT.run_mk]
+  rw [hstore]
+  simp only
+  split
+  · rfl
+  · contradiction
+
 end ProverInteraction
 
 /--
@@ -203,6 +301,18 @@ info: 'Extractor.ProverInteraction.seededImpl_feedChal_pure' depends on axioms: 
 -/
 #guard_msgs (whitespace := lax) in
 #print axioms ProverInteraction.seededImpl_feedChal_pure
+
+/--
+info: 'Extractor.ProverInteraction.seededImpl_fork_shares_prefix' depends on axioms: [propext, Classical.choice, Quot.sound]
+-/
+#guard_msgs (whitespace := lax) in
+#print axioms ProverInteraction.seededImpl_fork_shares_prefix
+
+/--
+info: 'Extractor.ProverInteraction.seededImpl_sendMsg_eq_processRound' depends on axioms: [propext, Classical.choice, Quot.sound]
+-/
+#guard_msgs (whitespace := lax) in
+#print axioms ProverInteraction.seededImpl_sendMsg_eq_processRound
 
 -- def SimOracle.proverImpl (P : Prover pSpec oSpec StmtIn WitIn StmtOut WitOut) :
 --     SimOracle.Stateless (OracleSpec.proverOracle pSpec StmtIn) oSpec := sorry
