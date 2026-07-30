@@ -1,7 +1,3 @@
-# PR #3 metadata
-
-Title: `feat(Interaction): add rewinding security interfaces and a derived-cost extractor`
-
 ## What is not verified or done
 
 - No Lean build was run on this branch in the 2026-07-30 cleanup wave. The last targeted
