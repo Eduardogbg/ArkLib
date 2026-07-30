@@ -787,23 +787,23 @@ namespace SpongeParams
 
 variable (sp : SpongeParams F)
 
-def init [Zero F] (iv : F) : SpongeState sp where
+def init (iv : F) : SpongeState sp where
   cache := zeroVector sp.rate
   st := (zeroVector sp.width).set sp.rate iv sp.rate_lt_width
   cacheSize := 0
   squeezeMode := false
 
-def addCacheToState [Add F] (s : SpongeState sp) : Vector F sp.width :=
+def addCacheToState (s : SpongeState sp) : Vector F sp.width :=
   Vector.ofFn fun i =>
     if hRate : i.val < sp.rate then
       if i.val < s.cacheSize then s.st.get i + s.cache.get ⟨i.val, hRate⟩
       else s.st.get i
     else s.st.get i
 
-def performDuplex [Add F] (s : SpongeState sp) : SpongeState sp :=
+def performDuplex (s : SpongeState sp) : SpongeState sp :=
   { s with st := sp.permute (addCacheToState sp s) }
 
-def absorb? [Add F] (s : SpongeState sp) (input : F) : Option (SpongeState sp) :=
+def absorb? (s : SpongeState sp) (input : F) : Option (SpongeState sp) :=
   if s.squeezeMode then none
   else if s.cacheSize = sp.rate then
     let s' := performDuplex sp s
@@ -812,21 +812,21 @@ def absorb? [Add F] (s : SpongeState sp) (input : F) : Option (SpongeState sp) :
     some { s with cache := s.cache.set s.cacheSize input hSpace, cacheSize := s.cacheSize + 1 }
   else none
 
-def squeeze? [Add F] (s : SpongeState sp) : Option (F × SpongeState sp) :=
+def squeeze? (s : SpongeState sp) : Option (F × SpongeState sp) :=
   if s.squeezeMode then none
   else
     let s' := performDuplex sp s
     have wpos : 0 < sp.width := Nat.lt_trans sp.rate_pos sp.rate_lt_width
     some (s'.st.get ⟨0, wpos⟩, { s' with squeezeMode := true })
 
-def absorbPrefix? [Add F] : SpongeState sp → List F → Nat → Option (SpongeState sp)
+def absorbPrefix? : SpongeState sp → List F → Nat → Option (SpongeState sp)
   | s, [], _ => some s
   | s, _ :: _, 0 => some s
   | s, x :: xs, n + 1 => do
       let s' ← absorb? sp s x
       absorbPrefix? s' xs n
 
-def hashWithIV? [Zero F] [Add F]
+def hashWithIV?
     (input : List F) (inLen : Nat) (isVariableLength : Bool) (iv : F) : Option F := do
   let s ← absorbPrefix? sp (init sp iv) input inLen
   let s ← if isVariableLength then absorb? sp s 1 else some s
@@ -1038,3 +1038,275 @@ example :
   native_decide
 
 end Poseidon2.BN254
+
+/-! ## Axiom audit -/
+
+/--
+info: 'Poseidon2.rawConstants16' depends on axioms: [propext, Classical.choice, Quot.sound]
+-/
+#guard_msgs in
+#print axioms Poseidon2.rawConstants16
+
+/--
+info: 'Poseidon2.RAW_CONSTANTS_24' depends on axioms: [propext, Classical.choice, Quot.sound]
+-/
+#guard_msgs in
+#print axioms Poseidon2.RAW_CONSTANTS_24
+
+/--
+info: 'Poseidon2.Params' depends on axioms: [propext]
+-/
+#guard_msgs in
+#print axioms Poseidon2.Params
+
+/--
+info: 'Poseidon2.Params.instNeZeroNatWidth' depends on axioms: [propext]
+-/
+#guard_msgs in
+#print axioms Poseidon2.Params.instNeZeroNatWidth
+
+/--
+info: 'Poseidon2.Params.instNeZeroNatNumFullRounds' depends on axioms: [propext]
+-/
+#guard_msgs in
+#print axioms Poseidon2.Params.instNeZeroNatNumFullRounds
+
+/--
+info: 'Poseidon2.Params.instNeZeroNatNumPartialRounds' depends on axioms: [propext]
+-/
+#guard_msgs in
+#print axioms Poseidon2.Params.instNeZeroNatNumPartialRounds
+
+/--
+info: 'Poseidon2.Params.width_pos' depends on axioms: [propext]
+-/
+#guard_msgs in
+#print axioms Poseidon2.Params.width_pos
+
+/--
+info: 'Poseidon2.Params.widthDiv4' depends on axioms: [propext]
+-/
+#guard_msgs in
+#print axioms Poseidon2.Params.widthDiv4
+
+/--
+info: 'Poseidon2.Params.widthDiv4_mul_4_eq_width' depends on axioms: [propext]
+-/
+#guard_msgs in
+#print axioms Poseidon2.Params.widthDiv4_mul_4_eq_width
+
+/--
+info: 'Poseidon2.Params.halfNumFullRounds' depends on axioms: [propext]
+-/
+#guard_msgs in
+#print axioms Poseidon2.Params.halfNumFullRounds
+
+/--
+info: 'Poseidon2.Params.numFullRounds_dvd_by_2' depends on axioms: [propext, Quot.sound]
+-/
+#guard_msgs in
+#print axioms Poseidon2.Params.numFullRounds_dvd_by_2
+
+/--
+info: 'Poseidon2.Params.halfNumFullRounds_mul_2_eq_numFullRounds' depends on axioms: [propext, Quot.sound]
+-/
+#guard_msgs in
+#print axioms Poseidon2.Params.halfNumFullRounds_mul_2_eq_numFullRounds
+
+/--
+info: 'Poseidon2.Params.half_full_le' depends on axioms: [propext, Quot.sound]
+-/
+#guard_msgs in
+#print axioms Poseidon2.Params.half_full_le
+
+/--
+info: 'Poseidon2.m4Matrix' depends on axioms: [propext, Quot.sound]
+-/
+#guard_msgs in
+#print axioms Poseidon2.m4Matrix
+
+/--
+info: 'Poseidon2.applyM4' depends on axioms: [propext, Quot.sound]
+-/
+#guard_msgs in
+#print axioms Poseidon2.applyM4
+
+/--
+info: 'Poseidon2.cheapExternalLayer4' depends on axioms: [propext, Quot.sound]
+-/
+#guard_msgs in
+#print axioms Poseidon2.cheapExternalLayer4
+
+/--
+info: 'Poseidon2.m4DiffusionExternalLayer' depends on axioms: [propext, Classical.choice, Quot.sound]
+-/
+#guard_msgs in
+#print axioms Poseidon2.m4DiffusionExternalLayer
+
+/--
+info: 'Poseidon2.internalLinearLayer' depends on axioms: [propext, Quot.sound]
+-/
+#guard_msgs in
+#print axioms Poseidon2.internalLinearLayer
+
+/--
+info: 'Poseidon2.fullRound' depends on axioms: [propext, Quot.sound]
+-/
+#guard_msgs in
+#print axioms Poseidon2.fullRound
+
+/--
+info: 'Poseidon2.partialRound' depends on axioms: [propext, Quot.sound]
+-/
+#guard_msgs in
+#print axioms Poseidon2.partialRound
+
+/--
+info: 'Poseidon2.fullRoundChunk' depends on axioms: [propext, Quot.sound]
+-/
+#guard_msgs in
+#print axioms Poseidon2.fullRoundChunk
+
+/--
+info: 'Poseidon2.permute' depends on axioms: [propext, Quot.sound]
+-/
+#guard_msgs in
+#print axioms Poseidon2.permute
+
+/--
+info: 'Poseidon2.params16' depends on axioms: [propext, Classical.choice, Quot.sound]
+-/
+#guard_msgs in
+#print axioms Poseidon2.params16
+
+/--
+info: 'Poseidon2.params24' depends on axioms: [propext, Classical.choice, Quot.sound]
+-/
+#guard_msgs in
+#print axioms Poseidon2.params24
+
+/--
+info: 'Poseidon2.SpongeParams' does not depend on any axioms
+-/
+#guard_msgs in
+#print axioms Poseidon2.SpongeParams
+
+/--
+info: 'Poseidon2.SpongeState' does not depend on any axioms
+-/
+#guard_msgs in
+#print axioms Poseidon2.SpongeState
+
+/--
+info: 'Poseidon2.zeroVector' depends on axioms: [propext]
+-/
+#guard_msgs in
+#print axioms Poseidon2.zeroVector
+
+/--
+info: 'Poseidon2.SpongeParams.init' depends on axioms: [propext, Quot.sound]
+-/
+#guard_msgs in
+#print axioms Poseidon2.SpongeParams.init
+
+/--
+info: 'Poseidon2.SpongeParams.addCacheToState' depends on axioms: [propext, Quot.sound]
+-/
+#guard_msgs in
+#print axioms Poseidon2.SpongeParams.addCacheToState
+
+/--
+info: 'Poseidon2.SpongeParams.performDuplex' depends on axioms: [propext, Quot.sound]
+-/
+#guard_msgs in
+#print axioms Poseidon2.SpongeParams.performDuplex
+
+/--
+info: 'Poseidon2.SpongeParams.absorb?' depends on axioms: [propext, Quot.sound]
+-/
+#guard_msgs in
+#print axioms Poseidon2.SpongeParams.absorb?
+
+/--
+info: 'Poseidon2.SpongeParams.squeeze?' depends on axioms: [propext, Quot.sound]
+-/
+#guard_msgs in
+#print axioms Poseidon2.SpongeParams.squeeze?
+
+/--
+info: 'Poseidon2.SpongeParams.absorbPrefix?' depends on axioms: [propext, Quot.sound]
+-/
+#guard_msgs in
+#print axioms Poseidon2.SpongeParams.absorbPrefix?
+
+/--
+info: 'Poseidon2.SpongeParams.hashWithIV?' depends on axioms: [propext, Quot.sound]
+-/
+#guard_msgs in
+#print axioms Poseidon2.SpongeParams.hashWithIV?
+
+/--
+info: 'Poseidon2.SpongeToyTest.testParams' depends on axioms: [propext]
+-/
+#guard_msgs in
+#print axioms Poseidon2.SpongeToyTest.testParams
+
+/--
+info: 'Poseidon2.BN254.Fr' does not depend on any axioms
+-/
+#guard_msgs in
+#print axioms Poseidon2.BN254.Fr
+
+/--
+info: 'Poseidon2.BN254.c' does not depend on any axioms
+-/
+#guard_msgs in
+#print axioms Poseidon2.BN254.c
+
+/--
+info: 'Poseidon2.BN254.matDiagM1' depends on axioms: [propext, Classical.choice, Quot.sound]
+-/
+#guard_msgs in
+#print axioms Poseidon2.BN254.matDiagM1
+
+/--
+info: 'Poseidon2.BN254.roundConstants88' depends on axioms: [propext, Classical.choice, Quot.sound]
+-/
+#guard_msgs in
+#print axioms Poseidon2.BN254.roundConstants88
+
+/--
+info: 'Poseidon2.BN254.paramsBN254T4' depends on axioms: [propext, Classical.choice, Quot.sound]
+-/
+#guard_msgs in
+#print axioms Poseidon2.BN254.paramsBN254T4
+
+/--
+info: 'Poseidon2.BN254.bn254Sponge' depends on axioms: [propext, Classical.choice, Quot.sound]
+-/
+#guard_msgs in
+#print axioms Poseidon2.BN254.bn254Sponge
+
+/--
+info: 'Poseidon2.BN254.noirIV' depends on axioms: [propext, Classical.choice, Quot.sound]
+-/
+#guard_msgs in
+#print axioms Poseidon2.BN254.noirIV
+
+/--
+info: 'Poseidon2.BN254.noirHash?' depends on axioms: [propext, Classical.choice, Quot.sound]
+-/
+#guard_msgs in
+#print axioms Poseidon2.BN254.noirHash?
+
+/--
+info: 'Poseidon2.BN254.vals' does not depend on any axioms
+-/
+#guard_msgs in
+#print axioms Poseidon2.BN254.vals
+
+/--
+info: 'Poseidon2.BN254.val?' does not depend on any axioms
+-/
+#guard_msgs in
+#print axioms Poseidon2.BN254.val?
