@@ -39,14 +39,6 @@ Handles, rather than prover states or coins, are exposed to an extractor.  The
 checkpoint-restore implementation allocates them and keeps their meaning private. -/
 def RunId : Type := ℕ
 
-namespace RunId
-
-/-- Reveal a handle only to the private implementation of the handle table. -/
-@[inline]
-def toNat (h : RunId) : ℕ := h
-
-end RunId
-
 /-- Queries against a black-box prover with explicit run identity.
 
 The older `OracleSpec.proverOracle` is indexed by
@@ -139,7 +131,7 @@ def seededImpl [∀ i, Inhabited (pSpec.Message i)]
         pure (appendCheckpoint P store cp)
     | .sendMsg h i =>
         let entries : List (Prover.Checkpoint P) := store
-        match entries[h.toNat]? with
+        match entries[(show ℕ from h)]? with
         | some (Prover.Checkpoint.atRound j s) =>
             if hj : j = i.1.castSucc then do
               let ⟨msg, s'⟩ ← P.sendMessage i (hj ▸ s)
@@ -151,7 +143,7 @@ def seededImpl [∀ i, Inhabited (pSpec.Message i)]
         | _ => pure ((default, h), store)
     | .feedChal h i c =>
         let entries : List (Prover.Checkpoint P) := store
-        match entries[h.toNat]? with
+        match entries[(show ℕ from h)]? with
         | some (Prover.Checkpoint.pendingChal j k) =>
             if hj : j = i then do
               let cp ← normalizeCheckpoint P ⟨i.1.succ, (hj ▸ k) c⟩
@@ -176,7 +168,7 @@ theorem seededImpl_feedChal_pure [∀ i, Inhabited (pSpec.Message i)]
     (c : pSpec.Challenge i) (store : RunStore P)
     (k : pSpec.Challenge i → P.PrvState i.1.succ)
     (hstore :
-      (show List (Prover.Checkpoint P) from store)[h.toNat]? =
+      (show List (Prover.Checkpoint P) from store)[(show ℕ from h)]? =
         some (.pendingChal i k)) :
     (seededImpl (StmtIn := StmtIn) P (.feedChal h i c)).run store =
       (do
@@ -250,7 +242,7 @@ theorem seededImpl_fork_shares_prefix [∀ i, Inhabited (pSpec.Message i)]
     (c₁ c₂ : pSpec.Challenge i) (store : RunStore P)
     (k : pSpec.Challenge i → P.PrvState i.1.succ)
     (hstore :
-      (show List (Prover.Checkpoint P) from store)[h.toNat]? =
+      (show List (Prover.Checkpoint P) from store)[(show ℕ from h)]? =
         some (.pendingChal i k)) :
     (seededImpl (StmtIn := StmtIn) P (.feedChal h i c₁)).run store =
         (do
@@ -270,7 +262,7 @@ theorem seededImpl_sendMsg_eq_processRound [∀ i, Inhabited (pSpec.Message i)]
     (P : ProverInteraction oSpec pSpec) (h : RunId) (i : pSpec.MessageIdx)
     (store : RunStore P) (s : P.PrvState i.1.castSucc)
     (hstore :
-      (show List (Prover.Checkpoint P) from store)[h.toNat]? =
+      (show List (Prover.Checkpoint P) from store)[(show ℕ from h)]? =
         some (.atRound i.1.castSucc s)) :
     (seededImpl (StmtIn := StmtIn) P (.sendMsg h i)).run store =
       (do
