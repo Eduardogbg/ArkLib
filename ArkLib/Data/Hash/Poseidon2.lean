@@ -698,6 +698,42 @@ def permute (params : Params) (state : Vector KoalaBear.Field params.width) :
     st_new) st2
   st3
 
+/-! ## Axiom audit -/
+
+/--
+info: 'Poseidon2.rawConstants16' depends on axioms: [propext, Classical.choice, Quot.sound]
+-/
+#guard_msgs in
+#print axioms rawConstants16
+
+/--
+info: 'Poseidon2.RAW_CONSTANTS_24' depends on axioms: [propext, Classical.choice, Quot.sound]
+-/
+#guard_msgs in
+#print axioms RAW_CONSTANTS_24
+
+/--
+info: '_private.ArkLib.Data.Hash.Poseidon2.0.Poseidon2.firstHalfRoundConstants_extract_length' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+-/
+#guard_msgs in
+#print axioms firstHalfRoundConstants_extract_length
+
+/--
+info: '_private.ArkLib.Data.Hash.Poseidon2.0.Poseidon2.secondHalfRoundConstants_extract_length' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+-/
+#guard_msgs in
+#print axioms secondHalfRoundConstants_extract_length
+
+/--
+info: 'Poseidon2.permute' depends on axioms: [propext, Classical.choice, Quot.sound]
+-/
+#guard_msgs in
+#print axioms permute
+
 /-! ## Known-answer tests
 
 Permutation vectors from the reference Python implementation's test suite
