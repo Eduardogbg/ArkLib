@@ -3,7 +3,7 @@ Title: Tree special soundness: existential extractor carries no algorithmic cont
 Body:
 
 > Not done in this wave: no issue or pull request was filed upstream, and no full-repository build
-> was run locally. After these texts were committed, the clean-build step in
+> was run locally. The subsequent fork CI clean-build for head `8ffa15d0` in
 > [fork CI run 30519277986](https://github.com/Eduardogbg/ArkLib/actions/runs/30519277986)
 > passed with `Build completed successfully (4122 jobs)`. The overall workflow remained red only
 > because its later validation-wrapper step reported the unrelated knowledge-base error

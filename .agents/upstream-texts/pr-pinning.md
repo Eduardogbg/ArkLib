@@ -3,7 +3,7 @@ Title: fix(security): pin tree-special-sound extractor
 Body:
 
 > Not done in this wave: no upstream PR was opened and no full-repository build was run locally.
-> After this text was committed, the clean-build step in
+> The subsequent fork CI clean-build for head `8ffa15d0` in
 > [fork CI run 30519277986](https://github.com/Eduardogbg/ArkLib/actions/runs/30519277986)
 > passed with `Build completed successfully (4122 jobs)`. The overall workflow remained red only
 > because its later validation-wrapper step reported the unrelated knowledge-base error
