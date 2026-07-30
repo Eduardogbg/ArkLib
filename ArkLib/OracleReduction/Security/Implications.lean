@@ -227,8 +227,9 @@ the plain special-soundness shape `distinctShape k`. This is the structural hear
 between CWSS and plain special soundness: both the arity (`1·(kᵢ-1)+1 = kᵢ`) and the node predicate
 (`IsSpecialSoundFamily 1 kᵢ` vs. `Function.Injective`) agree. -/
 theorem toShape_ofSpecialSound_eq_distinctShape (k : pSpec.ChallengeIdx → ℕ) (hk : ∀ i, 2 ≤ k i) :
-    (CWSSStructure.ofSpecialSound k hk).toShape = distinctShape k := by
-  have harity : (CWSSStructure.ofSpecialSound k hk).toShape.arity = (distinctShape k).arity := by
+    (CWSSStructure.ofSpecialSound k hk).toShape = distinctShape (fun i => ⟨k i, hk i⟩) := by
+  have harity : (CWSSStructure.ofSpecialSound k hk).toShape.arity
+      = (distinctShape (fun i => ⟨k i, hk i⟩)).arity := by
     funext i
     change 1 * (k i - 1) + 1 = k i
     have := hk i; omega
@@ -257,7 +258,7 @@ theorem coordinateWiseSpecialSound_ofSpecialSound_iff (k : pSpec.ChallengeIdx �
     (relIn : Set (StmtIn × WitIn)) (relOut : Set (StmtOut × WitOut))
     (verifier : Verifier oSpec StmtIn StmtOut pSpec) :
     verifier.coordinateWiseSpecialSound init impl (CWSSStructure.ofSpecialSound k hk) relIn relOut
-      ↔ verifier.specialSound init impl k relIn relOut := by
+      ↔ verifier.specialSound init impl (fun i => ⟨k i, hk i⟩) relIn relOut := by
   unfold Verifier.coordinateWiseSpecialSound Verifier.specialSound
   rw [toShape_ofSpecialSound_eq_distinctShape]
 
@@ -281,7 +282,7 @@ theorem coordinateWiseSpecialSound_ofSpecialSound_iff (k : pSpec.ChallengeIdx �
     (relOut : Set ((StmtOut × ∀ i, OStmtOut i) × WitOut))
     (verifier : OracleVerifier oSpec StmtIn OStmtIn StmtOut OStmtOut pSpec) :
     verifier.coordinateWiseSpecialSound init impl (CWSSStructure.ofSpecialSound k hk) relIn relOut
-      ↔ verifier.specialSound init impl k relIn relOut :=
+      ↔ verifier.specialSound init impl (fun i => ⟨k i, hk i⟩) relIn relOut :=
   Verifier.coordinateWiseSpecialSound_ofSpecialSound_iff init impl k hk relIn relOut
     verifier.toVerifier
 
