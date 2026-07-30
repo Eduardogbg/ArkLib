@@ -118,6 +118,24 @@ theorem ackPolyBound_le_two_mul (k depth : ℕ) (hk : 2 ≤ k) :
   simpa [ackPolyBound, ackNecessaryTranscripts] using h
 
 /--
+info: 'Interaction.Security.ackKnowledgeError' depends on axioms: [propext, Classical.choice, Quot.sound]
+-/
+#guard_msgs in
+#print axioms ackKnowledgeError
+
+/--
+info: 'Interaction.Security.ackPolyBound' depends on axioms: [propext, Classical.choice, Quot.sound]
+-/
+#guard_msgs in
+#print axioms ackPolyBound
+
+/--
+info: 'Interaction.Security.ackNecessaryTranscripts' depends on axioms: [propext, Classical.choice, Quot.sound]
+-/
+#guard_msgs in
+#print axioms ackNecessaryTranscripts
+
+/--
 info: 'Interaction.Security.ackNecessaryTranscripts_eq_prod' depends on axioms: [propext, Classical.choice, Quot.sound]
 -/
 #guard_msgs in
