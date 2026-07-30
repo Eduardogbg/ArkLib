@@ -270,8 +270,12 @@ witness (`Classical.choose` of the gap statement, cost `0`) that closes the exis
 form cannot arise. It matches [AFK21, Def. 2] read as "*this* black-box rewinding
 extractor has an expected-query bound and an extraction gap `≤ knowledgeError`" — with
 the caveat that the notion itself does not force black-box access (`runProg` receives the
-prover as a plain argument); black-box behaviour is certified per pinned extractor by a
-separate factoring lemma. Implies the existential form by `⟨E, ·⟩`
+prover as a plain argument); black-box behaviour is not yet certified.
+
+TODO (next proof wave): after re-spelling `proverResumeAt` on `main`'s prover API, define
+the prover-oracle bridge and prove a factoring lemma for pinned extractors. This is a
+separate interface theorem, not part of the present package. Implies the existential form
+by `⟨E, ·⟩`
 (`rewindingKnowledgeSoundnessAccepting_of_with`). -/
 def rewindingKnowledgeSoundnessAcceptingWith
     (relIn : (i : SharedIn) → StmtIn i → WitIn i → Prop)
