@@ -1,10 +1,9 @@
 # Seeded prover oracle: fill the rewinding stub
 
-> **Not ready to file:** the arbitrary-depth straight-line adequacy theorem against
-> `Prover.runToRound` is not proved.  The branch contains the canonical straight-line
-> program and direct fixed-challenge run, plus exact per-round send and fork equations,
-> but the dependent `Fin.induction` round trip remains open.  Do not present this draft
-> as a completed adequacy result.
+The arbitrary-depth straight-line adequacy theorem is proved against the repository's
+actual `Prover.runToRound` semantics.  The result observes both the transcript and final
+prover checkpoint, so a constant-transcript or junk-handler implementation cannot
+satisfy it.
 
 ## Defect
 
@@ -48,20 +47,20 @@ program allocates every handle it uses.
 
 ## Proven interface facts
 
-- `seededImpl_store_appendOnly`: successful allocations append a checkpoint and never
-  overwrite an existing entry.
+- `seededImpl_store_appendOnly`: for every handler query and every result in the
+  computation's support, the returned store has the input store as a prefix.  Thus no
+  successful, pure, or junk path can overwrite an existing entry.
 - `seededImpl_feedChal_pure`: a valid challenge query applies the stored realized
   continuation; only normalization of later rounds can perform further oracle effects.
 - `seededImpl_fork_shares_prefix`: two challenges sent to one handle use the identical
   stored continuation.
 - `seededImpl_sendMsg_eq_processRound`: a valid send query is exactly
   `P.sendMessage` followed by checkpoint normalization.
-
-The branch also defines `straightlineScript{To}` and `runToRoundFixed`.  Their
-arbitrary-depth equality is **not yet a theorem**.  The approved R1 fallback is to state
-an alternating-protocol restriction as explicit generality debt if the fully general
-dependent induction cannot be completed; no restriction or behavioral hypothesis on
-the prover may be introduced.
+- `seededImpl_straightline_eq_runToRound`: simulating the canonical
+  `straightlineScript` through `seededImpl` is equal to
+  `simulateQ fixedChallengeImpl (P.runToRound ...)`, after observing the returned
+  transcript and checkpoint.  The proof is fully general over protocol directions and
+  uses no behavioral hypothesis on the prover.
 
 ## Verification
 
@@ -82,5 +81,6 @@ declarations.
 
 ## Scope
 
-One existing file is changed, additively.  No existing declaration is deleted, and no
-upstream issue or pull request is opened by this preparation.
+One Lean source file is changed additively, along with this draft.  No existing
+declaration is deleted, and no upstream issue or pull request is opened by this
+preparation.
