@@ -3,10 +3,14 @@ Title: Tree special soundness: existential extractor carries no algorithmic cont
 Body:
 
 > Not done in this wave: no issue or pull request was filed upstream, and no full-repository build
-> was run. The previously combined fork change passed fork CI on 2026-07-15; this wave instead
-> rebuilt the fix as two independent branches from `main` at
-> `fad5cbf808774838924dc8273715724c6a6caa1f`, reran the probe below, and completed targeted builds
-> of every touched Security module. The sorry delta is zero.
+> was run locally. After these texts were committed, the clean-build step in
+> [fork CI run 30519277986](https://github.com/Eduardogbg/ArkLib/actions/runs/30519277986)
+> passed with `Build completed successfully (4122 jobs)`. The overall workflow remained red only
+> because its later validation-wrapper step reported the unrelated knowledge-base error
+> `Paper page without matching BibTeX key: docs/kb/papers/NOZ26.md`. This wave rebuilt the fix as
+> two independent branches from `main` at `fad5cbf808774838924dc8273715724c6a6caa1f`, reran the
+> probe below, and completed targeted builds of every touched Security module. The sorry delta is
+> zero.
 
 Two related observations concern
 [`Verifier.treeSpecialSound`](https://github.com/Verified-zkEVM/ArkLib/blob/fad5cbf808774838924dc8273715724c6a6caa1f/ArkLib/OracleReduction/Security/TranscriptTree/Basic.lean#L292-L316)

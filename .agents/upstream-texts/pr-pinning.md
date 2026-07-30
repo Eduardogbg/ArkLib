@@ -2,11 +2,15 @@ Title: fix(security): pin tree-special-sound extractor
 
 Body:
 
-> Not done in this wave: no upstream PR was opened and no full-repository build was run. The
-> previously combined fork change passed fork CI on 2026-07-15. This independent branch was rebuilt
-> from `main` at `fad5cbf808774838924dc8273715724c6a6caa1f`; the touched Security module, the
-> compatibility probe, the positive witness, and guarded axiom reports were compiled in this wave.
-> Sorry delta: `+0 / -0`.
+> Not done in this wave: no upstream PR was opened and no full-repository build was run locally.
+> After this text was committed, the clean-build step in
+> [fork CI run 30519277986](https://github.com/Eduardogbg/ArkLib/actions/runs/30519277986)
+> passed with `Build completed successfully (4122 jobs)`. The overall workflow remained red only
+> because its later validation-wrapper step reported the unrelated knowledge-base error
+> `Paper page without matching BibTeX key: docs/kb/papers/NOZ26.md`. This independent branch was
+> rebuilt from `main` at `fad5cbf808774838924dc8273715724c6a6caa1f`; the touched Security module,
+> the compatibility probe, the positive witness, and guarded axiom reports were compiled locally
+> in this wave. Sorry delta: `+0 / -0`.
 
 ## Degenerate satisfaction at the current signature
 
