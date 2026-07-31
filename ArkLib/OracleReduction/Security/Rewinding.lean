@@ -19,7 +19,6 @@ open scoped NNReal
 
 variable {ι : Type} {oSpec : OracleSpec ι}
   {StmtIn WitIn StmtOut WitOut : Type} {n : ℕ} {pSpec : ProtocolSpec n}
-  [∀ i, SampleableType (pSpec.Challenge i)]
   {σ : Type} (init : ProbComp σ) (impl : QueryImpl oSpec (StateT σ ProbComp))
 
 namespace Extractor
@@ -650,7 +649,7 @@ info: 'Extractor.ProverInteraction.seededImpl_store_appendOnly' depends on axiom
 #print axioms ProverInteraction.seededImpl_store_appendOnly
 
 /--
-info: 'Extractor.ProverInteraction.simulateQ_fixedChallenge_getChallenge' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: 'Extractor.ProverInteraction.simulateQ_fixedChallenge_getChallenge' depends on axioms: [propext, Quot.sound]
 -/
 #guard_msgs (whitespace := lax) in
 #print axioms ProverInteraction.simulateQ_fixedChallenge_getChallenge
@@ -668,19 +667,19 @@ info: 'Extractor.ProverInteraction.seededImpl_straightlineTo_eq_checkpointRunToR
 #print axioms ProverInteraction.seededImpl_straightlineTo_eq_checkpointRunToRound
 
 /--
-info: 'Extractor.ProverInteraction.normalize_bind_checkpointStep_eq_directRound' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: 'Extractor.ProverInteraction.normalize_bind_checkpointStep_eq_directRound' depends on axioms: [propext, Quot.sound]
 -/
 #guard_msgs (whitespace := lax) in
 #print axioms ProverInteraction.normalize_bind_checkpointStep_eq_directRound
 
 /--
-info: 'Extractor.ProverInteraction.checkpointRunToRound_eq_runToRoundFixed' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: 'Extractor.ProverInteraction.checkpointRunToRound_eq_runToRoundFixed' depends on axioms: [propext, Quot.sound]
 -/
 #guard_msgs (whitespace := lax) in
 #print axioms ProverInteraction.checkpointRunToRound_eq_runToRoundFixed
 
 /--
-info: 'Extractor.ProverInteraction.runToRoundFixed_eq_runToRound' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: 'Extractor.ProverInteraction.runToRoundFixed_eq_runToRound' depends on axioms: [propext, Quot.sound]
 -/
 #guard_msgs (whitespace := lax) in
 #print axioms ProverInteraction.runToRoundFixed_eq_runToRound
@@ -692,19 +691,19 @@ info: 'Extractor.ProverInteraction.seededImpl_straightline_eq_runToRound' depend
 #print axioms ProverInteraction.seededImpl_straightline_eq_runToRound
 
 /--
-info: 'Extractor.ProverInteraction.seededImpl_feedChal_pure' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: 'Extractor.ProverInteraction.seededImpl_feedChal_pure' depends on axioms: [propext]
 -/
 #guard_msgs (whitespace := lax) in
 #print axioms ProverInteraction.seededImpl_feedChal_pure
 
 /--
-info: 'Extractor.ProverInteraction.seededImpl_fork_shares_prefix' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: 'Extractor.ProverInteraction.seededImpl_fork_shares_prefix' depends on axioms: [propext]
 -/
 #guard_msgs (whitespace := lax) in
 #print axioms ProverInteraction.seededImpl_fork_shares_prefix
 
 /--
-info: 'Extractor.ProverInteraction.seededImpl_sendMsg_eq_processRound' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: 'Extractor.ProverInteraction.seededImpl_sendMsg_eq_processRound' depends on axioms: [propext, Quot.sound]
 -/
 #guard_msgs (whitespace := lax) in
 #print axioms ProverInteraction.seededImpl_sendMsg_eq_processRound

@@ -69,7 +69,7 @@ lake build ArkLib.OracleReduction.Security.Rewinding
 Build completed successfully (2953 jobs).
 ```
 
-The `#guard_msgs` gates for every new theorem report exactly:
+The `#guard_msgs` gates pin every new theorem to its exact axiom set, each a subset of:
 
 ```text
 [propext, Classical.choice, Quot.sound]
